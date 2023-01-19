@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
-from json import dump as dump_json
 from metadata_magic.main.meta_reader import get_artist
 from metadata_magic.main.meta_reader import get_title
 from metadata_magic.main.meta_reader import get_value_from_keylist
 from metadata_magic.main.meta_reader import load_metadata
-from metadata_magic.test.temp_dir import get_temp_dir
+from metadata_magic.test.temp_file_tools import create_json_file, get_temp_dir
 from os.path import abspath, exists, join
 
 def test_get_value_from_keylist():
@@ -37,8 +36,7 @@ def test_load_metadata():
     # Create JSON to load
     temp_dir = get_temp_dir()
     test_json = abspath(join(temp_dir, "empty.json"))
-    with open(test_json, "w") as out_file:
-        dump_json({"title":"test"}, out_file)
+    create_json_file(test_json, {"title":"test"})
     assert exists(test_json)
     # Attempt to load the JSON file
     meta = load_metadata(test_json)
@@ -59,8 +57,7 @@ def test_get_title():
     # Create JSON to load
     temp_dir = get_temp_dir()
     test_json = abspath(join(temp_dir, "title.json"))
-    with open(test_json, "w") as out_file:
-        dump_json({"thing":"other", "title":"Loaded!"}, out_file)
+    create_json_file(test_json, {"thing":"other", "title":"Loaded!"})
     assert exists(test_json)
     # Test getting title when read directly from JSON
     meta = load_metadata(test_json)
@@ -90,8 +87,7 @@ def test_get_artist():
     # Create JSON to load
     temp_dir = get_temp_dir()
     test_json = abspath(join(temp_dir, "title.json"))
-    with open(test_json, "w") as out_file:
-        dump_json({"thing":"other", "uploader":"Name!!!"}, out_file)
+    create_json_file(test_json, {"thing":"other", "uploader":"Name!!!"})
     assert exists(test_json)
     # Test getting artist when read directly from JSON
     meta = load_metadata(test_json)

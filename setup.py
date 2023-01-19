@@ -7,14 +7,15 @@ import setuptools
 console_scripts = [
     "meta-missing-media = metadata_magic.main.error_finding.missing_media:main",
     "meta-missing-metadata = metadata_magic.main.error_finding.missing_metadata:main",
-    "meta-rename = metadata_magic.main.rename.rename_jsons:main"]
+    "meta-rename = metadata_magic.main.rename.rename_jsons:main",
+    "sort-rename = metadata_magic.main.rename.sort_rename:main"]
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="Metadata-Magic",
-    version="0.1.1",
+    version="0.1.2",
     author="Drakovek",
     author_email="DrakovekMail@gmail.com",
     description="Utility for managing metadata.",

@@ -4,7 +4,9 @@ from os import pardir
 from os.path import abspath, basename, exists, join
 from metadata_magic.main.rename.rename_tools import create_filename
 from metadata_magic.main.rename.rename_tools import rename_file
-from metadata_magic.test.temp_dir import get_temp_dir
+from metadata_magic.test.temp_file_tools import create_text_file
+from metadata_magic.test.temp_file_tools import get_temp_dir
+from metadata_magic.test.temp_file_tools import read_text_file
 
 def test_create_filename():
     """
@@ -46,8 +48,7 @@ def test_rename_file():
     # Create test file
     temp_dir = get_temp_dir()
     file = abspath(join(temp_dir, "file.txt"))
-    with open(file, "w") as out_file:
-        out_file.write("TEST")
+    create_text_file(file, "TEST")
     assert exists(file)
     # Test renaming file
     new_file = rename_file(file, "Name?")
@@ -63,8 +64,7 @@ def test_rename_file():
     assert file == new_file
     # Test renaming file to name of existing file
     file = abspath(join(temp_dir, "totally_new.txt"))
-    with open(file, "w") as out_file:
-        out_file.write("NEW!")
+    create_text_file(file, "NEW!")
     assert exists(file)
     new_file = rename_file(file, "Name")
     assert exists(new_file)
@@ -72,8 +72,7 @@ def test_rename_file():
     assert basename(new_file) == "Name2.txt"
     # Test renaming same filename but different extension
     file = abspath(join(temp_dir, "Weeee!.png"))
-    with open(file, "w") as out_file:
-        out_file.write("Not Actually PNG.")
+    create_text_file(file, "Not Actually PNG.")
     assert exists(file)
     new_file = rename_file(file, ":Name:")
     assert exists(new_file)
@@ -81,8 +80,7 @@ def test_rename_file():
     assert basename(new_file) == "Name.png"
     # Test renaming a third time
     file = abspath(join(temp_dir, "next.txt"))
-    with open(file, "w") as out_file:
-        out_file.write("Next")
+    create_text_file(file, "Next")
     assert exists(file)
     new_file = rename_file(file, ":Name:")
     assert exists(new_file)
@@ -90,21 +88,13 @@ def test_rename_file():
     assert basename(new_file) == "Name3.txt"
     # Test that renamed files still contain the correct data
     file = abspath(join(temp_dir, "Name.txt"))
-    with open (file) as in_file:
-        content = in_file.read()
-    assert content == "TEST"
+    assert read_text_file(file) == "TEST"
     file = abspath(join(temp_dir, "Name2.txt"))
-    with open (file) as in_file:
-        content = in_file.read()
-    assert content == "NEW!"
+    assert read_text_file(file) == "NEW!"
     file = abspath(join(temp_dir, "Name.png"))
-    with open (file) as in_file:
-        content = in_file.read()
-    assert content == "Not Actually PNG."
+    assert read_text_file(file) == "Not Actually PNG."
     file = abspath(join(temp_dir, "Name3.txt"))
-    with open (file) as in_file:
-        content = in_file.read()
-    assert content == "Next"
+    assert read_text_file(file) == "Next"
     # Test renaming invalid file
     file = abspath(join(temp_dir, "non-existant.txt"))
     new_file = rename_file(file, "new")
