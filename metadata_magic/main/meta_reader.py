@@ -124,7 +124,7 @@ def get_publisher(json:dict) -> str:
     :rtype: str
     """
     # Find the page URL/category of the media to base publisher on
-    keylist = [["link"], ["url"], ["post_url"], ["webpage_url"], ["category"]]
+    keylist = [["link"], ["post_url"], ["webpage_url"], ["url"], ["category"]]
     value = get_value_from_keylist(json, keylist, str)
     # Return None if there was no returned value
     if value is None:
@@ -173,8 +173,45 @@ def get_url(json:dict, publisher:str=None, media_id:str=None) -> str:
         if publisher == "pixiv":
             return f"https://www.pixiv.net/en/artworks/{media_id}"
     # Return default URL if it couldn't be determined by ID and publisher
-    keylist = [["link"], ["url"], ["post_url"], ["webpage_url"]]
+    keylist = [["link"], ["post_url"], ["webpage_url"], ["url"], ["category"]]
     return get_value_from_keylist(json, keylist, str)
+
+def get_tags(json:dict) -> List[str]:
+    """
+    Attempts to find the tags from a given JSON dictionary.
+    
+    :param json: JSON in dict form to search for metadata within
+    :type json: dict, required
+    :return: Extracted value for the tags
+    :rtype: str
+    """
+    tags = []
+    # Append listed tags to the tag list
+    keys = ["tags", "categories"]
+    for key in keys:
+        new_tags = get_value_from_keylist(json, [[key]], list)
+        if new_tags is not None:
+            tags.extend(new_tags)
+    # Append tags that exist as a single string
+    keys = ["da_category", "theme", "species", "gender"]
+    for key in keys:
+        tag = get_value_from_keylist(json, [[key]], str)
+        if tag is not None:
+            tags.append(tag)
+    # Replace tag with a simple string if applicable
+    keylist = [["translated_name"], ["name"]]
+    for i in range(0, len(tags)):
+        if not isinstance(tags[i], str):
+            tags[i] = get_value_from_keylist(tags[i], keylist, str)
+    # Delete tags that got replaced as None
+    for i in range(len(tags)-1, -1, -1):
+        if tags[i] is None:
+            del tags[i]
+    # Return None if there were no tags
+    if tags == []:
+        return None
+    # Return tags
+    return tags
 
 def load_metadata(json_file:str) -> dict:
     """
@@ -198,9 +235,11 @@ def load_metadata(json_file:str) -> dict:
     meta_dict["id"] = get_id(json)
     meta_dict["title"] = get_title(json)
     meta_dict["artist"] = get_artist(json)
+    meta_dict["writer"] = meta_dict["artist"]
     meta_dict["date"] = get_date(json)
     meta_dict["description"] = get_description(json)
     meta_dict["publisher"] = get_publisher(json)
+    meta_dict["tags"] = get_tags(json)
     meta_dict["url"] = get_url(json, meta_dict["publisher"], meta_dict["id"])
     # Return the dict with all metadata
     return meta_dict

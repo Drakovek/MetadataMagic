@@ -5,6 +5,7 @@ from metadata_magic.main.meta_reader import get_date
 from metadata_magic.main.meta_reader import get_description
 from metadata_magic.main.meta_reader import get_id
 from metadata_magic.main.meta_reader import get_publisher
+from metadata_magic.main.meta_reader import get_tags
 from metadata_magic.main.meta_reader import get_title
 from metadata_magic.main.meta_reader import get_url
 from metadata_magic.main.meta_reader import get_value_from_keylist
@@ -49,6 +50,15 @@ def test_load_metadata():
     # Test loading from an invalid path
     meta = load_metadata("/not/real/directory/")
     assert not exists(meta["json_path"])
+    assert meta["id"] is None
+    assert meta["title"] is None
+    assert meta["artist"] is None
+    assert meta["writer"] is None
+    assert meta["date"] is None
+    assert meta["description"] is None
+    assert meta["publisher"] is None
+    assert meta["tags"] is None
+    assert meta["url"] is None
 
 def test_get_title():
     """
@@ -102,6 +112,7 @@ def test_get_artist():
     meta = load_metadata(test_json)
     assert meta["json_path"] == test_json
     assert meta["artist"] == "Name!!!"
+    assert meta["writer"] == "Name!!!"
 
 def test_get_date():
     """
@@ -294,4 +305,40 @@ def test_get_url():
     assert meta["id"] == "ID-ABC"
     assert meta["publisher"] == "Fur Affinity"
     assert meta["url"] == "https://www.furaffinity.net/view/ID-ABC/"
+
+def test_get_tags():
+    """
+    Tests the get_tags function.
+    """
+    # Test getting tags from only JSON lists
+    dictionary = {"tags":["These", "are"], "categories":["some", "tags"]}
+    assert get_tags(dictionary) == ["These", "are", "some", "tags"]
+    dictionary = {"categories":"blah", "tags":["New", "Tags"]}
+    assert get_tags(dictionary) == ["New", "Tags"]
+    # Test getting tags from only single strings
+    dictionary = {"da_category":"Artwork", "theme":"Something", "thing":"other"}
+    assert get_tags(dictionary) == ["Artwork", "Something"]
+    dictionary = {"theme":234, "species":"Cat", "gender":"Female"}
+    assert get_tags(dictionary) == ["Cat", "Female"]
+    # Test getting tags from internal parts of lists
+    dictionary = {"tags":[{"name":"Thing"}, {"blah":"Thing"}, {"name":"other"}, {"no":"tags"}]}
+    assert get_tags(dictionary) == ["Thing", "other"]
+    dictionary = {"tags":[{"name":"Nope", "translated_name":"Over"}], "categories":[{"name":"blah"}, {"translated_name":"next"}]}
+    assert get_tags(dictionary) == ["Over", "blah", "next"]
+    # Test getting tags from multiple sources
+    dictionary = {"tags":[{"name":"thing"}], "categories":["Tag", "Things"], "theme":"other", "species":["nope"]}
+    assert get_tags(dictionary) == ["thing", "Tag", "Things", "other"]
+    # Test with no tags
+    assert get_tags({"no":"tags"}) is None
+    assert get_tags({"tags":[{"nope":"nope"}]}) is None
+    # Create JSON to load
+    temp_dir = get_temp_dir()
+    dictionary = {"tags":["These", "are", "some", "tags"]}
+    test_json = abspath(join(temp_dir, "tags.json"))
+    create_json_file(test_json, dictionary)
+    assert exists(test_json)
+    # Test getting tags when read directly from JSON
+    meta = load_metadata(test_json)
+    assert meta["json_path"] == test_json
+    assert meta["tags"] == ["These", "are", "some", "tags"]
     
