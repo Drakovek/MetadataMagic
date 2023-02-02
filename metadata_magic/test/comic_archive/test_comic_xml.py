@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
+from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
 from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
 from metadata_magic.main.comic_archive.comic_xml import get_empty_metadata
 from metadata_magic.main.comic_archive.comic_xml import generate_info_from_jsons
 from metadata_magic.main.comic_archive.comic_xml import read_comic_info
-from metadata_magic.test.temp_file_tools import create_text_file, create_json_file, get_temp_dir
+from metadata_magic.test.temp_file_tools import create_text_file, create_json_file
 from os import mkdir
 from os.path import abspath, exists, join
 

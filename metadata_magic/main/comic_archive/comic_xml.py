@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 
-from argparse import ArgumentParser
 from html_string_tools.main.html_string_tools import get_extension, remove_whitespace
 from re import findall
 from re import sub as resub
-from os import getcwd, listdir
+from os import listdir
 from os.path import abspath, exists, isdir, join
-from metadata_magic.main.comic_archive.comic_archive import create_cb7
-from metadata_magic.main.comic_archive.comic_archive import create_cbz
 from metadata_magic.main.meta_reader import load_metadata
 from metadata_magic.main.rename.sort_rename import sort_alphanum
 from xml.etree.ElementTree import Element, SubElement
@@ -220,115 +217,3 @@ def generate_info_from_jsons(path:str) -> dict:
     # Return metadata
     return metadata
 
-def create_comic_archive(directory:str, archive_type:str="cb7"):
-    """
-    Creates a comic archive using the files in a directory and metadata from the user.
-    
-    :param directory: Directory with files to archive 
-    :type directory: str, required
-    :param archive_type: What type of archive to use, either "cb7" or "cbz", defaults to "cb7
-    :type archive_type: str, optional
-    """
-    # Get default metadata
-    full_directory = abspath(directory)
-    metadata = generate_info_from_jsons(full_directory)
-    # Get existing ComicInfo.xml info, if applicable
-    xml_file = abspath(join(full_directory, "ComicInfo.xml"))
-    if exists(xml_file):
-        metadata = read_comic_info(xml_file)
-    # Get the title
-    title = metadata["title"]
-    if title is None:
-        metadata["title"] = str(input("Title: "))
-    else:
-        title = str(input(f"Title (Default is \"{title}\"): "))
-        if not title == "":
-            metadata["title"] = title
-    # Get the description
-    if metadata["description"] is None:
-        description = str(input("Description: "))
-        if not description == "":
-            metadata["description"] = description
-    # Get the date
-    if metadata["date"] is None:
-        date = ""
-        regex = "(19[7-9][0-9]|2[0-1][0-9]{2})\\-(0[1-9]|1[0-2])\\-(0[1-9]|[1-2][0-9]|3[0-1])"
-        while len(findall(regex, date)) == 0:
-            date = str(input("Date (YYYY-MM-DD): "))
-        metadata["date"] = date
-    # Get the Main Artist
-    artist = metadata["artist"]
-    if artist is None:
-        artist = str(input("Artist: "))
-        if not artist == "":
-            metadata["artist"] = artist
-    # Get the Cover Artist
-    if metadata["cover_artist"] is None:
-        cover = str(input(f"Cover Artist (Default is \"{artist}\"): "))
-        if not cover == "":
-            metadata["cover_artist"] = cover
-        elif not artist == "":
-            metadata["cover_artist"] = artist
-    # Get the Writer
-    if metadata["writer"] is None:
-        writer = str(input(f"Writer (Default is \"{artist}\"): "))
-        if not writer == "":
-            metadata["writer"] = writer
-        elif not artist == "":
-            metadata["writer"] = artist
-    # Get the Publisher
-    if metadata["publisher"] is None:
-        publisher = str(input("Publisher: "))
-        if not publisher == "":
-            metadata["publisher"] = publisher
-    # Get the URL
-    if metadata["url"] is None:
-        url = str(input("URL: "))
-        if not url == "":
-            metadata["url"] = url
-    # Get tags
-    if metadata["tags"] is None:
-        url = str(input("Tags: "))
-        if not url == "":
-            metadata["tags"] = resub("\\s*,\\s*", ",", url)
-    # Write metadata to ComicInfo XML
-    xml = get_comic_xml(metadata)
-    with open(xml_file, "w") as out_file:
-        out_file.write(xml)
-    # Archive files
-    print("Creating archive:")
-    if archive_type == "cb7":
-        create_cb7(full_directory)
-    else:
-        create_cbz(full_directory)
-
-def main():
-    """
-    Sets up the parser for creating a comic archive.
-    """
-    # Set up argument parser
-    parser = ArgumentParser()
-    parser.add_argument(
-            "directory",
-            help="Directory containing files to archive.",
-            nargs="?",
-            type=str,
-            default=str(getcwd()))
-    parser.add_argument(
-            "-z",
-            "--zip",
-            help="Use cbz instead of cb7",
-            action="store_true")
-    args = parser.parse_args()
-    # Check that directory is valid
-    directory = abspath(args.directory)
-    if not exists(directory):
-        color_print("Invalid directory.", "red")
-    else:
-        archive_type = "cb7"
-        if args.zip:
-            archive_type = "cbz"
-        create_comic_archive(directory, archive_type)
-            
-if __name__ == "__main__":
-    main()

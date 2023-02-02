@@ -31,7 +31,7 @@ def create_filename(string:str) -> str:
     new_text = new_text.replace("Ý", "Y")
     new_text = new_text.replace("ñ", "n")
     # Replace all invalid characters
-    new_text = resub("<|>|:|\"|\\/|\\\\|\\||\\?|\\*|\\.$", "-", new_text)
+    new_text = resub("<|>|:|\"|\\/|\\\\|\\||\\?|\\*|\\.+$", "-", new_text)
     # Remove whitespace and hyphens at begining and end of text
     new_text = resub("^[\\s-]+|[\\s-]+$", "", new_text)
     # Remove duplicate spacers

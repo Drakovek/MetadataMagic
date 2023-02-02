@@ -2,10 +2,10 @@
 
 from os import listdir
 from os.path import abspath, exists, join
+from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
 from metadata_magic.main.rename.rename_jsons import rename_json_pairs
 from metadata_magic.test.temp_file_tools import create_json_file
 from metadata_magic.test.temp_file_tools import create_text_file
-from metadata_magic.test.temp_file_tools import get_temp_dir
 
 def test_rename_json_pairs():
     """

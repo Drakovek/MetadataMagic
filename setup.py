@@ -9,14 +9,15 @@ console_scripts = [
     "meta-missing-metadata = metadata_magic.main.error_finding.missing_metadata:main",
     "meta-rename = metadata_magic.main.rename.rename_jsons:main",
     "sort-rename = metadata_magic.main.rename.sort_rename:main",
-    "archive-comic = metadata_magic.main.comic_archive.comic_xml:main"]
+    "archive-comic = metadata_magic.main.comic_archive.comic_archive:main",
+    "archive-series = metadata_magic.main.comic_archive.series_info:main"]
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="Metadata-Magic",
-    version="0.2.0",
+    version="0.2.1",
     author="Drakovek",
     author_email="DrakovekMail@gmail.com",
     description="Utility for managing metadata.",

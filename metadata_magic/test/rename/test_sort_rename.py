@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
+from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
 from metadata_magic.main.rename.sort_rename import compare_alphanum
 from metadata_magic.main.rename.sort_rename import compare_sections
 from metadata_magic.main.rename.sort_rename import get_section
 from metadata_magic.main.rename.sort_rename import sort_alphanum
 from metadata_magic.main.rename.sort_rename import sort_rename
 from metadata_magic.test.temp_file_tools import create_text_file
-from metadata_magic.test.temp_file_tools import get_temp_dir
 from os import listdir, mkdir
 from os.path import abspath, exists, isdir, join
 

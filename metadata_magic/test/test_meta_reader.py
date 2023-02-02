@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
 from metadata_magic.main.meta_reader import get_artist
 from metadata_magic.main.meta_reader import get_date
 from metadata_magic.main.meta_reader import get_description
@@ -10,7 +11,7 @@ from metadata_magic.main.meta_reader import get_title
 from metadata_magic.main.meta_reader import get_url
 from metadata_magic.main.meta_reader import get_value_from_keylist
 from metadata_magic.main.meta_reader import load_metadata
-from metadata_magic.test.temp_file_tools import create_json_file, get_temp_dir
+from metadata_magic.test.temp_file_tools import create_json_file
 from os.path import abspath, exists, join
 
 def test_get_value_from_keylist():

@@ -2,10 +2,10 @@
 
 from os import pardir
 from os.path import abspath, basename, exists, join
+from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
 from metadata_magic.main.rename.rename_tools import create_filename
 from metadata_magic.main.rename.rename_tools import rename_file
 from metadata_magic.test.temp_file_tools import create_text_file
-from metadata_magic.test.temp_file_tools import get_temp_dir
 from metadata_magic.test.temp_file_tools import read_text_file
 
 def test_create_filename():
@@ -21,6 +21,8 @@ def test_create_filename():
     assert create_filename("...Mr. Roboto.") == "…Mr. Roboto"
     assert create_filename(" This    &    That ") == "This & That"
     assert create_filename("thing--stuff  @*-   blah") == "thing-stuff @ blah"
+    assert create_filename("This..") == "This"
+    assert create_filename("Dots.....") == "Dots…"
     # Test removing hanging hyphens.
     assert create_filename("Blah!- Thing") == "Blah! Thing"
     assert create_filename("Other23- Item") == "Other23 Item"
