@@ -43,11 +43,26 @@ def get_id(json:dict) -> str:
     :return: Extracted value for the ID
     :rtype: str
     """
+    # Gets the value of the ID as read from the JSON
     keylist = [["id"], ["display_id"], ["index"], ["submission_id"], ["submitid"]]
     value = get_value_from_keylist(json, keylist, int)
-    if value is not None:
-        return str(value)
-    return get_value_from_keylist(json, keylist, str)
+    if value is None:
+        value = get_value_from_keylist(json, keylist, str)
+    # Return None if no ID value is found
+    if value is None:
+        return None
+    # Strip out leading three letter ID tag if ID is from a DVK file
+    try:
+        leader = findall("^[A-Z]{3}[^0-9A-Z]*(?=[0-9])", value)
+        new_value = value[len(leader[0]):]
+        value = new_value
+    except (IndexError, TypeError): pass
+    # Add file ID, if applicable
+    file_id = get_value_from_keylist(json, [["file_id"]], str)
+    if file_id is not None:
+        value = f"{value}-{file_id}"
+    # Return Value
+    return str(value)
 
 def get_title(json:dict) -> str:
     """
@@ -58,7 +73,7 @@ def get_title(json:dict) -> str:
     :return: Extracted value of the title
     :rtype: str
     """
-    keylist = [["title"]]
+    keylist = [["title"], ["info", "title"]]
     return get_value_from_keylist(json, keylist, str)
 
 def get_artist(json:dict) -> str:
@@ -70,9 +85,17 @@ def get_artist(json:dict) -> str:
     :return: Extracted value of the artist
     :rtype: str
     """
-    keylist = [["artist"], ["uploader"], ["user"], ["username"], ["author", "username"],
-               ["creator", "full_name"], ["user", "name"], ["owner"]]
-    return get_value_from_keylist(json, keylist, str)
+    keylist = [["artist"], ["uploader"], ["user"], ["username"], ["artists"], ["author", "username"],
+               ["creator", "full_name"], ["user", "name"], ["info", "artists"], ["owner"]]
+    # Try getting artist from string value
+    value = get_value_from_keylist(json, keylist, str)
+    # Try getting artist from list
+    if value is None:
+        artists = get_value_from_keylist(json, keylist, list)
+        if artists is not None and len(artists) > 0:
+            value = artists[0]
+    # Return artist value
+    return value
 
 def get_date(json:dict) -> str:
     """
@@ -84,13 +107,13 @@ def get_date(json:dict) -> str:
     :rtype: str
     """
     # Get the date string
-    keylist = [["date"], ["upload_date"], ["published_at"]]
+    keylist = [["date"], ["upload_date"], ["published_at"], ["info", "time"]]
     value = get_value_from_keylist(json, keylist, str)
     # Return None if no value can be found
     if value is None:
         return None
     # Format date into standard format
-    regex = "(19[7-9][0-9]|2[0-1][0-9]{2})\\-(0[1-9]|1[0-2])\\-(0[1-9]|[1-2][0-9]|3[0-1])"
+    regex = "(19[7-9][0-9]|2[0-1][0-9]{2})[\\-/](0[1-9]|1[0-2])[\\-/](0[1-9]|[1-2][0-9]|3[0-1])"
     date = findall(regex, value)
     if len(date) > 0:
         year, month, day = date[0]
@@ -111,7 +134,7 @@ def get_description(json:dict) -> str:
     :return: Extracted value for the description
     :rtype: str
     """
-    keylist = [["description"], ["caption"], ["content"]]
+    keylist = [["description"], ["caption"], ["content"], ["info", "description"]]
     return get_value_from_keylist(json, keylist, str)
 
 def get_publisher(json:dict) -> str:
@@ -124,7 +147,7 @@ def get_publisher(json:dict) -> str:
     :rtype: str
     """
     # Find the page URL/category of the media to base publisher on
-    keylist = [["link"], ["post_url"], ["webpage_url"], ["url"], ["category"]]
+    keylist = [["link"], ["post_url"], ["webpage_url"], ["url"], ["web", "page_url"], ["category"]]
     value = get_value_from_keylist(json, keylist, str)
     # Return None if there was no returned value
     if value is None:
@@ -173,7 +196,7 @@ def get_url(json:dict, publisher:str=None, media_id:str=None) -> str:
         if publisher == "pixiv":
             return f"https://www.pixiv.net/en/artworks/{media_id}"
     # Return default URL if it couldn't be determined by ID and publisher
-    keylist = [["link"], ["post_url"], ["webpage_url"], ["url"], ["category"]]
+    keylist = [["link"], ["post_url"], ["webpage_url"], ["url"], ["web", "page_url"]]
     return get_value_from_keylist(json, keylist, str)
 
 def get_tags(json:dict) -> List[str]:
@@ -187,9 +210,9 @@ def get_tags(json:dict) -> List[str]:
     """
     tags = []
     # Append listed tags to the tag list
-    keys = ["tags", "categories"]
+    keys = [["info", "web_tags"], ["tags"], ["categories"]]
     for key in keys:
-        new_tags = get_value_from_keylist(json, [[key]], list)
+        new_tags = get_value_from_keylist(json, [key], list)
         if new_tags is not None:
             tags.extend(new_tags)
     # Append tags that exist as a single string

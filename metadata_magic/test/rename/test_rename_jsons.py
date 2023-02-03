@@ -21,7 +21,7 @@ def test_rename_json_pairs():
     assert exists(text_file)
     # Write test JSONS
     image_json = abspath(join(temp_dir, "image.json"))
-    create_json_file(image_json, {"title":"Picture!", "index":"ABC"})
+    create_json_file(image_json, {"title":"Picture!", "index":"abc"})
     text_json = abspath(join(temp_dir, "text.json"))
     create_json_file(text_json, {"title":"Totally Text", "id":"1234"})
     assert exists(image_json)
@@ -50,8 +50,8 @@ def test_rename_json_pairs():
     assert exists(new_json)
     # Test renaming files with the ID attatched
     rename_json_pairs(temp_dir, True)
-    image_file = abspath(join(temp_dir, "[ABC] Picture!.png"))
-    image_json = abspath(join(temp_dir, "[ABC] Picture!.json"))
+    image_file = abspath(join(temp_dir, "[abc] Picture!.png"))
+    image_json = abspath(join(temp_dir, "[abc] Picture!.json"))
     text_file = abspath(join(temp_dir, "[1234] Totally Text.txt"))
     text_json = abspath(join(temp_dir, "[1234] Totally Text.json"))
     assert exists(image_file)

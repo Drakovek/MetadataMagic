@@ -68,6 +68,8 @@ def test_get_title():
     # Test getting title from dictionary
     dictionary = {"thing":"blah", "inner":{"title":"Thing!"}, "title":"Bleh"}
     assert get_title(dictionary) == "Bleh"
+    dictionary = {"info":{"title": "New Title", "artists":["thing"]}}
+    assert get_title(dictionary) == "New Title"
     # Test if there is no title
     assert get_title({"no":"title"}) is None
     # Create JSON to load
@@ -82,7 +84,7 @@ def test_get_title():
 
 def test_get_artist():
     """
-    Tests the get_artists function.
+    Tests the get_artist function.
     """
     # Test getting artist from dictionary
     dictionary = {"thing":50, "artist":"Artist", "author":"other"}
@@ -101,9 +103,15 @@ def test_get_artist():
     assert get_artist(dictionary) == "New"
     dictionary = {"total":True, "creator":{"full_name":"Real Person"}}
     assert get_artist(dictionary) == "Real Person"
+    assert get_artist(dictionary) == "Real Person"
+    # Test getting artist from artist list in dictionary
+    dictionary = {"artists":["New Person", "blah"], "type":"other"}
+    assert get_artist(dictionary) == "New Person"
+    dictionary = {"info":{"artists":["ArtLass"], "title":"blah"}, "next":"this"}
+    assert get_artist(dictionary) == "ArtLass"
     # Test if there is no artist
-    dictionary = {"no":"artist"}
-    assert get_artist(dictionary) is None
+    assert get_artist({"no":"artist"}) is None
+    assert get_artist({"artists":[]}) is None
     # Create JSON to load
     temp_dir = get_temp_dir()
     test_json = abspath(join(temp_dir, "artists.json"))
@@ -122,15 +130,19 @@ def test_get_date():
     # Test getting date from dictionary in YYYY-MM-DD format
     dictionary = {"thing":50, "date":"2022-12-25"}
     assert get_date(dictionary) == "2022-12-25"
-    dictionary = {"upload_date":"1983-07-14", "other":False, "new":"Thing"}
+    dictionary = {"upload_date":"1983/07-14", "other":False, "new":"Thing"}
     assert get_date(dictionary) == "1983-07-14"
     dictionary = {"published_at":"2019-05-01T00:31:00.000+00:00"}
     assert get_date(dictionary) == "2019-05-01"
+    dictionary = {"info":{"time":"2012/12/21|22:33"}}
+    assert get_date(dictionary) == "2012-12-21"
     # Test getting date from dictionary in YYYYMMDD format
     dictionary = {"date":"19990723", "next":24}
     assert get_date(dictionary) == "1999-07-23"
     dictionary = {"thing":"other", "upload_date":"20041115", "date":{"other":23}}
     assert get_date(dictionary) == "2004-11-15"
+    dictionary = {"info":{"time":"20121221", "title":23}}
+    assert get_date(dictionary) == "2012-12-21"
     # Test getting invalid date
     dictionary = {"date":"2012-02-35"}
     assert get_date(dictionary) is None
@@ -159,6 +171,8 @@ def test_get_description():
     assert get_description(dictionary) == "New"
     dictionary = {"other":"Key", "content":"More text"}
     assert get_description(dictionary) == "More text"
+    dictionary = {"thing":"other", "info":{"description":"New Text"}}
+    assert get_description(dictionary) == "New Text"
     # Test if there is no description
     dictionary = {"no":"description"}
     assert get_description(dictionary) is None
@@ -177,8 +191,8 @@ def test_get_id():
     Tests the get_id function.
     """
     # Test getting string ID
-    dictionary = {"test":"thing", "id":"ABC123"}
-    assert get_id(dictionary) == "ABC123"
+    dictionary = {"test":"thing", "id":"abc123"}
+    assert get_id(dictionary) == "abc123"
     dictionary = {"test":"thing", "display_id":"thing", "id":{"inner":"thing"}}
     assert get_id(dictionary) == "thing"
     dictionary = {"index":"New1"}
@@ -198,6 +212,22 @@ def test_get_id():
     assert get_id(dictionary) == "58403"
     dictionary = {"submitid":483}
     assert get_id(dictionary) == "483"
+    # Test getting old DVK ID format
+    dictionary = {"id":"DVA48305"}
+    assert get_id(dictionary) == "48305"
+    dictionary = {"index":"FAF29045"}
+    assert get_id(dictionary) == "29045"
+    dictionary = {"display_id":"INK-1234"}
+    assert get_id(dictionary) == "1234"
+    dictionary = {"display_id":"ink123"}
+    assert get_id(dictionary) == "ink123"
+    dictionary = {"id":"DVAV225"}
+    assert get_id(dictionary) == "DVAV225"
+    # Test adding file id, if necessary
+    dictionary = {"id":"INK135", "file_id":"987"}
+    assert get_id(dictionary) == "135-987"
+    dictionary = {"index":"4829", "thing":54, "file_id":"27606"}
+    assert get_id(dictionary) == "4829-27606"
     # Test if there is no ID
     dictionary = {"no":"id"}
     assert get_id(dictionary) is None
@@ -236,7 +266,7 @@ def test_get_publisher():
     dictionary = {"this":"thing", "category":"newgrounds", "id":"other"}
     assert get_publisher(dictionary) == "Newgrounds"
     # Test getting Patreon as publisher
-    dictionary = {"thing":"Blah", "url":"www.patreon.com/test/url"}
+    dictionary = {"thing":"Blah", "web":{"page_url":"www.patreon.com/test/url"}}
     assert get_publisher(dictionary) == "Patreon"
     dictionary = {"category":"patreon"}
     assert get_publisher(dictionary) == "Patreon"
@@ -283,6 +313,8 @@ def test_get_url():
     assert get_url(dictionary, None, "123") == "New.url.thing"
     dictionary = {"webpage_url":"newthing.txt.thing", "id":"ABC"}
     assert get_url(dictionary, "Fur Affinity", None) == "newthing.txt.thing"
+    dictionary = {"web":{"page_url":"new/url/value"}, "id":"ABC"}
+    assert get_url(dictionary, "Deviantart", None) == "new/url/value"
     # Test getting Fur Affinity URL
     assert get_url({"D":"M"}, "Fur Affinity", "ID123") == "https://www.furaffinity.net/view/ID123/"
     assert get_url({"A":"B"}, "Fur Affinity", "Other") == "https://www.furaffinity.net/view/Other/"
@@ -326,6 +358,8 @@ def test_get_tags():
     assert get_tags(dictionary) == ["Thing", "other"]
     dictionary = {"tags":[{"name":"Nope", "translated_name":"Over"}], "categories":[{"name":"blah"}, {"translated_name":"next"}]}
     assert get_tags(dictionary) == ["Over", "blah", "next"]
+    dictionary = {"tags":["blah"], "info":{"web_tags":["DVK", "Style", "Tags"]}}
+    assert get_tags(dictionary) == ["DVK", "Style", "Tags", "blah"]
     # Test getting tags from multiple sources
     dictionary = {"tags":[{"name":"thing"}], "categories":["Tag", "Things"], "theme":"other", "species":["nope"]}
     assert get_tags(dictionary) == ["thing", "Tag", "Things", "other"]
