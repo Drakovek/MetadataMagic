@@ -7,8 +7,7 @@ from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
 from metadata_magic.main.comic_archive.comic_xml import generate_info_from_jsons
 from metadata_magic.main.comic_archive.comic_xml import get_empty_metadata
 from metadata_magic.main.comic_archive.comic_xml import read_comic_info
-from py7zr import is_7zfile, SevenZipFile
-from py7zr.exceptions import Bad7zFile
+from python_print_tools.main.python_print_tools import color_print
 from tempfile import gettempdir
 from tqdm import tqdm
 from re import findall
@@ -117,124 +116,12 @@ def update_cbz_info(cbz_file:str, metadata:dict):
         remove(file)
         rename(new_cbz, file)
 
-def create_cb7(directory:str) -> str:
-    """
-    Creates a cb7 archive containing all the files in a given directory.
-    
-    :param directory: Directory with files to compress into archive
-    :type directory: str, required
-    :return: Full path of the created cb7 archive
-    :rtype: str
-    """
-    try:
-        # Get filenames
-        full_directory = abspath(directory)
-        cb7 = abspath(join(full_directory, basename(full_directory) + ".cb7"))
-        # Get list of files in the directory
-        files = listdir(full_directory)
-        # Create empty cb7 file
-        with SevenZipFile(cb7, "w") as out_file: pass
-        assert exists(cb7)
-        # Write contents of directory to cb7 file
-        for file in tqdm(files):
-            full_file = abspath(join(full_directory, file))
-            with SevenZipFile(cb7, "a") as out_file:
-                out_file.writeall(full_file, basename(file))
-        # Return the path of the written cb7 archive
-        return cb7
-    except FileNotFoundError:
-        return None
-
-def get_info_from_cb7(cb7_file:str) -> dict:
-    """
-    Extracts ComicInfo.xml from a given .cb7 file and returns the metadata as a dict.
-    
-    :param cb7_file: Path to a .cb7 file
-    :type cb7_file: str, required
-    :return: Dictionary containing metadata from the .cb7 file
-    :rtype: dict
-    """
-    # Create temporary directory
-    file = abspath(cb7_file)
-    extract_dir = get_temp_dir("dvk_meta_extract")
-    assert exists(extract_dir)
-    # Extract ComicInfo.xml from given file
-    try:
-        with SevenZipFile(file, mode="r") as zfile:
-            zfile.extract(path=extract_dir, targets=["ComicInfo.xml"])
-        xml_file = abspath(join(extract_dir, "ComicInfo.xml"))
-        assert exists(xml_file)
-    except (AssertionError, Bad7zFile): return get_empty_metadata()
-    # Read XML file
-    return read_comic_info(xml_file)
-
-def update_cb7_info(cb7_file:str, metadata:dict):
-    """
-    Replaces the ComicInfo.xml file in a given .cb7 file to reflect the given metadata
-    
-    :param cb7_file: Path of the .cb7 file to update
-    :type cb7_file: str, required
-    :param metadata: Metadata to use for the new ComicInfo.xml file
-    :type metadata: dict
-    """
-    # Check if given file is a valid cb7 file
-    file = abspath(cb7_file)
-    if is_7zfile(file):
-        # Extract cb7 into temp file
-        temp_dir = get_temp_dir("dvk_comic_info")
-        with SevenZipFile(cb7_file, mode="r") as ext_file:
-            ext_file.extractall(path=temp_dir)
-        # Create/Overwrite ComicInfo.xml file
-        xml = get_comic_xml(metadata)
-        xml_file = abspath(join(temp_dir, "ComicInfo.xml"))
-        with open(xml_file, "w") as out_file:
-            out_file.write(xml)
-        # Pack files into archive
-        new_cb7 = create_cb7(temp_dir)
-        # Replace the old cb7 file
-        remove(file)
-        rename(new_cb7, file)
-
-def get_info_from_archive(archive_file:str) -> dict:
-    """
-    Extracts ComicInfo.xml from a given comic archive and returns the metadata as a dict.
-    Comic archive can be in either .cbz or .cb7 format
-    
-    :param archive_file: Path to a comic archive file
-    :type archive_file: str, required
-    :return: Dictionary containing metadata from the .cb7 file
-    :rtype: dict
-    """
-    # Try getting info as a cbz file
-    metadata = get_info_from_cbz(archive_file)
-    # Check if any metadata was gathered
-    if metadata == get_empty_metadata():
-        # Try getting info as a cb7 file if no metadata was already gathered
-        metadata = get_info_from_cb7(archive_file)
-    # Return the gathered metadata
-    return metadata
-
-def update_archive_info(archive_file:str, metadata:dict):
-    """
-    Replaces the ComicInfo.xml file in a given comic archive file to reflect the given metadata.
-    Comic archive can be in either .cbz or .cb7 format.
-    
-    :param archive_file: Path of the .cb7 file to update
-    :type archive_file: str, required
-    :param metadata: Metadata to use for the new ComicInfo.xml file
-    :type metadata: dict
-    """
-    update_cbz_info(archive_file, metadata)
-    update_cb7_info(archive_file, metadata)
-
-def create_comic_archive(directory:str, archive_type:str="cb7"):
+def create_comic_archive(directory:str):
     """
     Creates a comic archive using the files in a directory and metadata from the user.
     
     :param directory: Directory with files to archive 
     :type directory: str, required
-    :param archive_type: What type of archive to use, either "cb7" or "cbz", defaults to "cb7
-    :type archive_type: str, optional
     """
     # Get default metadata
     full_directory = abspath(directory)
@@ -304,10 +191,7 @@ def create_comic_archive(directory:str, archive_type:str="cb7"):
         out_file.write(xml)
     # Archive files
     print("Creating archive:")
-    if archive_type == "cb7":
-        create_cb7(full_directory)
-    else:
-        create_cbz(full_directory)
+    create_cbz(full_directory)
 
 def main():
     """
@@ -321,21 +205,13 @@ def main():
             nargs="?",
             type=str,
             default=str(getcwd()))
-    parser.add_argument(
-            "-z",
-            "--zip",
-            help="Use cbz instead of cb7",
-            action="store_true")
     args = parser.parse_args()
     # Check that directory is valid
     directory = abspath(args.directory)
     if not exists(directory):
         color_print("Invalid directory.", "red")
     else:
-        archive_type = "cb7"
-        if args.zip:
-            archive_type = "cbz"
-        create_comic_archive(directory, archive_type)
+        create_comic_archive(directory)
             
 if __name__ == "__main__":
     main()

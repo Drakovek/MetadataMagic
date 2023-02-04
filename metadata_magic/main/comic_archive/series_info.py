@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 
 from argparse import ArgumentParser
+from metadata_magic.main.comic_archive.comic_archive import get_info_from_cbz
+from metadata_magic.main.comic_archive.comic_archive import update_cbz_info
 from html_string_tools.main.html_string_tools import get_extension
 from math import floor
-from metadata_magic.main.comic_archive.comic_archive import get_info_from_archive
-from metadata_magic.main.comic_archive.comic_archive import update_archive_info
 from metadata_magic.main.rename.sort_rename import sort_alphanum
 from os import name as os_name
 from os import getcwd, listdir, system
 from os.path import abspath, basename, exists, join
+from python_print_tools.main.python_print_tools import color_print
 from typing import List
 
 def get_comic_archives(path:str) -> List[str]:
@@ -27,7 +28,7 @@ def get_comic_archives(path:str) -> List[str]:
     # Remove all directories that aren't comic archives
     for i in range(len(files)-1,-1,-1):
         extension = get_extension(files[i])
-        if not extension == ".cbz" and not extension == ".cb7":
+        if not extension == ".cbz":
             del files[i]
     # Sort list of files
     files = sort_alphanum(files)
@@ -80,12 +81,12 @@ def write_series_info(files:List[dict], series_title:str):
     """
     for file in files:
         # Read metadata from archive
-        metadata = get_info_from_archive(file["file"])
+        metadata = get_info_from_cbz(file["file"])
         # Add series info to metadata
         metadata["series"] = series_title
         metadata["series_number"] = file["label"]
         # Write metadata back into archive
-        update_archive_info(file["file"], metadata)
+        update_cbz_info(file["file"], metadata)
 
 def list_file_labels(files:List[dict]) -> str:
     """

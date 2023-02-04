@@ -2,9 +2,8 @@
 
 from os import listdir, mkdir
 from os.path import abspath, basename, exists, isdir, join
-from metadata_magic.main.comic_archive.comic_archive import create_cb7
 from metadata_magic.main.comic_archive.comic_archive import create_cbz
-from metadata_magic.main.comic_archive.comic_archive import get_info_from_archive
+from metadata_magic.main.comic_archive.comic_archive import get_info_from_cbz
 from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
 from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
 from metadata_magic.main.comic_archive.comic_xml import get_empty_metadata
@@ -20,8 +19,8 @@ def test_get_comic_archives():
     """
     temp_dir = get_temp_dir()
     create_text_file(abspath(join(temp_dir, "aaa.cbz")), "Blah")
-    create_text_file(abspath(join(temp_dir, "not-comic.txt")), "Not")
-    create_text_file(abspath(join(temp_dir, "Book.cb7")), "Really")
+    create_text_file(abspath(join(temp_dir, "not-comic.cb7")), "Not")
+    create_text_file(abspath(join(temp_dir, "Book.cbz")), "Really")
     create_text_file(abspath(join(temp_dir, "Text.cbz")), "Important")
     create_text_file(abspath(join(temp_dir, "Other.cbz")), "At All")
     mkdir(abspath(join(temp_dir, "sub")))
@@ -30,7 +29,7 @@ def test_get_comic_archives():
     print(archives)
     assert len(archives) == 4
     assert basename(archives[0]) == "aaa.cbz"
-    assert basename(archives[1]) == "Book.cb7"
+    assert basename(archives[1]) == "Book.cbz"
     assert basename(archives[2]) == "Other.cbz"
     assert basename(archives[3]) == "Text.cbz"
 
@@ -127,41 +126,41 @@ def test_write_series_info():
     assert exists(xml_file)
     cbz_file = create_cbz(cbz_sub)
     assert exists(cbz_file)
-    # Create test cb7 file
-    cb7_sub = abspath(join(temp_dir, "cb7_sub"))
-    mkdir(cb7_sub)
-    assert isdir(cb7_sub)
+    # Create second cb7 file
+    next_sub = abspath(join(temp_dir, "cb7_sub"))
+    mkdir(next_sub)
+    assert isdir(next_sub)
     metadata = get_empty_metadata()
-    metadata["title"] = "This is a 7z cb7 archive"
+    metadata["title"] = "This is now also CBZ"
     metadata["description"] = "Other words."
     xml = get_comic_xml(metadata)
-    xml_file = abspath(join(cb7_sub, "ComicInfo.xml"))
+    xml_file = abspath(join(next_sub, "ComicInfo.xml"))
     create_text_file(xml_file, xml)
     assert exists(xml_file)
-    cb7_file = create_cb7(cb7_sub)
-    assert exists(cb7_file)
+    next_file = create_cbz(next_sub)
+    assert exists(next_file)
     # Test that existing metadata is intact
-    read_meta = get_info_from_archive(cbz_file)
+    read_meta = get_info_from_cbz(cbz_file)
     assert read_meta["title"] == "This is CBZ"
     assert read_meta["description"] == "Some words."
     assert read_meta["series"] is None
     assert read_meta["series_number"] is None
-    read_meta = get_info_from_archive(cb7_file)
-    assert read_meta["title"] == "This is a 7z cb7 archive"
+    read_meta = get_info_from_cbz(next_file)
+    assert read_meta["title"] == "This is now also CBZ"
     assert read_meta["description"] == "Other words."
     assert read_meta["series"] is None
     assert read_meta["series_number"] is None
     # Test writing series info
     files = [{"file":cbz_file, "label":"1.0"}]
-    files.append({"file":cb7_file, "label":"5.3"})
+    files.append({"file":next_file, "label":"5.3"})
     write_series_info(files, "Name of Series!")
-    read_meta = get_info_from_archive(cbz_file)
+    read_meta = get_info_from_cbz(cbz_file)
     assert read_meta["title"] == "This is CBZ"
     assert read_meta["description"] == "Some words."
     assert read_meta["series"] == "Name of Series!"
     assert read_meta["series_number"] == "1.0"
-    read_meta = get_info_from_archive(cb7_file)
-    assert read_meta["title"] == "This is a 7z cb7 archive"
+    read_meta = get_info_from_cbz(next_file)
+    assert read_meta["title"] == "This is now also CBZ"
     assert read_meta["description"] == "Other words."
     assert read_meta["series"] == "Name of Series!"
     assert read_meta["series_number"] == "5.3"
