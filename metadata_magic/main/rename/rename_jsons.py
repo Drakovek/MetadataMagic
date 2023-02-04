@@ -41,10 +41,12 @@ def rename_json_pairs(path:str, add_id:bool=False):
         # Rename JSON
         new_file = rename_file(json, title)
         # Rename media
-        title = basename(new_file)
-        extension = get_extension(title)
-        title = title[:len(title) - len(extension)]
-        rename_file(media, title)
+        try:
+            title = basename(new_file)
+            extension = get_extension(title)
+            title = title[:len(title) - len(extension)]
+            rename_file(media, title)
+        except TypeError: pass
 
 def main():
     """

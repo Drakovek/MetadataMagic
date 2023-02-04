@@ -14,7 +14,7 @@ def create_filename(string:str) -> str:
     :rtype: str
     """
     # Replace elipses
-    new_text = string.replace("...", "…")
+    new_text = resub("\\.\\s*\\.\\s*\\.", "…", string)
     # Replace special latin characters
     new_text = resub("[À-Å]", "A", new_text)
     new_text = resub("[È-Ë]", "E", new_text)
@@ -39,6 +39,8 @@ def create_filename(string:str) -> str:
     new_text = resub(" {2,}", " ", new_text)
     # Remove hanging hyphens
     new_text = resub("(?<= )-(?=[^ \\-])|(?<=[^ \\-])-(?= )", "", new_text)
+    # Remove any remaining whitespace & trailing periods
+    new_text = resub("^\\s+|[\\s\\.]+$", "", new_text)
     # Return "0" if there is no text
     if new_text == "":
         return "0"

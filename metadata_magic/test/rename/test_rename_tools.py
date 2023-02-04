@@ -23,6 +23,8 @@ def test_create_filename():
     assert create_filename("thing--stuff  @*-   blah") == "thing-stuff @ blah"
     assert create_filename("This..") == "This"
     assert create_filename("Dots.....") == "Dots…"
+    assert create_filename("Spaced .  .   .") == "Spaced …"
+    assert create_filename("  This is the end >.<  ") == "This is the end"
     # Test removing hanging hyphens.
     assert create_filename("Blah!- Thing") == "Blah! Thing"
     assert create_filename("Other23- Item") == "Other23 Item"
