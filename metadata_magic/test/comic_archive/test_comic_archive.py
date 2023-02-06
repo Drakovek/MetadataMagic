@@ -7,7 +7,7 @@ from metadata_magic.main.comic_archive.comic_archive import update_cbz_info
 from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
 from metadata_magic.main.comic_archive.comic_xml import get_empty_metadata
 from metadata_magic.test.temp_file_tools import create_text_file, read_text_file
-from os import listdir, mkdir, pardir, rename
+from os import listdir, mkdir, pardir, rename, remove
 from os.path import abspath, basename, exists, isdir, join
 from zipfile import ZipFile
 
@@ -125,6 +125,42 @@ def test_create_cbz():
     assert isdir(deeper)
     assert len(listdir(deeper)) == 1
     assert exists(abspath(join(deeper, "deep.txt")))
+    # Test that cbz is only updated if cbz already exists
+    temp_dir = get_temp_dir()
+    text_file = abspath(join(temp_dir, "file.txt"))
+    create_text_file(text_file, "This is some text!")
+    assert exists(text_file)
+    cbz = create_cbz(temp_dir)
+    assert basename(cbz) == "dvk_meta_magic.cbz"
+    assert exists(cbz)
+    assert get_info_from_cbz(cbz) == get_empty_metadata()
+    metadata = get_empty_metadata()
+    metadata["title"] = "Updated!"
+    metadata["tags"] = "Some,Tags!"
+    xml = get_comic_xml(metadata)
+    xml_file = abspath(join(temp_dir, "ComicInfo.xml"))
+    create_text_file(xml_file, xml)
+    assert exists(xml_file)
+    cbz = create_cbz(temp_dir)
+    read_metadata = get_info_from_cbz(cbz)
+    assert read_metadata["title"] == "Updated!"
+    assert read_metadata["tags"] == "Some,Tags!"
+    extract_dir = abspath(join(temp_dir, "ext"))
+    mkdir(extract_dir)
+    with ZipFile(cbz, mode="r") as file:
+        file.extractall(path=extract_dir)
+    assert len(listdir(extract_dir)) == 2
+    text_file = abspath(join(extract_dir, "file.txt"))
+    assert exists(text_file)
+    assert exists(abspath(join(extract_dir, "ComicInfo.xml")))
+    assert read_text_file(text_file) == "This is some text!"
+    # Test same update with no ComicInfo
+    remove(xml_file)
+    assert not exists(xml_file)
+    assert create_cbz(temp_dir) is None
+    read_metadata = get_info_from_cbz(cbz)
+    assert read_metadata["title"] == "Updated!"
+    assert read_metadata["tags"] == "Some,Tags!"
     # Test with non-existant file
     assert create_cbz("/non/existant/dir") is None
 

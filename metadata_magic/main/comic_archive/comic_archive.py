@@ -43,6 +43,12 @@ def create_cbz(directory:str) -> str:
         # Get filenames
         full_directory = abspath(directory)
         cbz = abspath(join(full_directory, basename(full_directory) + ".cbz"))
+        # Simply update filename if cbz already exists
+        if exists(cbz):
+            xml_file = abspath(join(full_directory, "ComicInfo.xml"))
+            metadata = read_comic_info(xml_file)
+            update_cbz_info(cbz, metadata)
+            return cbz
         # Get list of files in the directory
         files = listdir(full_directory)
         for i in range(0, len(files)):
@@ -116,12 +122,30 @@ def update_cbz_info(cbz_file:str, metadata:dict):
         remove(file)
         rename(new_cbz, file)
 
-def create_comic_archive(directory:str):
+def create_comic_archive(directory:str,
+                rp_description:bool=False,
+                rp_date:bool=False,
+                rp_artists:bool=False,
+                rp_publisher:bool=False,
+                rp_url:bool=False,
+                rp_tags:bool=False):
     """
     Creates a comic archive using the files in a directory and metadata from the user.
     
     :param directory: Directory with files to archive 
     :type directory: str, required
+    :param rp_description: Whether to replace the description from gathered metadata, defaults to False
+    :type rp_description: bool, optional
+    :param rp_date: Whether to replace the date from gathered metadata, defaults to False
+    :type rp_date: bool, optional
+    :param rp_artists: Whether to replace the artists/writers from gathered metadata, defaults to False
+    :type rp_artists: bool, optional
+    :param rp_publisher: Whether to replace the publisher from gathered metadata, defaults to False
+    :type rp_publiser: bool, optional
+    :param rp_url: Whether to replace the URL from gathered metadata, defaults to False
+    :type rp_url: bool, optional
+    :param rp_tags: Whether to replace the tags from gathered metadata, defaults to False
+    :type rp_tags: bool, optional
     """
     # Get default metadata
     full_directory = abspath(directory)
@@ -130,6 +154,21 @@ def create_comic_archive(directory:str):
     xml_file = abspath(join(full_directory, "ComicInfo.xml"))
     if exists(xml_file):
         metadata = read_comic_info(xml_file)
+    # Remove metadata fields the user wishes to replace
+    if rp_description:
+        metadata["description"] = None
+    if rp_date:
+        metadata["date"] = None
+    if rp_artists:
+        metadata["artist"] = None
+        metadata["writer"] = None
+        metadata["cover_artist"] = None
+    if rp_publisher:
+        metadata["publisher"] = None
+    if rp_url:
+        metadata["url"] = None
+    if rp_tags:
+        metadata["tags"] = None
     # Get the title
     title = metadata["title"]
     if title is None:
@@ -205,13 +244,50 @@ def main():
             nargs="?",
             type=str,
             default=str(getcwd()))
+    parser.add_argument(
+            "-s",
+            "--summary",
+            help="Use user summary instead of summary in metadata.",
+            action="store_true")
+    parser.add_argument(
+            "-d",
+            "--date",
+            help="Use user date instead of date in metadata.",
+            action="store_true")
+    parser.add_argument(
+            "-a",
+            "--artists",
+            help="Use user artists instead of artists in metadata.",
+            action="store_true")
+    parser.add_argument(
+            "-p",
+            "--publisher",
+            help="Use user publisher instead of publisher in metadata.",
+            action="store_true")
+    parser.add_argument(
+            "-u",
+            "--url",
+            help="Use user URL instead of URL in metadata.",
+            action="store_true")
+    parser.add_argument(
+            "-t",
+            "--tags",
+            help="Use user tags instead of tags in metadata.",
+            action="store_true")
     args = parser.parse_args()
     # Check that directory is valid
     directory = abspath(args.directory)
     if not exists(directory):
         color_print("Invalid directory.", "red")
     else:
-        create_comic_archive(directory)
+        # Create the comic archive
+        create_comic_archive(directory,
+                rp_description=args.summary,
+                rp_date=args.date,
+                rp_artists=args.artists,
+                rp_publisher=args.publisher,
+                rp_url=args.url,
+                rp_tags=args.tags)
             
 if __name__ == "__main__":
     main()

@@ -40,7 +40,7 @@ def create_filename(string:str) -> str:
     # Remove hanging hyphens
     new_text = resub("(?<= )-(?=[^ \\-])|(?<=[^ \\-])-(?= )", "", new_text)
     # Remove any remaining whitespace & trailing periods
-    new_text = resub("^\\s+|[\\s\\.]+$", "", new_text)
+    new_text = resub("^\\s+|[\\s\\.\\-]+$", "", new_text)
     # Return "0" if there is no text
     if new_text == "":
         return "0"

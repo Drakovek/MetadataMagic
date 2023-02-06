@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-from html_string_tools.main.html_string_tools import get_extension, remove_whitespace
+from html_string_tools.main.html_string_tools import get_extension
+from html_string_tools.main.html_string_tools import remove_whitespace
+from html_string_tools.main.html_string_tools import replace_entities
 from re import findall
 from re import sub as resub
 from os import listdir
@@ -202,6 +204,7 @@ def generate_info_from_jsons(path:str) -> dict:
     # Get description metadata
     description = json_meta["description"]
     if description is not None:
+        description = replace_entities(description)
         description = resub("<a [^<>]*>|<\\/a[^<>]*>|<b>|<i>|</b>|</i>", "", description)
         description = resub("<[^<>]*>", " ", description)
         description = resub("\\s+", " ", description)
