@@ -108,11 +108,7 @@ def get_comic_xml(metadata:dict, indent:bool=True) -> str:
     if indent:
         xml_indent(base, space="  ")
     # Get xml as string
-    xml = str(xml_to_string(base))
-    result = findall("(?<=^b['\"])<.*>(?=['\"]$)", xml)
-    if len(result) > 0:
-        xml = result[0]
-        xml = xml.replace("\\n","\n")
+    xml = xml_to_string(base).decode("UTF-8")
     # Return XML
     return f"<?xml version=\"1.0\"?>\n{xml}"
 

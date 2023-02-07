@@ -34,9 +34,9 @@ def test_get_comic_xml():
     start = f"{start}xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">"
     # Test setting title in the XML file
     meta = get_empty_metadata()
-    meta["title"] = "This is a title"
+    meta["title"] = "This's a title\\'"
     xml = get_comic_xml(meta, False)
-    assert xml == f"{start}<Title>This is a title</Title></ComicInfo>"
+    assert xml == f"{start}<Title>This's a title\\'</Title></ComicInfo>"
     # Test setting series info in the XML file
     meta = get_empty_metadata()
     meta["series"] = "Name!!"
@@ -48,9 +48,9 @@ def test_get_comic_xml():
     meta["description"] = "Description of the thing."
     xml = get_comic_xml(meta, False)
     assert xml == f"{start}<Summary>Description of the thing.</Summary></ComicInfo>"
-    meta["description"] = "This & That >.<"
+    meta["description"] = "'Tis this & That's >.<"
     xml = get_comic_xml(meta, False)
-    assert xml == f"{start}<Summary>This &amp; That &gt;.&lt;</Summary></ComicInfo>"
+    assert xml == f"{start}<Summary>'Tis this &amp; That's &gt;.&lt;</Summary></ComicInfo>"
     # Test setting date in the XML file
     meta = get_empty_metadata()
     meta["date"] = "2023-01-15"
@@ -132,12 +132,12 @@ def test_read_comic_info():
     assert meta_read["title"] == "This is a title!"
     assert meta_read["description"] == "Some words and such."
     assert meta_read["date"] is None
-    meta_write["description"] = "This & That >.<"
+    meta_write["description"] = "'Tis this & That\\Other >.<"
     xml = get_comic_xml(meta_write, False)
     create_text_file(xml_file, xml)
     meta_read = read_comic_info(xml_file)
     assert meta_read["title"] == "This is a title!"
-    assert meta_read["description"] == "This & That >.<"
+    assert meta_read["description"] == "'Tis this & That\\Other >.<"
     assert meta_read["date"] is None
     # Test getting date from ComicInfo.xml
     meta_write["date"] = "2012-03-09"
@@ -249,10 +249,10 @@ def test_generate_info_from_jsons():
     create_json_file(main_json, json_meta)
     meta = generate_info_from_jsons(temp_dir)
     assert meta["description"] == "Way too many tags! But it's okay right?"
-    json_meta["description"] = "What about elements &amp; such? &gt;.&gt;"
+    json_meta["description"] = "What about 'em elements &amp; such? &gt;.&gt;"
     create_json_file(main_json, json_meta)
     meta = generate_info_from_jsons(temp_dir)
-    assert meta["description"] == "What about elements & such? >.>"
+    assert meta["description"] == "What about 'em elements & such? >.>"
     # Test getting date
     json_meta["date"] = "2012-12-21"
     create_json_file(main_json, json_meta)

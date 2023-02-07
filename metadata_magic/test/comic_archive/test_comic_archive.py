@@ -7,7 +7,7 @@ from metadata_magic.main.comic_archive.comic_archive import update_cbz_info
 from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
 from metadata_magic.main.comic_archive.comic_xml import get_empty_metadata
 from metadata_magic.test.temp_file_tools import create_text_file, read_text_file
-from os import listdir, mkdir, pardir, rename, remove
+from os import listdir, mkdir, pardir, remove
 from os.path import abspath, basename, exists, isdir, join
 from zipfile import ZipFile
 

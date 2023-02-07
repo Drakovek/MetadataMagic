@@ -8,6 +8,7 @@ MetadataMagic is a command line utility for managing media and their respective 
 # Installation
 
 MetadataMagic can be downloaded from it's PyPI package using pip:
+
     pip3 install Metadata-Magic
 
 If you are installing from source, the following python packages are required:
@@ -63,6 +64,7 @@ Renames all media files and corresponing `.json` metadata files in given directo
 This command does NOT rename files in subdirectories.
 
 Options:
+
     -n, --name [NAME]       The base filename that will be used when renaming files. "\#" characters will be replaced with the index number.
     -i, --index [INDEX]     The index number to start with when renaming files. Defaults to "1".
 
@@ -76,6 +78,7 @@ Scripts for creating and managing comic archives in `.cbz` format.
 Compresses all the files in a given directory into a `.cbz` comic archive. The program will attempt to get metadata from any included `.json` files to use for the `ComicInfo.xml` metadata file, or from an already existing `ComicInfo.xml` file. The program will prompt the user for any metadata that could not be gatherered.
 
 If the user wishes to override any existing metadata when creating the archive, they can use the following options:
+
     -s, --summary       Override the summary
     -d, --date          Override the date
     -a, --artists       Override the artists

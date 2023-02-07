@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from argparse import ArgumentParser
-from os import getcwd, listdir, mkdir, remove, rename
+from os import getcwd, listdir, mkdir, remove
 from os.path import abspath, basename, exists, isdir, join, relpath
 from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
 from metadata_magic.main.comic_archive.comic_xml import generate_info_from_jsons
@@ -12,7 +12,7 @@ from tempfile import gettempdir
 from tqdm import tqdm
 from re import findall
 from re import sub as resub
-from shutil import rmtree
+from shutil import copy, rmtree
 from zipfile import BadZipFile, is_zipfile, ZipFile
 
 def get_temp_dir(folder_name:str="dvk_meta_magic") -> str:
@@ -120,7 +120,8 @@ def update_cbz_info(cbz_file:str, metadata:dict):
         new_cbz = create_cbz(temp_dir)
         # Replace the old cbz file
         remove(file)
-        rename(new_cbz, file)
+        copy(new_cbz, file)
+        remove(new_cbz)
 
 def create_comic_archive(directory:str,
                 rp_description:bool=False,
