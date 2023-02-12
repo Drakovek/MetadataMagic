@@ -23,6 +23,7 @@ def get_empty_metadata() -> dict:
     meta_dict["title"] = None
     meta_dict["series"] = None
     meta_dict["series_number"] = None
+    meta_dict["series_total"] = None
     meta_dict["description"] = None
     meta_dict["date"] = None
     meta_dict["writer"] = None
@@ -57,10 +58,14 @@ def get_comic_xml(metadata:dict, indent:bool=True) -> str:
     if metadata["series"] is not None:
         series = SubElement(base, "Series")
         series.text = metadata["series"]
-    # Sets the seris number if applicable
+    # Sets the series number if applicable
     if metadata["series_number"] is not None:
         number = SubElement(base, "Number")
         number.text = str(float(metadata["series_number"]))
+    # Sets the series total if applicable
+    if metadata["series_total"] is not None:
+        total = SubElement(base, "Count")
+        total.text = str(metadata["series_total"])
     # Set description if applicable
     if metadata["description"] is not None:
         summary = SubElement(base, "Summary")
@@ -132,6 +137,7 @@ def read_comic_info(xml_file:str) -> dict:
     metadata["title"] = base.findtext("Title")
     metadata["series"] = base.findtext("Series")
     metadata["series_number"] = base.findtext("Number")
+    metadata["series_total"] = base.findtext("Count")
     metadata["description"] = base.findtext("Summary")
     metadata["writer"] = base.findtext("Writer")
     metadata["cover_artist"] = base.findtext("CoverArtist")
@@ -215,4 +221,3 @@ def generate_info_from_jsons(path:str) -> dict:
         metadata["tags"] = tag_string
     # Return metadata
     return metadata
-

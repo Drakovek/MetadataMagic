@@ -17,6 +17,7 @@ def test_get_empty_metadata():
     assert meta["title"] is None
     assert meta["series"] is None
     assert meta["series_number"] is None
+    assert meta["series_total"] is None
     assert meta["description"] is None
     assert meta["date"] is None
     assert meta["writer"] is None
@@ -41,8 +42,9 @@ def test_get_comic_xml():
     meta = get_empty_metadata()
     meta["series"] = "Name!!"
     meta["series_number"] = "2.5"
+    meta["series_total"] = "5"
     xml = get_comic_xml(meta, False)
-    assert xml == f"{start}<Series>Name!!</Series><Number>2.5</Number></ComicInfo>"
+    assert xml == f"{start}<Series>Name!!</Series><Number>2.5</Number><Count>5</Count></ComicInfo>"
     # Test setting description in the XML file
     meta = get_empty_metadata()
     meta["description"] = "Description of the thing."
@@ -117,12 +119,14 @@ def test_read_comic_info():
     # Test getting series info from ComicInfo.xml
     meta_write["series"] = "The Thing"
     meta_write["series_number"] = "3.0"
+    meta_write["series_total"] = "4"
     xml = get_comic_xml(meta_write, False)
     create_text_file(xml_file, xml)
     meta_read = read_comic_info(xml_file)
     assert meta_read["title"] == "This is a title!"
     assert meta_read["series"] == "The Thing"
     assert meta_read["series_number"] == "3.0"
+    assert meta_read["series_total"] == "4"
     assert meta_read["description"] is None
     # Test getting description from ComicInfo.xml
     meta_write["description"] = "Some words and such."

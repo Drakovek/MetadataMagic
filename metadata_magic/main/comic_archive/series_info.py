@@ -8,35 +8,41 @@ from math import floor
 from metadata_magic.main.rename.sort_rename import sort_alphanum
 from os import name as os_name
 from os import getcwd, listdir, system
-from os.path import abspath, basename, exists, join
+from os.path import abspath, basename, exists, isdir, join
 from python_print_tools.main.python_print_tools import color_print
+from tqdm import tqdm
 from typing import List
 
-def get_comic_archives(path:str) -> List[str]:
+def get_comic_archives(path:str, include_subdirs:bool=False) -> List[str]:
     """
     Returns a sorted list of all the comic book archives in a given directory.
-    Does not include sub-directories.
     
     :param path: Path of the directory to search
     :type path: str, required
+    :param include_subdirs: Whether to include comic archive in sub-directories, defaults to False
+    :type include_subdirs: bool, optional
     :return: Sorted list of all the comic archives in the given directory
     :rtype: list[str]
     """
-    # Get list of files in the directory
-    full_directory = abspath(path)
-    files = listdir(full_directory)
-    # Remove all directories that aren't comic archives
-    for i in range(len(files)-1,-1,-1):
-        extension = get_extension(files[i])
-        if not extension == ".cbz":
-            del files[i]
-    # Sort list of files
-    files = sort_alphanum(files)
-    # Get full directory for all listed files
-    for i in range(0, len(files)):
-        files[i] = abspath(join(full_directory, files[i]))
-    # Return list of files
-    return files
+    # Look through all files in the directory for comic archive files
+    archives = []
+    directories = [abspath(path)]
+    while len(directories) > 0:
+        # Get all files in the directory
+        cur_files = sort_alphanum(listdir(directories[0]))
+        # Run through all files in the directory
+        for file in cur_files:
+            full_file = abspath(join(directories[0], file))
+            if include_subdirs and isdir(full_file):
+                # Add file to list of subdirectories if searching subdirs is specified
+                directories.append(full_file)
+            if get_extension(full_file) == ".cbz":
+                # Add file to archive list if it is a comic archive
+                archives.append(full_file)
+        # Remove the directory currently being searched through
+        del directories[0]
+    # Return list of comic archives
+    return archives
 
 def label_files_with_numbers(files:List[dict], index:int, label:str) -> List[dict]:
     """
@@ -79,12 +85,13 @@ def write_series_info(files:List[dict], series_title:str):
     :param series_title: Title of the series
     :type series_title: str, required
     """
-    for file in files:
+    for file in tqdm(files):
         # Read metadata from archive
         metadata = get_info_from_cbz(file["file"])
         # Add series info to metadata
         metadata["series"] = series_title
         metadata["series_number"] = file["label"]
+        metadata["series_total"] = str(len(files))
         # Write metadata back into archive
         update_cbz_info(file["file"], metadata)
 
@@ -156,6 +163,27 @@ def set_series_info(path:str):
         # Clear the terminal
         clear_terminal()
 
+def set_single_series(path:str):
+    """
+    Sets series name and number as being the same as the title for archives that are considered singles or one-shots
+    
+    :param path: Directory containing comic archive files
+    :type path: str, required
+    """
+    # Print all comic archives
+    archives = get_comic_archives(path, True)
+    for archive in archives:
+        print(basename(archive))
+    # Ask if user wants to set all sequences as singles
+    if input("Set all archives as single comics? (Y/N):").lower() == "y":
+        # Set the series info for each archive
+        for archive in tqdm(archives):
+            metadata = get_info_from_cbz(archive)
+            metadata["series"] = metadata["title"]
+            metadata["series_number"] = "1.0"
+            metadata["series_total"] = "1"
+            update_cbz_info(archive, metadata)
+
 def main():
     """
     Sets up the parser for adding series info to archives.
@@ -168,13 +196,22 @@ def main():
             nargs="?",
             type=str,
             default=str(getcwd()))
+    parser.add_argument(
+            "-s",
+            "--single",
+            help="Use user summary instead of summary in metadata.",
+            action="store_true")
     args = parser.parse_args()
     # Check that directory is valid
     directory = abspath(args.directory)
     if not exists(directory):
         color_print("Invalid directory.", "red")
     else:
-        set_series_info(directory)
+        # Check whether to add as full series or as one-shots
+        if args.single:
+            set_single_series(directory)
+        else:
+            set_series_info(directory)
             
 if __name__ == "__main__":
     main()

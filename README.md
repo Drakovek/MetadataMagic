@@ -54,6 +54,7 @@ Scripts for renaming files and metadata.
     meta-rename [directory] [-i, --id]
 
 Renames all media files and their corresponding `.json` metadata files in a given directory, based on the title provided by the `.json` metadata.
+
 If the `-i, --id` option is included, file names will also include the media ID tag provided by the `.json` metadata as well.
 This command renames files in main directory and subdirectories
 
@@ -87,6 +88,8 @@ If the user wishes to override any existing metadata when creating the archive, 
     -t, --tags          Override the tags
 
 ### archive-series
-    archive-series [directory]
+    archive-series [directory] [-s, --single]
 
 Updates existing `.cbz` comic archives in a given directory to include series info. The program prompts the user for the series title and the series number of each archive when run.
+
+If the `-s, --single` option is included, all comic archives in the given directory will be set as being book 1 of 1 in a series. This option is intended for indicating that a collection of comic archives are all considered single comics or one-shots.

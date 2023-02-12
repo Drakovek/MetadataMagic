@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from os import listdir, mkdir
+from os import listdir, mkdir, pardir
 from os.path import abspath, basename, exists, isdir, join
 from metadata_magic.main.comic_archive.comic_archive import create_cbz
 from metadata_magic.main.comic_archive.comic_archive import get_info_from_cbz
@@ -17,6 +17,7 @@ def test_get_comic_archives():
     """
     Tests the get_comic_archives function.
     """
+    # Test getting comics in single directory
     temp_dir = get_temp_dir()
     create_text_file(abspath(join(temp_dir, "aaa.cbz")), "Blah")
     create_text_file(abspath(join(temp_dir, "not-comic.cb7")), "Not")
@@ -26,12 +27,36 @@ def test_get_comic_archives():
     mkdir(abspath(join(temp_dir, "sub")))
     assert len(listdir(temp_dir)) == 6
     archives = get_comic_archives(temp_dir)
-    print(archives)
     assert len(archives) == 4
     assert basename(archives[0]) == "aaa.cbz"
     assert basename(archives[1]) == "Book.cbz"
     assert basename(archives[2]) == "Other.cbz"
     assert basename(archives[3]) == "Text.cbz"
+    # Test getting comics in subdirectories
+    temp_dir = get_temp_dir()
+    sub_dir = abspath(join(temp_dir, "sub"))
+    further_sub = abspath(join(sub_dir, "further_sub"))
+    mkdir(sub_dir)
+    mkdir(further_sub)
+    create_text_file(abspath(join(temp_dir, "thing.cbz")), "blah")
+    create_text_file(abspath(join(temp_dir, "other.cbz")), "thing")
+    create_text_file(abspath(join(sub_dir, "Next.cbz")), "next")
+    create_text_file(abspath(join(further_sub, "Last.cbz")), "last")
+    create_text_file(abspath(join(further_sub, "Another.cbz")), "another")
+    assert isdir(sub_dir)
+    assert isdir(further_sub)
+    archives = get_comic_archives(temp_dir, True)
+    assert len(archives) == 5
+    assert basename(archives[0]) == "other.cbz"
+    assert abspath(join(archives[0], pardir)) == temp_dir
+    assert basename(archives[1]) == "thing.cbz"
+    assert abspath(join(archives[1], pardir)) == temp_dir
+    assert basename(archives[2]) == "Next.cbz"
+    assert abspath(join(archives[2], pardir)) == sub_dir
+    assert basename(archives[3]) == "Another.cbz"
+    assert abspath(join(archives[3], pardir)) == further_sub
+    assert basename(archives[4]) == "Last.cbz"
+    assert abspath(join(archives[4], pardir)) == further_sub
 
 def test_label_files_with_numbers():
     """
@@ -127,7 +152,7 @@ def test_write_series_info():
     cbz_file = create_cbz(cbz_sub)
     assert exists(cbz_file)
     # Create second cb7 file
-    next_sub = abspath(join(temp_dir, "cb7_sub"))
+    next_sub = abspath(join(temp_dir, "other_sub"))
     mkdir(next_sub)
     assert isdir(next_sub)
     metadata = get_empty_metadata()
@@ -159,11 +184,13 @@ def test_write_series_info():
     assert read_meta["description"] == "Some words."
     assert read_meta["series"] == "Name of Series!"
     assert read_meta["series_number"] == "1.0"
+    assert read_meta["series_total"] == "2"
     read_meta = get_info_from_cbz(next_file)
     assert read_meta["title"] == "This is now also CBZ"
     assert read_meta["description"] == "Other words."
     assert read_meta["series"] == "Name of Series!"
     assert read_meta["series_number"] == "5.3"
+    assert read_meta["series_total"] == "2"
 
 def test_list_file_labels():
     """
