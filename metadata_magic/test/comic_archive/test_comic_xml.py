@@ -26,6 +26,8 @@ def test_get_empty_metadata():
     assert meta["publisher"] is None
     assert meta["tags"] is None
     assert meta["url"] is None
+    assert meta["age_rating"] == None
+    assert meta["score"] is None
 
 def test_get_comic_xml():
     """
@@ -33,64 +35,119 @@ def test_get_comic_xml():
     """
     start = "<?xml version=\"1.0\"?>\n<ComicInfo xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" "
     start = f"{start}xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">"
+    end = "<AgeRating>Unknown</AgeRating></ComicInfo>"
     # Test setting title in the XML file
     meta = get_empty_metadata()
     meta["title"] = "This's a title\\'"
     xml = get_comic_xml(meta, False)
-    assert xml == f"{start}<Title>This's a title\\'</Title></ComicInfo>"
+    assert xml == f"{start}<Title>This's a title\\'</Title>{end}"
     # Test setting series info in the XML file
     meta = get_empty_metadata()
     meta["series"] = "Name!!"
     meta["series_number"] = "2.5"
     meta["series_total"] = "5"
     xml = get_comic_xml(meta, False)
-    assert xml == f"{start}<Series>Name!!</Series><Number>2.5</Number><Count>5</Count></ComicInfo>"
+    assert xml == f"{start}<Series>Name!!</Series><Number>2.5</Number><Count>5</Count>{end}"
+    # Test setting invalid series number and total
+    meta["series_number"] = "NotNumber"
+    xml = get_comic_xml(meta, False)
+    assert xml == f"{start}<Series>Name!!</Series>{end}"
+    meta["series_number"] = "5.0"
+    meta["series_total"] = "AlsoNotNumber"
+    xml = get_comic_xml(meta, False)
+    assert xml == f"{start}<Series>Name!!</Series><Number>5.0</Number>{end}"
     # Test setting description in the XML file
     meta = get_empty_metadata()
     meta["description"] = "Description of the thing."
     xml = get_comic_xml(meta, False)
-    assert xml == f"{start}<Summary>Description of the thing.</Summary></ComicInfo>"
+    assert xml == f"{start}<Summary>Description of the thing.</Summary>{end}"
     meta["description"] = "'Tis this & That's >.<"
     xml = get_comic_xml(meta, False)
-    assert xml == f"{start}<Summary>'Tis this &amp; That's &gt;.&lt;</Summary></ComicInfo>"
+    assert xml == f"{start}<Summary>'Tis this &amp; That's &gt;.&lt;</Summary>{end}"
     # Test setting date in the XML file
     meta = get_empty_metadata()
     meta["date"] = "2023-01-15"
     xml = get_comic_xml(meta, False)
-    assert xml == f"{start}<Year>2023</Year><Month>1</Month><Day>15</Day></ComicInfo>"
+    assert xml == f"{start}<Year>2023</Year><Month>1</Month><Day>15</Day>{end}"
     meta["date"] = "2014-12-08"
     xml = get_comic_xml(meta, False)
-    assert xml == f"{start}<Year>2014</Year><Month>12</Month><Day>8</Day></ComicInfo>"
+    assert xml == f"{start}<Year>2014</Year><Month>12</Month><Day>8</Day>{end}"
     # Test setting writer in XML file
     meta = get_empty_metadata()
     meta["writer"] = "Person!"
     xml = get_comic_xml(meta, False)
-    assert xml == f"{start}<Writer>Person!</Writer></ComicInfo>"
+    assert xml == f"{start}<Writer>Person!</Writer>{end}"
     # Test setting cover artist in XML file
     meta = get_empty_metadata()
     meta["cover_artist"] = "Guest"
     xml = get_comic_xml(meta, False)
-    assert xml == f"{start}<CoverArtist>Guest</CoverArtist></ComicInfo>"
+    assert xml == f"{start}<CoverArtist>Guest</CoverArtist>{end}"
     # Test setting main artists in XML file
     meta = get_empty_metadata()
     meta["artist"] = "Bleh"
     xml = get_comic_xml(meta, False)
-    assert xml == f"{start}<Penciller>Bleh</Penciller><Inker>Bleh</Inker><Colorist>Bleh</Colorist></ComicInfo>"
+    assert xml == f"{start}<Penciller>Bleh</Penciller><Inker>Bleh</Inker><Colorist>Bleh</Colorist>{end}"
     # Test setting publisher in XML file
     meta = get_empty_metadata()
     meta["publisher"] = "Company"
     xml = get_comic_xml(meta, False)
-    assert xml == f"{start}<Publisher>Company</Publisher></ComicInfo>"
+    assert xml == f"{start}<Publisher>Company</Publisher>{end}"
     # Test setting tags in XML file
     meta = get_empty_metadata()
     meta["tags"] = "Some,Tags,&,stuff"
     xml = get_comic_xml(meta, False)
-    assert xml == f"{start}<Tags>Some,Tags,&amp;,stuff</Tags></ComicInfo>"
+    assert xml == f"{start}<Tags>Some,Tags,&amp;,stuff</Tags>{end}"
     # Test setting URL in XML file
     meta = get_empty_metadata()
     meta["url"] = "www.ihopethisisntarealsite.com"
     xml = get_comic_xml(meta, False)
-    assert xml == f"{start}<Web>www.ihopethisisntarealsite.com</Web></ComicInfo>"
+    assert xml == f"{start}<Web>www.ihopethisisntarealsite.com</Web>{end}"
+    # Test setting the score in the XML file
+    meta = get_empty_metadata()
+    meta["score"] = "0"
+    xml = get_comic_xml(meta, False)
+    assert xml == f"{start}<CommunityRating>0</CommunityRating>{end}"
+    meta = get_empty_metadata()
+    meta["score"] = "2"
+    xml = get_comic_xml(meta, False)
+    assert xml == f"{start}<CommunityRating>2</CommunityRating><Tags>&#9733;&#9733;</Tags>{end}"
+    meta = get_empty_metadata()
+    meta["score"] = "5"
+    xml = get_comic_xml(meta, False)
+    assert xml == f"{start}<CommunityRating>5</CommunityRating><Tags>&#9733;&#9733;&#9733;&#9733;&#9733;</Tags>{end}"
+    # Test setting invalid score in XML file
+    meta["title"] = "Thing!"
+    meta["score"] = "Blah"
+    xml = get_comic_xml(meta, False)
+    assert xml == f"{start}<Title>Thing!</Title>{end}"
+    meta["score"] = "6"
+    xml = get_comic_xml(meta, False)
+    assert xml == f"{start}<Title>Thing!</Title>{end}"
+    meta["score"] = "-3"
+    xml = get_comic_xml(meta, False)
+    assert xml == f"{start}<Title>Thing!</Title>{end}"
+    # Test adding score as tags
+    meta = get_empty_metadata()
+    meta["tags"] = "These,are,things"
+    meta["score"] = "3"
+    xml = get_comic_xml(meta, False)
+    assert xml == f"{start}<CommunityRating>3</CommunityRating><Tags>&#9733;&#9733;&#9733;,These,are,things</Tags>{end}"
+    meta["score"] = "5"
+    meta["tags"] = None
+    xml = get_comic_xml(meta, False)
+    assert xml == f"{start}<CommunityRating>5</CommunityRating><Tags>&#9733;&#9733;&#9733;&#9733;&#9733;</Tags>{end}"
+    meta["score"] = "0"
+    xml = get_comic_xml(meta, False)
+    assert xml == f"{start}<CommunityRating>0</CommunityRating>{end}"
+    # Test setting the age rating in the XML file
+    meta = get_empty_metadata()
+    meta["age_rating"] = "Everyone"
+    xml = get_comic_xml(meta, False)
+    assert xml == f"{start}<AgeRating>Everyone</AgeRating></ComicInfo>"
+    meta = get_empty_metadata()
+    meta["age_rating"] = None
+    xml = get_comic_xml(meta, False)
+    assert xml == f"{start}<AgeRating>Unknown</AgeRating></ComicInfo>"
     # Test getting XML with indents
     meta = get_empty_metadata()
     meta["title"] = "Name!"
@@ -98,7 +155,8 @@ def test_get_comic_xml():
     result = "<?xml version=\"1.0\"?>\n"
     result = f"{result}<ComicInfo xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" "
     result = f"{result}xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">"
-    result = f"{result}\n  <Title>Name!</Title>\n</ComicInfo>"
+    result = f"{result}\n  <Title>Name!</Title>"
+    result = f"{result}\n  <AgeRating>Unknown</AgeRating>\n</ComicInfo>"
     assert xml == result
 
 def test_read_comic_info():
@@ -198,14 +256,59 @@ def test_read_comic_info():
     assert meta_read["title"] == "This is a title!"
     assert meta_read["url"] == "/web/page/"
     assert meta_read["tags"] is None
-    # Test getting tags from ComicInfo.xml
-    meta_write["title"] = None
-    meta_write["tags"] = "these,are,tags"
+    assert meta_read["age_rating"] == "Unknown"
+    # Test getting age rating from ComicInfo.xml
+    meta_write["age_rating"] = "Everyone"
     xml = get_comic_xml(meta_write, False)
     create_text_file(xml_file, xml)
     meta_read = read_comic_info(xml_file)
-    assert meta_read["tags"] == "these,are,tags"
+    assert meta_read["title"] == "This is a title!"
+    assert meta_read["age_rating"] == "Everyone"
+    assert meta_read["tags"] is None
+    # Test getting score from ComicInfo.xml
+    meta_write["score"] = "4"
+    xml = get_comic_xml(meta_write, False)
+    create_text_file(xml_file, xml)
+    meta_read = read_comic_info(xml_file)
+    assert meta_read["title"] == "This is a title!"
+    assert meta_read["score"] == "4"
+    assert meta_read["tags"] == None
+    # Test getting tags from ComicInfo.xml
+    meta_write["title"] = None
+    meta_write["tags"] = " these, are , some tags  "
+    xml = get_comic_xml(meta_write, False)
+    create_text_file(xml_file, xml)
+    meta_read = read_comic_info(xml_file)
+    assert meta_read["tags"] == "these,are,some tags"
     assert meta_read["title"] is None
+    # Test that any star score tags are removed
+    meta_write["title"] = "Hooray!"
+    meta_write["tags"] = "★★★★"
+    xml = get_comic_xml(meta_write, False)
+    create_text_file(xml_file, xml)
+    meta_read = read_comic_info(xml_file)
+    assert meta_read["title"] == "Hooray!"
+    assert meta_read["tags"] == None
+    meta_write["tags"] = "★, Some,Tags!,Yay"
+    xml = get_comic_xml(meta_write, False)
+    create_text_file(xml_file, xml)
+    meta_read = read_comic_info(xml_file)
+    assert meta_read["tags"] == "Some,Tags!,Yay"
+    meta_write["tags"] = "More, tags, and, such, ★★★"
+    xml = get_comic_xml(meta_write, False)
+    create_text_file(xml_file, xml)
+    meta_read = read_comic_info(xml_file)
+    assert meta_read["tags"] == "More,tags,and,such"
+    meta_write["tags"] = "Other, ★★★★★, Final "
+    xml = get_comic_xml(meta_write, False)
+    create_text_file(xml_file, xml)
+    meta_read = read_comic_info(xml_file)
+    assert meta_read["tags"] == "Other,Final"
+    meta_write["tags"] = "Larger,Star,Count,★★★★★★★★★★"
+    xml = get_comic_xml(meta_write, False)
+    create_text_file(xml_file, xml)
+    meta_read = read_comic_info(xml_file)
+    assert meta_read["tags"] == "Larger,Star,Count,★★★★★★★★★★"
     # Test if given file is not a proper XML file
     unrelated = abspath(join(temp_dir, "blah.xml"))
     create_text_file(unrelated, "This is some unimportant non-xml text.")
@@ -301,6 +404,30 @@ def test_generate_info_from_jsons():
     assert meta["title"] == "This is a title!"
     assert meta["url"] == "someurlthing.net"
     assert meta["tags"] is None
+    assert meta["age_rating"] == "Unknown"
+    # Test getting age rating
+    temp_dir = get_temp_dir()
+    json_everyone = abspath(join(temp_dir, "everyone.json"))
+    create_json_file(json_everyone, {"title":"Thing!", "url":"newgrounds.com/", "rating":"E"})
+    meta = generate_info_from_jsons(temp_dir)
+    assert meta["title"] == "Thing!"
+    assert meta["age_rating"] == "Everyone"
+    json_teen = abspath(join(temp_dir, "teen.json"))
+    create_json_file(json_teen, {"rating":"t", "url":"www.newgrounds.com"})
+    meta = generate_info_from_jsons(temp_dir)
+    assert meta["age_rating"] == "Teen"
+    json_mature = abspath(join(temp_dir, "mature.json"))
+    create_json_file(json_mature, {"url":"newgrounds", "rating":"m"})
+    meta = generate_info_from_jsons(temp_dir)
+    assert meta["age_rating"] == "Mature 17+"
+    json_adult = abspath(join(temp_dir, "adult.json"))
+    create_json_file(json_adult, {"url":"www.newgrounds.com/thing", "rating":"A"})
+    meta = generate_info_from_jsons(temp_dir)
+    assert meta["age_rating"] == "X18+"
+    assert exists(json_everyone)
+    assert exists(json_teen)
+    assert exists(json_mature)
+    assert exists(json_adult)
     # Test with JSON files only in subdirectories
     temp_dir = get_temp_dir()
     sub1 = abspath(join(temp_dir, "aaaa"))

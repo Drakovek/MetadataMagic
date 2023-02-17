@@ -236,6 +236,54 @@ def get_tags(json:dict) -> List[str]:
     # Return tags
     return tags
 
+def get_age_rating(json:dict, publisher:str) -> str:
+    """
+    Attempts to get a standardized age rating based on ratings values in a given JSON dictionary.
+    
+    :param json: JSON in dict form to search for metadata within
+    :type json: dict, required
+    :param publisher: Publisher as returned by get_publisher to determine how the rating is stored in the JSON
+    :type publisher: str, required
+    :return: Extracted value for the age rating
+    :rtype: str
+    """
+    try:
+        rating = ""
+        # Check the publisher
+        if publisher == "DeviantArt":
+            # Get age rating from DeviantArt JSON
+            mature = json["is_mature"]
+            # Return Everyone if not Mature
+            if not mature:
+                return "Everyone"
+            # Check how strict the mature rating should be
+            level = json["mature_level"]
+            if level == "moderate":
+                return "Mature 17+"
+            if level == "strict":
+                return "X18+"
+        if (publisher == "Fur Affinity"
+                    or publisher == "Inkbunny"
+                    or publisher == "Newgrounds"
+                    or publisher == "pixiv"
+                    or publisher == "Weasyl"):
+            # Get standard age rating keys
+            keys = [["rating"], ["rating_name"]]
+            rating = get_value_from_keylist(json, keys , str).lower()
+    except (AttributeError, KeyError):
+        return "Unknown"
+    # Return rating from rating string
+    if rating == "general" or rating == "e":
+        return "Everyone"
+    if rating == "t":
+        return "Teen"
+    if rating == "mature" or rating == "m":
+        return "Mature 17+"
+    if rating == "adult" or rating == "a" or rating == "r-18" or rating == "explicit":
+        return "X18+"
+    # Return "Unknown" by default
+    return "Unknown"
+
 def load_metadata(json_file:str) -> dict:
     """
     Loads metadata from a given JSON file.
@@ -264,5 +312,6 @@ def load_metadata(json_file:str) -> dict:
     meta_dict["publisher"] = get_publisher(json)
     meta_dict["tags"] = get_tags(json)
     meta_dict["url"] = get_url(json, meta_dict["publisher"], meta_dict["id"])
+    meta_dict["age_rating"] = get_age_rating(json, meta_dict["publisher"])
     # Return the dict with all metadata
     return meta_dict

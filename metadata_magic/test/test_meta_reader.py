@@ -10,6 +10,7 @@ from metadata_magic.main.meta_reader import get_tags
 from metadata_magic.main.meta_reader import get_title
 from metadata_magic.main.meta_reader import get_url
 from metadata_magic.main.meta_reader import get_value_from_keylist
+from metadata_magic.main.meta_reader import get_age_rating
 from metadata_magic.main.meta_reader import load_metadata
 from metadata_magic.test.temp_file_tools import create_json_file
 from os.path import abspath, exists, join
@@ -376,4 +377,96 @@ def test_get_tags():
     meta = load_metadata(test_json)
     assert meta["json_path"] == test_json
     assert meta["tags"] == ["These", "are", "some", "tags"]
-    
+
+def test_get_age_rating():
+    """
+    Tests the get_age_rating function.
+    """
+    # Test deviantart-style rating
+    dictionary = {"is_mature":False, "thing":"blah"}
+    assert get_age_rating(dictionary, "DeviantArt") == "Everyone"
+    dictionary = {"is_mature":True, "mature_level":"moderate"}
+    assert get_age_rating(dictionary, "DeviantArt") == "Mature 17+"
+    dictionary = {"is_mature":True, "mature_level":"strict"}
+    assert get_age_rating(dictionary, "DeviantArt") == "X18+"
+    dictionary = {"is_mature":True, "mature_level":"blah"}
+    assert get_age_rating(dictionary, "DeviantArt") == "Unknown"
+    dictionary = {"is_mature":"nope"}
+    assert get_age_rating(dictionary, "DeviantArt") == "Unknown"
+    dictionary = {"is_mature":True, "blah":"thing"}
+    assert get_age_rating(dictionary, "DeviantArt") == "Unknown"
+    dictionary = {"thing":False}
+    assert get_age_rating(dictionary, "DeviantArt") == "Unknown"
+    # Test Fur Affinity style ratings
+    dictionary = {"rating":"General", "other":"thing"}
+    assert get_age_rating(dictionary, "Fur Affinity") == "Everyone"
+    dictionary = {"rating":"Mature", "other":False}
+    assert get_age_rating(dictionary, "Fur Affinity") == "Mature 17+"
+    dictionary = {"3":True, "rating":"Adult"}
+    assert get_age_rating(dictionary, "Fur Affinity") == "X18+"
+    dictionary = {"rating":"Who Knows?"}
+    assert get_age_rating(dictionary, "Fur Affinity") == "Unknown"
+    dictionary = {"thing":"Other"}
+    assert get_age_rating(dictionary, "Fur Affinity") == "Unknown"
+    # Test Inkbunny style ratings
+    dictionary = {"rating_name":"General", "other":"thing"}
+    assert get_age_rating(dictionary, "Inkbunny") == "Everyone"
+    dictionary = {"rating_name":"Mature", "other":False}
+    assert get_age_rating(dictionary, "Inkbunny") == "Mature 17+"
+    dictionary = {"3":True, "rating_name":"Adult"}
+    assert get_age_rating(dictionary, "Inkbunny") == "X18+"
+    dictionary = {"rating_name":"Who Knows?"}
+    assert get_age_rating(dictionary, "Inkbunny") == "Unknown"
+    dictionary = {"thing":"Other"}
+    assert get_age_rating(dictionary, "Inkbunny") == "Unknown"
+    # Test Newgrounds style ratings
+    dictionary = {"rating":"e", "info":"other"}
+    assert get_age_rating(dictionary, "Newgrounds") == "Everyone"
+    dictionary = {"4":True, "rating":"T"}
+    assert get_age_rating(dictionary, "Newgrounds") == "Teen"
+    dictionary = {"rating":"m", "Final":"Not"}
+    assert get_age_rating(dictionary, "Newgrounds") == "Mature 17+"
+    dictionary = {"rating":"A"}
+    assert get_age_rating(dictionary, "Newgrounds") == "X18+"
+    dictionary = {"rating":"thing"}
+    assert get_age_rating(dictionary, "Newgrounds") == "Unknown"
+    dictionary = {"blah":"thing"}
+    assert get_age_rating(dictionary, "Newgrounds") == "Unknown"
+    # Test pixiv style ratings
+    dictionary = {"rating":"General", "thing":12}
+    assert get_age_rating(dictionary, "pixiv") == "Everyone"
+    dictionary = {"true":False, "rating":"R-18"}
+    assert get_age_rating(dictionary, "pixiv") == "X18+"
+    dictionary = {"rating":"blah"}
+    assert get_age_rating(dictionary, "pixiv") == "Unknown"
+    dictionary = {"blah":"blah"}
+    assert get_age_rating(dictionary, "pixiv") == "Unknown"
+    # Test Weasyl style ratings
+    dictionary = {"rating":"General", "info":"other"}
+    assert get_age_rating(dictionary, "Weasyl") == "Everyone"
+    dictionary = {"rating":"Mature", "Final":"Not"}
+    assert get_age_rating(dictionary, "Weasyl") == "Mature 17+"
+    dictionary = {"rating":"Explicit"}
+    assert get_age_rating(dictionary, "Weasyl") == "X18+"
+    dictionary = {"rating":"thing"}
+    assert get_age_rating(dictionary, "Weasyl") == "Unknown"
+    dictionary = {"blah":"thing"}
+    assert get_age_rating(dictionary, "Weasyl") == "Unknown"
+    # Test with invalid Publisher
+    dictionary = {"rating":"General"}
+    assert get_age_rating(dictionary, "NotRecognized") == "Unknown"
+    dictionary = {"rating":"mature"}
+    assert get_age_rating(dictionary, "Other") == "Unknown"
+    dictionary = {"rating":"mature"}
+    assert get_age_rating(dictionary, None) == "Unknown"
+    # Create JSON to load
+    temp_dir = get_temp_dir()
+    dictionary = {"url":"www.furaffinity.net/thing/", "rating":"Mature"}
+    test_json = abspath(join(temp_dir, "url.json"))
+    create_json_file(test_json, dictionary)
+    assert exists(test_json)
+    # Test getting age rating when read directly from JSON
+    meta = load_metadata(test_json)
+    assert meta["json_path"] == test_json
+    assert meta["publisher"] == "Fur Affinity"
+    assert meta["age_rating"] == "Mature 17+"

@@ -32,6 +32,8 @@ def get_empty_metadata() -> dict:
     meta_dict["publisher"] = None
     meta_dict["tags"] = None
     meta_dict["url"] = None
+    meta_dict["age_rating"] = None
+    meta_dict["score"] = None
     return meta_dict
 
 def get_comic_xml(metadata:dict, indent:bool=True) -> str:
@@ -58,14 +60,16 @@ def get_comic_xml(metadata:dict, indent:bool=True) -> str:
     if metadata["series"] is not None:
         series = SubElement(base, "Series")
         series.text = metadata["series"]
-    # Sets the series number if applicable
-    if metadata["series_number"] is not None:
+    try:
+        # Sets the series number if applicable
+        series_number = str(float(metadata["series_number"]))
         number = SubElement(base, "Number")
-        number.text = str(float(metadata["series_number"]))
-    # Sets the series total if applicable
-    if metadata["series_total"] is not None:
+        number.text = series_number
+        # Sets the series total if applicable
+        total_number = str(int(metadata["series_total"]))
         total = SubElement(base, "Count")
-        total.text = str(metadata["series_total"])
+        total.text = total_number
+    except (TypeError, ValueError): pass
     # Set description if applicable
     if metadata["description"] is not None:
         summary = SubElement(base, "Summary")
@@ -101,14 +105,39 @@ def get_comic_xml(metadata:dict, indent:bool=True) -> str:
     if metadata["publisher"] is not None:
         publisher = SubElement(base, "Publisher")
         publisher.text = metadata["publisher"]
-    # Set tags if applicable
-    if metadata["tags"] is not None:
-        url = SubElement(base, "Tags")
-        url.text = metadata["tags"]
     # Set URL if applicable
     if metadata["url"] is not None:
         url = SubElement(base, "Web")
         url.text = metadata["url"]
+    try:
+        # Set the score
+        score_number = int(metadata["score"])
+        if score_number > -1 and score_number < 6:
+            score = SubElement(base, "CommunityRating")
+            score.text = str(score_number)
+    except (TypeError, ValueError): pass
+    # Set tags if applicable
+    tags = metadata["tags"]
+    try:
+        # Add score as star rating in tags
+        score_number = int(metadata["score"])
+        if score_number > 0 and score_number < 6:
+            stars = "★"
+            while len(stars) < score_number:
+                stars = f"{stars}★"
+            if tags is None or tags == "":
+                tags = stars
+            else:
+                tags = f"{stars},{tags}"
+    except (TypeError, ValueError): pass
+    if tags is not None:
+        tag_element = SubElement(base, "Tags")
+        tag_element.text = tags
+    # Set the age rating
+    age_rating = SubElement(base, "AgeRating")
+    age_rating.text = "Unknown"
+    if metadata["age_rating"] is not None:
+        age_rating.text = metadata["age_rating"]
     # Set indents to make the XML more readable
     if indent:
         xml_indent(base, space="  ")
@@ -143,7 +172,16 @@ def read_comic_info(xml_file:str) -> dict:
     metadata["cover_artist"] = base.findtext("CoverArtist")
     metadata["publisher"] = base.findtext("Publisher")
     metadata["url"] = base.findtext("Web")
-    metadata["tags"] = base.findtext("Tags")
+    metadata["age_rating"] = base.findtext("AgeRating")
+    metadata["score"] = base.findtext("CommunityRating")
+    # Get the tags, removing score tags if necessary
+    try:
+        metadata["tags"] = resub("\\s*,+\\s*", ",", base.findtext("Tags"))
+        metadata["tags"] = resub("^\\s+|\\s+$|★{1,5},|,★{1,5}$", "", metadata["tags"])
+        metadata["tags"] = resub("^★{1,5}$", "", metadata["tags"])
+        if metadata["tags"] == "":
+            metadata["tags"] = None
+    except TypeError: metadata["tags"] = None
     # Get the main artist from XML
     metadata["artist"] = base.findtext("Penciller")
     if metadata["artist"] is None:
@@ -184,27 +222,30 @@ def generate_info_from_jsons(path:str) -> dict:
             sub_files = listdir(file)
             for i in range(0, len(sub_files)):
                 files.append(abspath(join(file, sub_files[i])))
-    # Get the first JSON in a directory
-    json_file = None
-    files = sort_alphanum(files)
+    # Get all the JSONS
+    jsons = []
     for file in files:
         if get_extension(file) == ".json":
-            json_file = file
-            break
-    # Get metadata from JSON
-    metadata = get_empty_metadata()
+            jsons.append(file)
+    jsons = sort_alphanum(jsons)
+    # Get metadata from all JSONs
     try:
-        json_meta = load_metadata(json_file)
-    except TypeError: return metadata
-    metadata["title"] = json_meta["title"]
-    metadata["date"] = json_meta["date"]
-    metadata["writer"] = json_meta["writer"]
-    metadata["artist"] = json_meta["artist"]
-    metadata["cover_artist"] = json_meta["artist"]
-    metadata["publisher"] = json_meta["publisher"]
-    metadata["url"] = json_meta["url"]
+        json_metas = []
+        for json in jsons:
+            json_metas.append(load_metadata(json))
+        main_meta = json_metas[0]
+    except IndexError: return get_empty_metadata()
+    # Get most metadata from first JSON
+    metadata = get_empty_metadata()
+    metadata["title"] = main_meta["title"]
+    metadata["date"] = main_meta["date"]
+    metadata["writer"] = main_meta["writer"]
+    metadata["artist"] = main_meta["artist"]
+    metadata["cover_artist"] = main_meta["artist"]
+    metadata["publisher"] = main_meta["publisher"]
+    metadata["url"] = main_meta["url"]
     # Get description metadata
-    description = json_meta["description"]
+    description = main_meta["description"]
     if description is not None:
         description = replace_entities(description)
         description = resub("<a [^<>]*>|<\\/a[^<>]*>|<b>|<i>|</b>|</i>", "", description)
@@ -213,11 +254,26 @@ def generate_info_from_jsons(path:str) -> dict:
         description = remove_whitespace(description)
     metadata["description"] = description
     # Get tag metadata
-    tags = json_meta["tags"]
+    tags = main_meta["tags"]
     if tags is not None and tags is not []:
         tag_string = tags[0]
         for i in range(1, len(tags)):
             tag_string = f"{tag_string},{tags[i]}"
         metadata["tags"] = tag_string
+    # Get highest age rating in list of JSON metadata
+    highest_age = "Unknown"
+    for json_meta in json_metas:
+        if json_meta["age_rating"] == "X18+":
+            highest_age = "X18+"
+            continue
+        elif json_meta["age_rating"] == "Mature 17+" and not highest_age == "X18+":
+            highest_age = "Mature 17+"
+            continue
+        elif json_meta["age_rating"] == "Teen" and (highest_age == "Everyone" or highest_age == "Unknown"):
+            highest_age = "Teen"
+            continue
+        elif json_meta["age_rating"] == "Everyone" and highest_age == "Unknown":
+            highest_age = "Everyone"
+    metadata["age_rating"] = highest_age
     # Return metadata
     return metadata
