@@ -74,9 +74,9 @@ Options:
 Scripts for creating and managing comic archives in `.cbz` format.
 
 ### archive-comic
-    archive-comic [directory] [OPTIONS]
+    archive-comic [path] [OPTIONS]
 
-Compresses all the files in a given directory into a `.cbz` comic archive. The program will attempt to get metadata from any included `.json` files to use for the `ComicInfo.xml` metadata file, or from an already existing `ComicInfo.xml` file. The program will prompt the user for any metadata that could not be gatherered.
+Either creates a `.cbz` comic archive or updates an existing `.cbz` archive. Path can either lead to a directory, or an existing `.cbz` file. The program will attempt to get metadata from an existing `.cbz`, a standalone `ComicInfo.xml` file, or `.json` metadata files when creating the `ComicInfo.xml` file for the archive. The program will prompt the user for any metadata that could not be gatherered.
 
 If the user wishes to override any existing metadata when creating the archive, they can use the following options:
 

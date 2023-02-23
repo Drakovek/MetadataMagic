@@ -3,10 +3,14 @@
 from metadata_magic.main.comic_archive.comic_archive import create_cbz
 from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
 from metadata_magic.main.comic_archive.comic_archive import get_info_from_cbz
+from metadata_magic.main.comic_archive.comic_archive import get_comic_info_from_path
 from metadata_magic.main.comic_archive.comic_archive import update_cbz_info
+from metadata_magic.main.comic_archive.comic_archive import create_or_update_cbz
 from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
 from metadata_magic.main.comic_archive.comic_xml import get_empty_metadata
-from metadata_magic.test.temp_file_tools import create_text_file, read_text_file
+from metadata_magic.main.comic_archive.comic_xml import read_comic_info
+from metadata_magic.test.temp_file_tools import create_json_file, create_text_file, read_text_file
+from shutil import copy
 from os import listdir, mkdir, pardir, remove
 from os.path import abspath, basename, exists, isdir, join
 from zipfile import ZipFile
@@ -265,3 +269,147 @@ def test_update_cbz_info():
     update_cbz_info(text_file, metadata)
     assert exists(text_file)
     assert read_text_file(text_file) == "This is text!"
+
+def test_get_comic_info_from_path():
+    """
+    Tests the get_comic_info_from_path function.
+    """
+    # Test getting metadata from jsons
+    temp_dir = get_temp_dir()
+    json_file = abspath(join(temp_dir, "file.json"))
+    text_file = abspath(join(temp_dir, "file.txt"))
+    create_json_file(json_file, {"title":"This is a title!", "other":"blah", "tags":["some", "things!"]})
+    create_text_file(text_file, "This is text!!")
+    assert exists(json_file)
+    assert exists(text_file)
+    read_meta = get_comic_info_from_path(temp_dir)
+    assert read_meta["title"] == "This is a title!"
+    assert read_meta["tags"] == "some,things!"
+    # Test getting metadata from existing ComicInfo.xml
+    metadata = get_empty_metadata()
+    metadata["title"] = "XML title?"
+    metadata["cover_artist"] = "Person"
+    xml = get_comic_xml(metadata)
+    xml_file = abspath(join(temp_dir, "ComicInfo.xml"))
+    create_text_file(xml_file, xml)
+    assert exists(xml_file)
+    read_meta = get_comic_info_from_path(temp_dir)
+    assert read_meta["title"] == "XML title?"
+    assert read_meta["cover_artist"] == "Person"
+    assert len(listdir(temp_dir)) == 3
+    # Test falling back to JSONs if existing ComicInfo.xml is empty
+    create_text_file(xml_file, get_comic_xml(get_empty_metadata()))
+    read_meta = get_comic_info_from_path(temp_dir)
+    assert read_meta["title"] == "This is a title!"
+    assert read_meta["tags"] == "some,things!"
+    assert read_meta["cover_artist"] is None
+    assert len(listdir(temp_dir)) == 3
+    # Test getting metadata from cbz in directory with multiple cbz files
+    create_text_file(xml_file, xml)
+    cbz = create_cbz(temp_dir)
+    new_cbz = abspath(join(temp_dir, "aaa.cbz"))
+    copy(cbz, new_cbz)
+    assert exists(cbz)
+    assert exists(new_cbz)
+    metadata["title"] = "New Title"
+    metadata["tags"] = "total,thing"
+    update_cbz_info(new_cbz, metadata)
+    read_meta = get_comic_info_from_path(temp_dir)
+    assert read_meta["title"] == "New Title"
+    assert read_meta["tags"] == "total,thing"
+    read_meta = get_info_from_cbz(cbz)
+    assert read_meta["title"] == "XML title?"
+    assert read_meta["cover_artist"] == "Person"
+    assert read_meta["tags"] is None
+    # Test getting metatada from specific given cbz file
+    read_meta = get_comic_info_from_path(new_cbz)
+    assert read_meta["title"] == "New Title"
+    assert read_meta["tags"] == "total,thing"
+    # Test falling back to ComicInfo.xml if cbz is empty
+    update_cbz_info(new_cbz, get_empty_metadata())
+    read_meta = get_comic_info_from_path(new_cbz)
+    assert read_meta["title"] == "XML title?"
+    assert read_meta["cover_artist"] == "Person"
+    # Test falling back if file given is not cbz
+    read_meta = None
+    assert exists(text_file)
+    read_meta = get_comic_info_from_path(text_file)
+    assert read_meta["title"] == "XML title?"
+    assert read_meta["cover_artist"] == "Person"
+    # Test falling back to JSONs if ComicInfo and cbz are empty
+    update_cbz_info(cbz, get_empty_metadata())
+    update_cbz_info(new_cbz, get_empty_metadata())
+    create_text_file(xml_file, get_comic_xml(get_empty_metadata()))
+    read_meta = get_comic_info_from_path(temp_dir)
+    assert read_meta["title"] == "This is a title!"
+    assert read_meta["tags"] == "some,things!"
+    # Test if given file is non-existant
+    read_meta = get_comic_info_from_path("non/existant/path/")
+    assert read_meta == get_empty_metadata()
+    read_meta = get_comic_info_from_path("non/existant/file.txt")
+    assert read_meta == get_empty_metadata()
+
+def test_create_or_update_cbz():
+    """
+    Tests the create_or_update_cbz function.
+    """
+    # Test creating cbz from files in directory
+    temp_dir = get_temp_dir()
+    text_file = abspath(join(temp_dir, "text.txt"))
+    xml_file = abspath(join(temp_dir, "ComicInfo.xml"))
+    create_text_file(text_file, "this is text!")
+    assert exists(text_file)
+    assert not exists(xml_file)
+    metadata = get_empty_metadata()
+    metadata["title"] = "This is a title!"
+    metadata["tags"] = "These,are,tags!"
+    cbz = create_or_update_cbz(temp_dir, metadata)
+    assert exists(cbz)
+    assert exists(xml_file)
+    read_meta = get_info_from_cbz(cbz)
+    assert read_meta["title"] == "This is a title!"
+    assert read_meta["tags"] == "These,are,tags!"
+    # Test updating cbz in a given directory
+    metadata["title"] = "New title!"
+    metadata["cover_artist"] = "Person"
+    new_cbz = create_or_update_cbz(temp_dir, metadata)
+    assert exists(new_cbz)
+    assert cbz == new_cbz
+    other_meta = read_comic_info(xml_file)
+    assert other_meta["title"] == "New title!"
+    assert other_meta["tags"] == "These,are,tags!"
+    assert other_meta["cover_artist"] == "Person"
+    read_meta = get_info_from_cbz(new_cbz)
+    assert read_meta["title"] == "New title!"
+    assert read_meta["tags"] == "These,are,tags!"
+    assert read_meta["cover_artist"] == "Person"
+    assert len(listdir(temp_dir)) == 3
+    # Test updating cbz from given directory when there are multiple cbz files
+    new_cbz = abspath(join(temp_dir, "aaa.cbz"))
+    assert not exists(new_cbz)
+    copy(cbz, new_cbz)
+    assert exists(new_cbz)
+    metadata["title"] = "Totally New!!!"
+    metadata["score"] = "4"
+    new_cbz = create_or_update_cbz(temp_dir, metadata)
+    new_meta = get_info_from_cbz(new_cbz)
+    assert new_meta["title"] == "Totally New!!!"
+    assert new_meta["score"] == "4"
+    old_meta = get_info_from_cbz(cbz)
+    assert old_meta["title"] == "New title!"
+    assert old_meta["score"] is None
+    # Test updating a given cbz file
+    metadata["title"] = "Other?"
+    metadata["tags"] = "Separate,thing"
+    cbz = create_or_update_cbz(cbz, metadata)
+    new_meta = get_info_from_cbz(cbz)
+    assert new_meta["title"] == "Other?"
+    assert new_meta["score"] == "4"
+    assert new_meta["tags"] == "Separate,thing"
+    old_meta = get_info_from_cbz(new_cbz)
+    assert old_meta["title"] == "Totally New!!!"
+    assert old_meta["score"] == "4"
+    # Test if given cbz file is not actually cbz
+    test = create_or_update_cbz(text_file, metadata)
+    assert len(listdir(temp_dir)) == 4
+    

@@ -230,3 +230,20 @@ def test_sort_rename():
     assert filenames[8] == "Middle 5.zip"
     assert filenames[9] == "Sub"
     assert filenames[10] == "different 5"
+    # Test that ComicInfo.xml is not renamed
+    test_dir = get_temp_dir()
+    xml_file = abspath(join(temp_dir, "ComicInfo.xml"))
+    other_file = abspath(join(temp_dir, "blah.txt"))
+    last_file = abspath(join(temp_dir, "final.png"))
+    create_text_file(xml_file, "Not")
+    create_text_file(other_file, "Actually")
+    create_text_file(last_file, "Important")
+    assert exists(xml_file)
+    assert exists(other_file)
+    assert exists(last_file)
+    sort_rename(temp_dir, "Not Comic [##]")
+    filenames = sorted(listdir(temp_dir))
+    assert len(filenames) == 3
+    assert filenames[0] == "ComicInfo.xml"
+    assert filenames[1] == "Not Comic [01].txt"
+    assert filenames[2] == "Not Comic [02].png"

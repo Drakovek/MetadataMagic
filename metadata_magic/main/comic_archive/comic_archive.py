@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
 from argparse import ArgumentParser
-from os import getcwd, listdir, mkdir, remove
+from os import getcwd, listdir, mkdir, pardir, remove
 from os.path import abspath, basename, exists, isdir, join, relpath
+from html_string_tools.main.html_string_tools import get_extension
 from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
 from metadata_magic.main.comic_archive.comic_xml import generate_info_from_jsons
 from metadata_magic.main.comic_archive.comic_xml import get_empty_metadata
 from metadata_magic.main.comic_archive.comic_xml import read_comic_info
+from metadata_magic.main.rename.sort_rename import sort_alphanum
 from python_print_tools.main.python_print_tools import color_print
 from tempfile import gettempdir
 from tqdm import tqdm
@@ -123,18 +125,105 @@ def update_cbz_info(cbz_file:str, metadata:dict):
         copy(new_cbz, file)
         remove(new_cbz)
 
-def create_comic_archive(directory:str,
+def get_comic_info_from_path(path:str) -> dict:
+    """
+    Attempts to get comic metadata from a given path in either cbz, standalone ComicInfo.xml, or JSON format.
+    In order of preference, metadata is gathered from cbz, ComicInfo.xml, then JSON.
+    
+    :param path: Path for either a directory or cbz file
+    :type path: str, required
+    :return: Comic metadata
+    :rtype: dict
+    """
+    # Get full path
+    full_path = abspath(path)
+    empty = get_empty_metadata()
+    empty["age_rating"] = "Unknown"
+    # Check if cbz file is present
+    cbz_file = None
+    if not isdir(full_path):
+        cbz_file = full_path
+    else:
+        files = listdir(full_path)
+        files = sort_alphanum(files)
+        for file in files:
+            if get_extension(file) == ".cbz":
+                cbz_file = abspath(join(full_path, file))
+                break
+    # Try to get info from cbz file, if available
+    if cbz_file is not None:
+        try:
+            metadata = get_info_from_cbz(cbz_file)
+        except FileNotFoundError: metadata = get_empty_metadata()
+        if not metadata == get_empty_metadata() and not metadata == empty:
+            return metadata
+        else:
+            full_path = abspath(join(cbz_file, pardir))
+    # Get metadata from XML file, if available
+    xml_file = abspath(join(full_path, "ComicInfo.xml"))
+    if exists(xml_file):
+        metadata = read_comic_info(xml_file)
+        if not metadata == get_empty_metadata() and not metadata == empty:
+            return metadata
+    # Get metadata from JSONS
+    try:
+        metadata = generate_info_from_jsons(full_path)
+        return metadata
+    except FileNotFoundError: return get_empty_metadata()
+
+def create_or_update_cbz(path:str, metadata:dict) -> str:
+    """
+    Attempts to either create a cbz archive or update an existing archive.
+    If a cbz file or directory containing cbz file is given, existing cbz is updated with giben metadata.
+    If a directory not containing cbz file is given, contents of the directory are archived as cbz.
+    
+    :param path: Path to either a directory or cbz file
+    :type path: str, required
+    :param metadata: Metadata to use when creating ComicInfo.xml
+    :type metadata: dict, required
+    :return: Path of the created or updated cbz file
+    :rtype: str
+    """
+    # Check if path is a directory
+    cbz_file = None
+    full_path = abspath(path)
+    if isdir(full_path):
+        # Create ComicInfo.xml from metadata
+        xml = get_comic_xml(metadata)
+        with open(abspath(join(full_path, "ComicInfo.xml")), "w") as out_file:
+            out_file.write(xml)
+        # See if cbz file already exists
+        files = listdir(full_path)
+        files = sort_alphanum(files)
+        for file in files:
+            if get_extension(file) == ".cbz":
+                cbz_file = abspath(join(full_path, file))
+                break
+        if cbz_file is None:
+            # Create cbz archive
+            print("Creating archive:")
+            cbz_file = create_cbz(full_path)
+            return cbz_file
+    # Update cbz file if applicable
+    if cbz_file is None:
+        cbz_file = full_path
+    update_cbz_info(cbz_file, metadata)
+    return cbz_file
+    
+def create_comic_archive(path:str,
                 rp_description:bool=False,
                 rp_date:bool=False,
                 rp_artists:bool=False,
                 rp_publisher:bool=False,
                 rp_url:bool=False,
-                rp_tags:bool=False):
+                rp_tags:bool=False,
+                rp_age:bool=False,
+                rp_score:bool=False):
     """
     Creates a comic archive using the files in a directory and metadata from the user.
     
-    :param directory: Directory with files to archive 
-    :type directory: str, required
+    :param path: Directory with files to archive, or existing .cbz file
+    :type path: str, required
     :param rp_description: Whether to replace the description from gathered metadata, defaults to False
     :type rp_description: bool, optional
     :param rp_date: Whether to replace the date from gathered metadata, defaults to False
@@ -147,14 +236,14 @@ def create_comic_archive(directory:str,
     :type rp_url: bool, optional
     :param rp_tags: Whether to replace the tags from gathered metadata, defaults to False
     :type rp_tags: bool, optional
+    :param rp_age: Whether to replace the age rating from gathered metadata, defaults to False
+    :type rp_age: bool, optional
+    :param rp_score: Whether to replace the score from gathered metadata, defaults to False
+    :type rp_score: bool, optional
     """
     # Get default metadata
-    full_directory = abspath(directory)
-    metadata = generate_info_from_jsons(full_directory)
-    # Get existing ComicInfo.xml info, if applicable
-    xml_file = abspath(join(full_directory, "ComicInfo.xml"))
-    if exists(xml_file):
-        metadata = read_comic_info(xml_file)
+    full_path = abspath(path)
+    metadata = get_comic_info_from_path(full_path)
     # Remove metadata fields the user wishes to replace
     if rp_description:
         metadata["description"] = None
@@ -170,6 +259,8 @@ def create_comic_archive(directory:str,
         metadata["url"] = None
     if rp_tags:
         metadata["tags"] = None
+    if rp_age:
+        metadata["age_rating"] = None
     # Get the title
     title = metadata["title"]
     if title is None:
@@ -225,13 +316,27 @@ def create_comic_archive(directory:str,
         url = str(input("Tags: "))
         if not url == "":
             metadata["tags"] = resub("\\s*,\\s*", ",", url)
-    # Write metadata to ComicInfo XML
-    xml = get_comic_xml(metadata)
-    with open(xml_file, "w") as out_file:
-        out_file.write(xml)
-    # Archive files
-    print("Creating archive:")
-    create_cbz(full_directory)
+    # Get age rating
+    while metadata["age_rating"] is None:
+        print("0) Unknown\n1) Everyone\n2) Teen\n3) Mature 17+\n4) X18+")
+        age = str(input("Age Rating: "))
+        if age == "0":
+            metadata["age_rating"] = "Unknown"
+        if age == "1":
+            metadata["age_rating"] = "Everyone"
+        if age == "2":
+            metadata["age_rating"] = "Teen"
+        if age == "3":
+            metadata["age_rating"] = "Mature 17+"
+        if age == "4":
+            metadata["age_rating"] = "X18+"
+    # Get score
+    if rp_score:
+        score = str(input("Score (Range 0-5): "))
+        if not score == "":
+            metadata["score"] = score
+    # Create/Update .cbz
+    create_or_update_cbz(full_path, metadata)
 
 def main():
     """
@@ -240,8 +345,8 @@ def main():
     # Set up argument parser
     parser = ArgumentParser()
     parser.add_argument(
-            "directory",
-            help="Directory containing files to archive.",
+            "path",
+            help="Path to directory or existing .cbz file.",
             nargs="?",
             type=str,
             default=str(getcwd()))
@@ -275,20 +380,32 @@ def main():
             "--tags",
             help="Use user tags instead of tags in metadata.",
             action="store_true")
+    parser.add_argument(
+            "-r",
+            "--rating",
+            help="Use user age rating instead of rating in metadata.",
+            action="store_true")
+    parser.add_argument(
+            "-g",
+            "--grade",
+            help="Use user grade/score instead of score in metadata.",
+            action="store_true")
     args = parser.parse_args()
     # Check that directory is valid
-    directory = abspath(args.directory)
-    if not exists(directory):
-        color_print("Invalid directory.", "red")
+    path = abspath(args.path)
+    if not exists(path):
+        color_print("Invalid path.", "red")
     else:
         # Create the comic archive
-        create_comic_archive(directory,
+        create_comic_archive(path,
                 rp_description=args.summary,
                 rp_date=args.date,
                 rp_artists=args.artists,
                 rp_publisher=args.publisher,
                 rp_url=args.url,
-                rp_tags=args.tags)
+                rp_tags=args.tags,
+                rp_age=args.rating,
+                rp_score=args.grade)
             
 if __name__ == "__main__":
     main()

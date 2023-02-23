@@ -146,7 +146,7 @@ def sort_rename(path:str, name:str, start_index:int=1):
         filenames[index] = None
     # Add remaining non-paired items to sorted list
     for i in range(0, len(filenames)):
-        if filenames[i] is not None and not isdir(abspath(join(base, filenames[i]))):
+        if filenames[i] is not None and not filenames[i] == "ComicInfo.xml" and not isdir(abspath(join(base, filenames[i]))):
             file = abspath(join(base, filenames[i]))
             pair = {"json":None, "media":file}
             sort_pairs[i] = pair
