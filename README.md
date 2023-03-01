@@ -86,6 +86,8 @@ If the user wishes to override any existing metadata when creating the archive, 
     -p, --publisher     Override the publisher
     -u, --url           Override the URL
     -t, --tags          Override the tags
+    -r, --rating        Override the age rating
+    -g, --grade         Override the score/grade
 
 ### archive-series
     archive-series [directory] [-s, --single]
@@ -93,3 +95,22 @@ If the user wishes to override any existing metadata when creating the archive, 
 Updates existing `.cbz` comic archives in a given directory to include series info. The program prompts the user for the series title and the series number of each archive when run.
 
 If the `-s, --single` option is included, all comic archives in the given directory will be set as being book 1 of 1 in a series. This option is intended for indicating that a collection of comic archives are all considered single comics or one-shots.
+
+## EPUB
+
+Scripts for creating and managing ebooks in the `.epub` format.
+
+### archive-book
+    archive-book [path] [OPTIONS]
+
+Creates a `.epub` ebook based on the text files in a given directory. The program will attempt to get metadata from `.json` metadata files. The program will prompt the user for any metadata that could not be gathered.
+
+If the user wishes to override any existing metadata when creating the ebook, they can use the following options:
+
+    -s, --summary       Override the summary
+    -d, --date          Override the date
+    -a, --artists       Override the artists/writers
+    -p, --publisher     Override the publisher
+    -u, --url           Override the URL
+    -t, --tags          Override the tags
+    -g, --grade         Override the score/grade

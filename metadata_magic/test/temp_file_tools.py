@@ -2,6 +2,7 @@
 
 from json import dump as dump_json
 from os.path import abspath, exists, join
+from traceback import print_exc
 
 def create_text_file(file:str, text:str):
     """
@@ -46,4 +47,7 @@ def read_text_file(file:str) -> str:
         with open (file) as in_file:
             content = in_file.read()
         return content
-    except FileNotFoundError: return ""
+    except (FileNotFoundError, UnicodeDecodeError):
+        print_exc()
+        print(f"Error Reading: {file}")
+        return ""
