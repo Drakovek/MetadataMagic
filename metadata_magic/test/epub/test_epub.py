@@ -4,14 +4,13 @@ from os import mkdir, listdir
 from os.path import abspath, basename, exists, isdir, join
 from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
 from metadata_magic.main.comic_archive.comic_xml import get_empty_metadata
+from metadata_magic.main.epub.epub import get_chapters
+from metadata_magic.main.epub.epub import get_items
+from metadata_magic.main.epub.epub import get_style
+from metadata_magic.main.epub.epub import get_title_from_file
 from metadata_magic.main.epub.epub import create_epub
-from metadata_magic.main.epub.epub import create_epub_files
 from metadata_magic.main.epub.epub import create_image_page
-from metadata_magic.main.epub.epub import create_nav_file
-from metadata_magic.main.epub.epub import create_manifest
-from metadata_magic.main.epub.epub import create_metadata_xml
-from metadata_magic.main.epub.epub import create_style_file
-from metadata_magic.main.epub.epub import format_xhtml
+from metadata_magic.main.epub.epub import create_metadata
 from metadata_magic.main.epub.epub import newline_to_tag
 from metadata_magic.main.epub.epub import txt_to_xhtml
 from metadata_magic.main.rename.sort_rename import sort_alphanum
@@ -27,47 +26,19 @@ def test_newline_to_tag():
     assert newline_to_tag("\n\n\n\n\n") == "{{{br}}}{{{br}}}{{{br}}}{{{br}}}{{{br}}}"
     assert newline_to_tag("\n\n") == "{{{br}}}{{{br}}}"
 
-def test_format_xhtml():
+def test_get_title_from_file():
     """
-    Tests the format_xhtml function.
+    Tests the get_title_from_file function.
     """
-    # Test single tag
-    start = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
-    head = "<head><title>Title!</title><meta charset=\"UTF-8\" />"
-    head = f"{head}<link rel=\"stylesheet\" href=\"style.css\" /></head>"
-    html = "<p>This is a simple test &amp; stuff</p>"
-    xhtml = format_xhtml(html, "Title!", False)
-    assert xhtml == f"{start}{head}<body><p>This is a simple test &amp; stuff</p></body></html>"
-    # Test with multiple tags
-    html = "<p>Multiple</p><p>Paragraphs!!!</p>"
-    xhtml = format_xhtml(html, "Title!", False)
-    assert xhtml == f"{start}{head}<body><p>Multiple</p><p>Paragraphs!!!</p></body></html>"
-    # Test with no tags
-    head = "<head><title>Title thing.</title><meta charset=\"UTF-8\" />"
-    head = f"{head}<link rel=\"stylesheet\" href=\"style.css\" /></head>"
-    html = "This is a thing.<br/><br/>Final thing."
-    xhtml = format_xhtml(html, "Title thing.", False)
-    assert xhtml == f"{start}{head}<body>This is a thing.<br /><br />Final thing.</body></html>"
-    # Test with spaces and newlines
-    html = "  <p>  This is a thing!  </p>\n  <div> Another </div> "
-    xhtml = format_xhtml(html, "Title thing.", False)
-    assert xhtml == f"{start}{head}<body><p>  This is a thing!  </p>  <div> Another </div></body></html>"
-    # Test adding indent
-    html = "<p>These</p><p>Are</p><p>Paragraphs!</p>"
-    xhtml = format_xhtml(html, "New", True)
-    xml = f"{start}\n"
-    xml = f"{xml}   <head>\n"
-    xml = f"{xml}      <title>New</title>\n"
-    xml = f"{xml}      <meta charset=\"UTF-8\" />\n"
-    xml = f"{xml}      <link rel=\"stylesheet\" href=\"style.css\" />\n"
-    xml = f"{xml}   </head>\n"
-    xml = f"{xml}   <body>\n"
-    xml = f"{xml}      <p>These</p>\n"
-    xml = f"{xml}      <p>Are</p>\n"
-    xml = f"{xml}      <p>Paragraphs!</p>\n"
-    xml = f"{xml}   </body>\n"
-    xml = f"{xml}</html>"
-    assert xml == xhtml
+    temp_file = get_temp_dir()
+    filename = abspath(join(temp_file, "thing.txt"))
+    assert get_title_from_file(filename) == "thing"
+    filename = abspath(join(temp_file, "[00] Image  .png"))
+    assert get_title_from_file(filename) == "Image"
+    filename = abspath(join(temp_file, "[This is a thing] Cover"))
+    assert get_title_from_file(filename) == "Cover"
+    filename = abspath(join(temp_file, "none"))
+    assert get_title_from_file(filename) == "none"
 
 def test_create_image_page():
     """
@@ -75,30 +46,10 @@ def test_create_image_page():
     """
     # Test with no indents
     temp_dir = get_temp_dir()
-    image_file = abspath(join(temp_dir, "Cover.jpg"))
-    xml = create_image_page(image_file, False)
-    compare = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-    compare = f"{compare}<html xmlns=\"http://www.w3.org/1999/xhtml\">"
-    compare = f"{compare}<head><title>Cover</title><meta charset=\"UTF-8\" />"
-    compare = f"{compare}<link rel=\"stylesheet\" href=\"style.css\" />"
-    compare = f"{compare}</head><body>"
-    compare = f"{compare}<img class=\"image-page\" src=\"Cover.jpg\" alt=\"Full Page Image\" />"
-    compare = f"{compare}</body></html>"
-    assert xml == compare
-    # Test with indents
-    image_file = abspath(join(temp_dir, "New.png"))
-    xml = create_image_page(image_file, True)
-    compare = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-    compare = f"{compare}<html xmlns=\"http://www.w3.org/1999/xhtml\">\n"
-    compare = f"{compare}   <head>\n"
-    compare = f"{compare}      <title>New</title>\n"
-    compare = f"{compare}      <meta charset=\"UTF-8\" />\n"
-    compare = f"{compare}      <link rel=\"stylesheet\" href=\"style.css\" />\n"
-    compare = f"{compare}   </head>\n"
-    compare = f"{compare}   <body>\n"
-    compare = f"{compare}      <img class=\"image-page\" src=\"New.png\" alt=\"Full Page Image\" />\n"
-    compare = f"{compare}   </body>\n"
-    compare = f"{compare}</html>"
+    image_file = abspath(join(temp_dir, "[00] Cover.jpg"))
+    xml = create_image_page(image_file)
+    compare = "<body><img class=\"image-page\" "
+    compare = f"{compare}src=\"../images/[00] Cover.jpg\" alt=\"Cover\" /></body>"
     assert xml == compare
 
 def test_txt_to_xhtml():
@@ -106,386 +57,331 @@ def test_txt_to_xhtml():
     Tests the txt_to_xhtml function.
     """
     # Test a single paragraph
-    start = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
-    head = "<head><title>Text</title><meta charset=\"UTF-8\" />"
-    head = f"{head}<link rel=\"stylesheet\" href=\"style.css\" /></head>"
     temp_dir = get_temp_dir()
     text_file = abspath(join(temp_dir, "Text.txt"))
     text = "This is a simple sentence!"
     create_text_file(text_file, text)
     assert exists(text_file)
-    xhtml = txt_to_xhtml(text_file, False)
-    assert xhtml == f"{start}{head}<body><p>This is a simple sentence!</p></body></html>"
+    xhtml = txt_to_xhtml(text_file)
+    assert xhtml == "<body><p>This is a simple sentence!</p></body>"
     # Test multiple paragraphs
     text = "Different paragraphs!\n\nHow cool!"
     create_text_file(text_file, text)
-    xhtml = txt_to_xhtml(text_file, False)
-    assert xhtml == f"{start}{head}<body><p>Different paragraphs!</p><p>How cool!</p></body></html>"
+    xhtml = txt_to_xhtml(text_file)
+    assert xhtml == "<body><p>Different paragraphs!</p><p>How cool!</p></body>"
     # Test single new line character
     text = "More text!\nAnd This & That..."
     create_text_file(text_file, text)
-    xhtml = txt_to_xhtml(text_file, False)
-    assert xhtml == f"{start}{head}<body><p>More text!<br />And This &amp; That...</p></body></html>"
+    xhtml = txt_to_xhtml(text_file)
+    assert xhtml == "<body><p>More text!<br/>And This &amp; That...</p></body>"
     # Test new lines and separate paragraphs
     text = "Paragraph\n\nOther\nText!\n\nFinal\nParagraph..."
     create_text_file(text_file, text)
-    xhtml = txt_to_xhtml(text_file, False)
-    assert xhtml == f"{start}{head}<body><p>Paragraph</p><p>Other<br />Text!</p><p>Final<br />Paragraph...</p></body></html>"
+    xhtml = txt_to_xhtml(text_file)
+    assert xhtml == "<body><p>Paragraph</p><p>Other<br/>Text!</p><p>Final<br/>Paragraph...</p></body>"
     # Test with more than one two new lines
     text = "Thing\n\n\nOther"
     create_text_file(text_file, text)
-    xhtml = txt_to_xhtml(text_file, False)
-    assert xhtml == f"{start}{head}<body><p>Thing<br /><br /><br />Other</p></body></html>"
+    xhtml = txt_to_xhtml(text_file)
+    assert xhtml == "<body><p>Thing<br/><br/><br/>Other</p></body>"
     text = "Thing\n\n\nOther\n\nParagraph\n\n\n\nNext"
     create_text_file(text_file, text)
-    xhtml = txt_to_xhtml(text_file, False)
-    assert xhtml == f"{start}{head}<body><p>Thing<br /><br /><br />Other</p><p>Paragraph<br /><br /><br /><br />Next</p></body></html>"
-    # Test adding indents
-    new_file = abspath(join(temp_dir, "Different Title!.txt"))
-    text = "Final\n\nText\nThing!"
-    create_text_file(new_file, text)
-    xhtml = txt_to_xhtml(new_file, True)
-    xml = f"{start}\n"
-    xml = f"{xml}   <head>\n"
-    xml = f"{xml}      <title>Different Title!</title>\n"
-    xml = f"{xml}      <meta charset=\"UTF-8\" />\n"
-    xml = f"{xml}      <link rel=\"stylesheet\" href=\"style.css\" />\n"
-    xml = f"{xml}   </head>\n"
-    xml = f"{xml}   <body>\n"
-    xml = f"{xml}      <p>Final</p>\n"
-    xml = f"{xml}      <p>Text<br />Thing!</p>\n"
-    xml = f"{xml}   </body>\n"
-    xml = f"{xml}</html>"
-    assert xhtml == xml
+    xhtml = txt_to_xhtml(text_file)
+    assert xhtml == "<body><p>Thing<br/><br/><br/>Other</p><p>Paragraph<br/><br/><br/><br/>Next</p></body>"
 
-def test_create_style_file():
+def test_get_style():
     """
     Tests the create_style_file function()
     """
-    temp_dir = get_temp_dir()
-    css_file = abspath(join(temp_dir, "style.css"))
-    assert not exists(css_file)
-    create_style_file(css_file)
-    assert exists(css_file)
-    # Test contents of the css file
-    content = read_text_file(css_file)
-    style = "body {margin: 0px 0px 0px 0px;}"
-    style = style + "\n\n.image-page {\n"
-    style = style + "   display: block;\n"
-    style = style + "   width: 100%;\n"
-    style = style + "   height: auto;\n"
-    style = style + "   max-height: 500px;\n"
-    style = style + "   max-width: 500px;"
-    style = style + "   margin: 0;\n"
-    style = style + "   position: absolute;\n"
-    style = style + "   top: 50%;\n"
-    style = style + "   left: 50%;\n"
-    style = style + "   transform: translate(-50%, -50%);\n}"
-    assert content == style
+    style = get_style()
+    compare = "body {margin: 14px 14px 14px 14px;"
+    compare = f"{compare}font-family: Georgia, serif;font-size:14px;}} "
+    compare = f"{compare}.image-page {{"
+    compare = f"{compare}display: block;"
+    compare = f"{compare}width: 100%;"
+    compare = f"{compare}height: auto;"
+    compare = f"{compare}margin-left: auto;"
+    compare = f"{compare}margin-right: auto;"
+    compare = f"{compare}margin-top: auto;"
+    compare = f"{compare}margin-bottom: auto;}}"
+    assert style == compare
 
-def test_create_nav_file():
-    # Test creating nav file
-    xhtmls = []
-    temp_dir = get_temp_dir()
-    xhtmls.append(abspath(join(temp_dir, "Cover.xhtml")))
-    xhtmls.append(abspath(join(temp_dir, "Chapter 1.xhtml")))
-    xhtmls.append(abspath(join(temp_dir, "Chapter 2.xhtml")))
-    xhtmls.append(abspath(join(temp_dir, "Epilogues.xhtml")))
-    nav_file = abspath(join(temp_dir, "nav.xhtml"))
-    assert not exists(nav_file)
-    create_nav_file(xhtmls, nav_file, False)
-    assert exists(nav_file)
-    content = read_text_file(nav_file)
-    compare = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-    compare = f"{compare}<html xmlns=\"http://www.w3.org/1999/xhtml\" xmlns:epub=\"http://www.idpf.org/2007/ops\" lang=\"en\" xml:lang=\"en\">"
-    compare = f"{compare}<head><meta charset=\"UTF-8\" /><title>Table of Contents</title></head>"
-    compare = f"{compare}<body><h1>Table of Contents</h1><nav epub:type=\"toc\" id=\"toc\">"
-    compare = f"{compare}<ol><li><a href=\"content/Cover.xhtml\">Cover</a></li>"
-    compare = f"{compare}<li><a href=\"content/Chapter 1.xhtml\">Chapter 1</a></li>"
-    compare = f"{compare}<li><a href=\"content/Chapter 2.xhtml\">Chapter 2</a></li>"
-    compare = f"{compare}<li><a href=\"content/Epilogues.xhtml\">Epilogues</a></li>"
-    compare = f"{compare}</ol></nav></body></html>"
-    assert content == compare
-    # Test creating nav file with indents
-    xhtmls = [abspath(join(temp_dir, "Cover.xhtml"))]
-    create_nav_file(xhtmls, nav_file, True)
-    content = read_text_file(nav_file)
-    compare = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-    compare = f"{compare}<html xmlns=\"http://www.w3.org/1999/xhtml\" xmlns:epub=\"http://www.idpf.org/2007/ops\" lang=\"en\" xml:lang=\"en\">\n"
-    compare = f"{compare}   <head>\n"
-    compare = f"{compare}      <meta charset=\"UTF-8\" />\n"
-    compare = f"{compare}      <title>Table of Contents</title>\n"
-    compare = f"{compare}   </head>\n"
-    compare = f"{compare}   <body>\n"
-    compare = f"{compare}      <h1>Table of Contents</h1>\n"
-    compare = f"{compare}      <nav epub:type=\"toc\" id=\"toc\">\n"
-    compare = f"{compare}         <ol>\n"
-    compare = f"{compare}            <li>\n"
-    compare = f"{compare}               <a href=\"content/Cover.xhtml\">Cover</a>\n"
-    compare = f"{compare}            </li>\n"
-    compare = f"{compare}         </ol>\n"
-    compare = f"{compare}      </nav>\n"
-    compare = f"{compare}   </body>\n"
-    compare = f"{compare}</html>"
-    assert content == compare
-
-def test_create_manifest():
-    """
-    Tests the create_manifest function.
-    """
-    files = []
-    temp_dir = get_temp_dir()
-    files.append(abspath(join(temp_dir, "Cover.xhtml")))
-    files.append(abspath(join(temp_dir, "Picture.png")))
-    files.append(abspath(join(temp_dir, "Jpeg!.jpg")))
-    files.append(abspath(join(temp_dir, "Thing.svg")))
-    manifest = create_manifest(files)
-    compare = "<manifest>"
-    compare = f"{compare}<item href=\"nav.xhtml\" id=\"toc\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
-    compare = f"{compare}<item href=\"content/Cover.xhtml\" id=\"Cover\" media-type=\"application/xhtml+xml\" />"
-    compare = f"{compare}<item href=\"content/Picture.png\" id=\"Picture\" media-type=\"image/png\" />"
-    compare = f"{compare}<item href=\"content/Jpeg!.jpg\" id=\"Jpeg!\" media-type=\"image/jpeg\" />"
-    compare = f"{compare}<item href=\"content/Thing.svg\" id=\"Thing\" media-type=\"image/svg+xml\" /></manifest>"
-    assert manifest == compare
-
-def test_create_metadata_xml():
+def test_create_metadata():
     """
     Tests the create_metadata_xml function.
     """
-    # Test setting title in the XML file
-    start = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\"><dc:language>en</dc:language>"
-    end = "<meta property=\"dcterms:modified\">0000-00-00T00:00:00+00:00</meta>"
-    end = f"{end}<dc:date>0000-00-00T00:00:00+00:00</dc:date></metadata>"
+    # Test setting title for the book
     meta = get_empty_metadata()
     meta["title"] = "This's a title\\'"
-    xml = create_metadata_xml(meta)
-    compare = f"{start}<dc:identifier>this's a title\\'</dc:identifier>"
-    compare = f"{compare}<dc:title>This's a title\\'</dc:title>{end}"
-    assert xml == compare
+    book = create_metadata(meta)
+    title = book.get_metadata("DC", "title")
+    assert title == [("This's a title\\'", None)]
+    identifier = book.get_metadata("DC", "identifier")
+    assert identifier == [("this's a title\\'", {"id":"id"})]
     # Test setting identifier in the XML file
-    base_meta = get_empty_metadata()
-    base_meta["url"] = "this/is/a/test"
-    base_meta["title"] = "Title."
-    start = f"{start}<dc:identifier>this/is/a/test</dc:identifier>"
-    start = f"{start}<dc:title>Title.</dc:title>"
-    xml = create_metadata_xml(base_meta)
-    assert xml == f"{start}{end}"
+    meta = get_empty_metadata()
+    meta["url"] = "this/is/a/test"
+    meta["title"] = "Title."
+    book = create_metadata(meta)
+    title = book.get_metadata("DC", "title")
+    assert title == [("Title.", None)]
+    identifier = book.get_metadata("DC", "identifier")
+    assert identifier == [("this/is/a/test", {"id":"id"})]
+    # Test that language is set
+    language = book.get_metadata("DC", "language")
+    assert language == [("en", None)]
     # Test setting description in the XML file
-    meta = base_meta
     meta["description"] = "Description of the thing."
-    xml = create_metadata_xml(meta)
-    assert xml == f"{start}<dc:description>Description of the thing.</dc:description>{end}"
+    book = create_metadata(meta)
+    description = book.get_metadata("DC", "description")
+    assert description == [("Description of the thing.", None)]
     meta["description"] = "'Tis this & That's >.<"
-    xml = create_metadata_xml(meta)
-    assert xml == f"{start}<dc:description>'Tis this &amp; That's &gt;.&lt;</dc:description>{end}"
+    book = create_metadata(meta)
+    description = book.get_metadata("DC", "description")
+    assert description == [("'Tis this & That's >.<", None)]
     # Test setting writer() in XML file
     meta["description"] = None
     meta["writer"] = "Person!"
-    xml = create_metadata_xml(meta)
-    compare = f"{start}<dc:creator id=\"author1\">Person!</dc:creator>"
-    compare = f"{compare}<meta refines=\"#author1\" property=\"role\" scheme=\"marc:relators\">aut</meta>"
-    assert xml == f"{compare}{end}"
+    book = create_metadata(meta)
+    writers = book.get_metadata("DC", "creator")
+    refines = book.get_metadata(None, "meta")
+    assert writers == [("Person!", {"id":"author0"})]
+    assert refines == [("aut", {"refines":"#author0", "property":"role", "scheme":"marc:relators"})]
     meta["writer"] = "More,People"
-    xml = create_metadata_xml(meta)
-    compare = f"{start}<dc:creator id=\"author1\">More</dc:creator>"
-    compare = f"{compare}<meta refines=\"#author1\" property=\"role\" scheme=\"marc:relators\">aut</meta>"
-    compare = f"{compare}<dc:creator id=\"author2\">People</dc:creator>"
-    compare = f"{compare}<meta refines=\"#author2\" property=\"role\" scheme=\"marc:relators\">aut</meta>"
-    assert xml == f"{compare}{end}"
+    book = create_metadata(meta)
+    writers = book.get_metadata("DC", "creator")
+    refines = book.get_metadata(None, "meta")
+    assert len(writers) == 2
+    assert writers[0] == ("More", {"id":"author0"})
+    assert writers[1] == ("People", {"id":"author1"})
+    assert len(refines) == 2
+    assert refines[0] == ("aut", {"refines":"#author0", "property":"role", "scheme":"marc:relators"})
+    assert refines[1] == ("aut", {"refines":"#author1", "property":"role", "scheme":"marc:relators"})
     # Test setting cover artist in XML file
     meta["writer"] = None
     meta["cover_artist"] = "Guest"
-    xml = create_metadata_xml(meta)
-    compare = f"{start}<dc:creator id=\"covartist1\">Guest</dc:creator>"
-    compare = f"{compare}<meta refines=\"#covartist1\" property=\"role\" scheme=\"marc:relators\">cov</meta>"
-    assert xml == f"{compare}{end}"
+    book = create_metadata(meta)
+    writers = book.get_metadata("DC", "creator")
+    refines = book.get_metadata(None, "meta")
+    assert writers == [("Guest", {"id":"covartist0"})]
+    assert refines == [("cov", {"refines":"#covartist0", "property":"role", "scheme":"marc:relators"})]
     meta["cover_artist"] = "Other,Folks"
-    xml = create_metadata_xml(meta)
-    compare = f"{start}<dc:creator id=\"covartist1\">Other</dc:creator>"
-    compare = f"{compare}<meta refines=\"#covartist1\" property=\"role\" scheme=\"marc:relators\">cov</meta>"
-    compare = f"{compare}<dc:creator id=\"covartist2\">Folks</dc:creator>"
-    compare = f"{compare}<meta refines=\"#covartist2\" property=\"role\" scheme=\"marc:relators\">cov</meta>"
-    assert xml == f"{compare}{end}"
+    book = create_metadata(meta)
+    writers = book.get_metadata("DC", "creator")
+    refines = book.get_metadata(None, "meta")
+    assert len(writers) == 2
+    assert writers[0] == ("Other", {"id":"covartist0"})
+    assert writers[1] == ("Folks", {"id":"covartist1"})
+    assert len(refines) == 2
+    assert refines[0] == ("cov", {"refines":"#covartist0", "property":"role", "scheme":"marc:relators"})
+    assert refines[1] == ("cov", {"refines":"#covartist1", "property":"role", "scheme":"marc:relators"})
     # Test setting illustrator in XML file
     meta["cover_artist"] = None
     meta["artist"] = "Bleh"
-    xml = create_metadata_xml(meta)
-    compare = f"{start}<dc:creator id=\"illustrator1\">Bleh</dc:creator>"
-    compare = f"{compare}<meta refines=\"#illustrator1\" property=\"role\" scheme=\"marc:relators\">ill</meta>"
-    assert xml == f"{compare}{end}"
+    book = create_metadata(meta)
+    writers = book.get_metadata("DC", "creator")
+    refines = book.get_metadata(None, "meta")
+    assert writers == [("Bleh", {"id":"illustrator0"})]
+    assert refines == [("ill", {"refines":"#illustrator0", "property":"role", "scheme":"marc:relators"})]
     meta["artist"] = "Other,Artist"
-    xml = create_metadata_xml(meta)
-    compare = f"{start}<dc:creator id=\"illustrator1\">Other</dc:creator>"
-    compare = f"{compare}<meta refines=\"#illustrator1\" property=\"role\" scheme=\"marc:relators\">ill</meta>"
-    compare = f"{compare}<dc:creator id=\"illustrator2\">Artist</dc:creator>"
-    compare = f"{compare}<meta refines=\"#illustrator2\" property=\"role\" scheme=\"marc:relators\">ill</meta>"
-    assert xml == f"{compare}{end}"
+    book = create_metadata(meta)
+    writers = book.get_metadata("DC", "creator")
+    refines = book.get_metadata(None, "meta")
+    assert len(writers) == 2
+    assert writers[0] == ("Other", {"id":"illustrator0"})
+    assert writers[1] == ("Artist", {"id":"illustrator1"})
+    assert len(refines) == 2
+    assert refines[0] == ("ill", {"refines":"#illustrator0", "property":"role", "scheme":"marc:relators"})
+    assert refines[1] == ("ill", {"refines":"#illustrator1", "property":"role", "scheme":"marc:relators"})
     # Test setting publisher in XML file
     meta["artist"] = None
     meta["publisher"] = "Company"
-    xml = create_metadata_xml(meta)
-    compare = f"{start}<dc:publisher>Company</dc:publisher>{end}"
-    assert xml == compare
+    book = create_metadata(meta)
+    publisher = book.get_metadata("DC", "publisher")
+    assert publisher == [("Company", None)]
     # Test setting date in the XML file
     meta["publisher"] = None
     meta["date"] = "2023-01-15"
-    xml = create_metadata_xml(meta)
-    end = "<meta property=\"dcterms:modified\">2023-01-15T00:00:00+00:00</meta>"
-    end = f"{end}<dc:date>2023-01-15T00:00:00+00:00</dc:date></metadata>"
-    assert xml == f"{start}{end}"
+    book = create_metadata(meta)
+    date = book.get_metadata("DC", "date")
+    assert date == [("2023-01-15T00:00:00+00:00", None)]
     meta["date"] = "2014-12-08"
-    xml = create_metadata_xml(meta)
-    end = "<meta property=\"dcterms:modified\">2014-12-08T00:00:00+00:00</meta>"
-    end = f"{end}<dc:date>2014-12-08T00:00:00+00:00</dc:date></metadata>"
-    assert xml == f"{start}{end}"
+    book = create_metadata(meta)
+    date = book.get_metadata("DC", "date")
+    assert date == [("2014-12-08T00:00:00+00:00", None)]
     # Test setting series info in the XML file
     meta["series"] = "Name!!"
     meta["series_number"] = "2.5"
     meta["series_total"] = "5"
-    xml = create_metadata_xml(meta)
-    compare = f"{start}<meta property=\"belongs-to-collection\" id=\"series-title\">Name!!</meta>"
-    compare = f"{compare}<meta refines=\"series-title\" property=\"collection-type\">series</meta>"
-    compare = f"{compare}<meta refines=\"series-title\" property=\"group-position\">2.5</meta>{end}"
-    assert xml == compare
+    book = create_metadata(meta)
+    series = book.get_metadata(None, "meta")
+    assert len(series) == 3
+    assert series[0] == ("Name!!", {"id":"series-title", "property":"belongs-to-collection"})
+    assert series[1] == ("series", {"refines":"#series-title", "property":"collection-type"})
+    assert series[2] == ("2.5", {"refines":"#series-title", "property":"group-position"})
     # Test setting invalid series number
+    meta["series"] = "New Series"
     meta["series_number"] = "NotNumber"
-    xml = create_metadata_xml(meta)
-    compare = f"{start}<meta property=\"belongs-to-collection\" id=\"series-title\">Name!!</meta>"
-    compare = f"{compare}<meta refines=\"series-title\" property=\"collection-type\">series</meta>{end}"
-    assert xml == compare
+    book = create_metadata(meta)
+    series = book.get_metadata(None, "meta")
+    assert len(series) == 2
+    assert series[0] == ("New Series", {"id":"series-title", "property":"belongs-to-collection"})
+    assert series[1] == ("series", {"refines":"#series-title", "property":"collection-type"})
     # Test setting tags in XML file
     meta["series"] = None
     meta["series_number"] = None
     meta["tags"] = "Some,Tags,&,stuff"
-    xml = create_metadata_xml(meta)
-    compare = f"{start}<dc:subject>Some</dc:subject>"
-    compare = f"{compare}<dc:subject>Tags</dc:subject>"
-    compare = f"{compare}<dc:subject>&amp;</dc:subject>"
-    compare = f"{compare}<dc:subject>stuff</dc:subject>{end}"
-    assert xml == compare
+    book = create_metadata(meta)
+    tags = book.get_metadata("DC", "subject")
+    assert len(tags) == 4
+    assert tags[0] == ("Some", None)
+    assert tags[1] == ("Tags", None)
+    assert tags[2] == ("&", None)
+    assert tags[3] == ("stuff", None)
     # Test setting the score in the XML file
     meta["tags"] = None
     meta["score"] = "0"
-    xml = create_metadata_xml(meta)
-    assert xml == f"{start}<meta property=\"calibre:rating\">0.0</meta>{end}"
+    book = create_metadata(meta)
+    scores = book.get_metadata(None, "meta")
+    assert scores == [("0.0", {"property":"calibre:rating"})]
     meta["score"] = "2"
-    xml = create_metadata_xml(meta)
-    compare = f"{start}<meta property=\"calibre:rating\">4.0</meta>"
-    compare = f"{compare}<dc:subject>&#9733;&#9733;</dc:subject>{end}"
-    assert xml == compare
+    book = create_metadata(meta)
+    scores = book.get_metadata(None, "meta")
+    tags = book.get_metadata("DC", "subject")
+    assert scores == [("4.0", {"property":"calibre:rating"})]
+    assert tags == [("★★", None)]
     meta["score"] = "5"
-    xml = create_metadata_xml(meta)
-    compare = f"{start}<meta property=\"calibre:rating\">10.0</meta>"
-    compare = f"{compare}<dc:subject>&#9733;&#9733;&#9733;&#9733;&#9733;</dc:subject>{end}"
-    assert xml == compare
+    book = create_metadata(meta)
+    scores = book.get_metadata(None, "meta")
+    tags = book.get_metadata("DC", "subject")
+    assert scores == [("10.0", {"property":"calibre:rating"})]
+    assert tags == [("★★★★★", None)]
     # Test setting invalid score in XML file
     meta["score"] = "Blah"
-    xml = create_metadata_xml(meta)
-    assert xml == f"{start}{end}"
+    book = create_metadata(meta)
+    try:
+        scores = book.get_metadata(None, "meta")
+        assert 1 == 0
+    except KeyError: pass
+    assert book.get_metadata("DC", "subject") == []
     meta["score"] = "6"
-    xml = create_metadata_xml(meta)
-    assert xml == f"{start}{end}"
+    book = create_metadata(meta)
+    try:
+        scores = book.get_metadata(None, "meta")
+        assert 1 == 0
+    except KeyError: pass
+    assert book.get_metadata("DC", "subject") == []
     meta["score"] = "-3"
-    xml = create_metadata_xml(meta)
-    assert xml == f"{start}{end}"
+    book = create_metadata(meta)
+    try:
+        scores = book.get_metadata(None, "meta")
+        assert 1 == 0
+    except KeyError: pass
+    assert book.get_metadata("DC", "subject") == []
     # Test adding score as tags
     meta["tags"] = "These,are,things"
     meta["score"] = "3"
-    xml = create_metadata_xml(meta)
-    compare = f"{start}<meta property=\"calibre:rating\">6.0</meta>"
-    compare = f"{compare}<dc:subject>&#9733;&#9733;&#9733;</dc:subject>"
-    compare = f"{compare}<dc:subject>These</dc:subject>"
-    compare = f"{compare}<dc:subject>are</dc:subject>"
-    compare = f"{compare}<dc:subject>things</dc:subject>{end}"
-    assert xml == compare
+    book = create_metadata(meta)
+    scores = book.get_metadata(None, "meta")
+    tags = book.get_metadata("DC", "subject")
+    assert scores == [("6.0", {"property":"calibre:rating"})]
+    assert len(tags) == 4
+    assert tags[0] == ("★★★", None)
+    assert tags[1] == ("These", None)
+    assert tags[2] == ("are", None)
+    assert tags[3] == ("things", None)
     meta["score"] = "5"
     meta["tags"] = None
-    xml = create_metadata_xml(meta)
-    compare = f"{start}<meta property=\"calibre:rating\">10.0</meta>"
-    compare = f"{compare}<dc:subject>&#9733;&#9733;&#9733;&#9733;&#9733;</dc:subject>{end}"
-    assert xml == compare
+    book = create_metadata(meta)
+    scores = book.get_metadata(None, "meta")
+    tags = book.get_metadata("DC", "subject")
+    assert scores == [("10.0", {"property":"calibre:rating"})]
+    assert tags == [("★★★★★", None)]
     meta["score"] = "0"
-    xml = create_metadata_xml(meta)
-    assert xml == f"{start}<meta property=\"calibre:rating\">0.0</meta>{end}"
+    book = create_metadata(meta)
+    scores = book.get_metadata(None, "meta")
+    tags = book.get_metadata("DC", "subject")
+    assert scores == [("0.0", {"property":"calibre:rating"})]
 
-def test_create_epub_files():
+def test_get_items():
     """
-    Tests the create_epub_files function.
+    Tests the get_items function.
     """
     # Create test files
     temp_dir = get_temp_dir()
-    content = abspath(join(temp_dir, "content"))
-    mkdir(content)
-    assert isdir(content) and exists(content)
-    cover_page = abspath(join(content, "00-Cover.xhtml"))
-    chapter_page = abspath(join(content, "01-Chapter1.xhtml"))
-    cover_image = abspath(join(content, "cover.png"))
-    internal_image = abspath(join(content, "other.jpeg"))
-    create_text_file(cover_page, "Doesn't")
-    create_text_file(chapter_page, "Really")
-    create_text_file(cover_image, "Matter")
-    create_text_file(internal_image, "To Me")
-    assert exists(cover_page)
-    assert exists(chapter_page)
-    assert exists(cover_image)
-    assert exists(internal_image)
-    # Create package file
-    metadata = get_empty_metadata()
-    metadata["title"] = "Some title!"
-    nav_file = abspath(join(temp_dir, "nav.xhtml"))
-    package_file = abspath(join(temp_dir, "package.opf"))
-    create_epub_files(temp_dir, metadata)
-    # Test that nav file is correct
-    assert exists(nav_file)
-    contents = read_text_file(nav_file)
-    compare = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-    compare = f"{compare}<html xmlns=\"http://www.w3.org/1999/xhtml\" "
-    compare = f"{compare}xmlns:epub=\"http://www.idpf.org/2007/ops\" lang=\"en\" xml:lang=\"en\">\n"
-    compare = f"{compare}   <head>\n"
-    compare = f"{compare}      <meta charset=\"UTF-8\" />\n"
-    compare = f"{compare}      <title>Table of Contents</title>\n"
-    compare = f"{compare}   </head>\n"
-    compare = f"{compare}   <body>\n"
-    compare = f"{compare}      <h1>Table of Contents</h1>\n"
-    compare = f"{compare}      <nav epub:type=\"toc\" id=\"toc\">\n"
-    compare = f"{compare}         <ol>\n"
-    compare = f"{compare}            <li>\n"
-    compare = f"{compare}               <a href=\"content/00-Cover.xhtml\">00-Cover</a>\n"
-    compare = f"{compare}            </li>\n"
-    compare = f"{compare}            <li>\n"
-    compare = f"{compare}               <a href=\"content/01-Chapter1.xhtml\">01-Chapter1</a>\n"
-    compare = f"{compare}            </li>\n"
-    compare = f"{compare}         </ol>\n"
-    compare = f"{compare}      </nav>\n"
-    compare = f"{compare}   </body>\n"
-    compare = f"{compare}</html>"
-    assert contents == compare
-    # Test that package file is correct
-    assert exists(package_file)
-    contents = read_text_file(package_file)
-    compare = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-    compare = f"{compare}<package xmlns:dc=\"http://purl.org/dc/elements/1.1/\" "
-    compare = f"{compare}xmlns=\"http://www.idpf.org/2007/opf\" unique-identifier=\"uid\" version=\"3.0\">\n"
-    compare = f"{compare}   <metadata>\n"
-    compare = f"{compare}      <dc:language>en</dc:language>\n"
-    compare = f"{compare}      <dc:identifier>some title!</dc:identifier>\n"
-    compare = f"{compare}      <dc:title>Some title!</dc:title>\n"
-    compare = f"{compare}      <meta property=\"dcterms:modified\">0000-00-00T00:00:00+00:00</meta>\n"
-    compare = f"{compare}      <dc:date>0000-00-00T00:00:00+00:00</dc:date>\n"
-    compare = f"{compare}   </metadata>\n"
-    compare = f"{compare}   <manifest>\n"
-    compare = f"{compare}      <item href=\"nav.xhtml\" id=\"toc\" media-type=\"application/xhtml+xml\" properties=\"nav\" />\n"
-    compare = f"{compare}      <item href=\"content/00-Cover.xhtml\" id=\"00-Cover\" media-type=\"application/xhtml+xml\" />\n"
-    compare = f"{compare}      <item href=\"content/01-Chapter1.xhtml\" id=\"01-Chapter1\" media-type=\"application/xhtml+xml\" />\n"
-    compare = f"{compare}      <item href=\"content/cover.png\" id=\"cover\" media-type=\"image/png\" />\n"
-    compare = f"{compare}      <item href=\"content/other.jpeg\" id=\"other\" media-type=\"image/jpeg\" />\n"
-    compare = f"{compare}   </manifest>\n"
-    compare = f"{compare}   <spine>\n"
-    compare = f"{compare}      <itemref idref=\"00-Cover\" />\n"
-    compare = f"{compare}      <itemref idref=\"01-Chapter1\" />\n"
-    compare = f"{compare}   </spine>\n"
-    compare = f"{compare}</package>"
-    assert contents == compare
+    json = abspath(join(temp_dir, "Text.json"))
+    text = abspath(join(temp_dir, "Text.txt"))
+    png = abspath(join(temp_dir, "[00] Cover.png"))
+    jpeg = abspath(join(temp_dir, "Image.jpeg"))
+    create_text_file(json, "Not")
+    create_text_file(text, "Really")
+    create_text_file(png, "That")
+    create_text_file(jpeg, "Important")
+    assert exists(json)
+    assert exists(text)
+    assert exists(png)
+    assert exists(jpeg)
+    # Get EpubItems
+    items = get_items(temp_dir)
+    assert len(items) == 7
+    assert items[0].get_name() == "images/[00] Cover.png"
+    assert items[0].get_id() == "Cover"
+    assert items[0].get_content() == b"That"
+    assert items[1].get_name() == "original/[00] Cover.png"
+    assert items[1].get_id() == "[00] Cover-png"
+    assert items[2].get_name() == "images/Image.jpeg"
+    assert items[2].get_id() == "Image"
+    assert items[3].get_name() == "original/Image.jpeg"
+    assert items[3].get_id() == "Image-jpeg"
+    assert items[4].get_name() == "original/Text.json"
+    assert items[4].get_id() == "Text-json"
+    assert items[5].get_name() == "original/Text.txt"
+    assert items[5].get_id() == "Text-txt"
+    assert items[6].get_name() == "style/epubstyle.css"
+    assert items[6].get_id() == "epubstyle"
+    assert items[6].get_content() == get_style()
+
+def test_get_chapters():
+    """
+    Tests the get_chapters function.
+    """
+    # Create test files
+    temp_dir = get_temp_dir()
+    json = abspath(join(temp_dir, "Text.json"))
+    text = abspath(join(temp_dir, "Text.txt"))
+    png = abspath(join(temp_dir, "[00] Cover.png"))
+    jpeg = abspath(join(temp_dir, "Image.jpeg"))
+    create_text_file(json, "blah")
+    create_text_file(text, "Actually important!")
+    create_text_file(png, "Not")
+    create_text_file(jpeg, "This Though")
+    assert exists(json)
+    assert exists(text)
+    assert exists(png)
+    assert exists(jpeg)
+    # Get html chapters
+    chapters = get_chapters(temp_dir)
+    assert len(chapters) == 3
+    assert chapters[0].get_name() == "content/[00] Cover.xhtml"
+    assert chapters[0].title == "Cover"
+    body = "<body><img class=\"image-page\" "
+    body = f"{body}src=\"../images/[00] Cover.png\" alt=\"Cover\" /></body>"
+    assert chapters[0].content == body
+    links = []
+    for link in chapters[0].get_links(): links.append(link)
+    assert links == [{"href":"../style/epubstyle.css", "rel":"stylesheet", "type":"text/css"}]
+    assert chapters[1].get_name() == "content/Image.xhtml"
+    assert chapters[1].title == "Image"
+    body = "<body><img class=\"image-page\" "
+    body = f"{body}src=\"../images/Image.jpeg\" alt=\"Image\" /></body>"
+    assert chapters[1].content == body
+    assert chapters[2].get_name() == "content/Text.xhtml"
+    assert chapters[2].title == "Text"
+    body = "<body><p>Actually important!</p></body>"
+    assert chapters[2].content == body
+    links = []
+    for link in chapters[2].get_links(): links.append(link)
+    assert links == [{"href":"../style/epubstyle.css", "rel":"stylesheet", "type":"text/css"}]
 
 def test_create_epub():
     # Create test files
@@ -514,12 +410,24 @@ def test_create_epub():
     with ZipFile(epub, mode="r") as file:
         file.extractall(path=extract_dir)
     files = sort_alphanum(listdir(extract_dir))
-    assert files == ["content", "nav.xhtml", "original", "package.opf"]
+    assert files == ["EPUB", "META-INF", "mimetype"]
+    # Check the contents of the EPUB folder
+    epub_dir = abspath(join(extract_dir, "EPUB"))
+    files = sort_alphanum(listdir(epub_dir))
+    assert files == ["content", "content.opf", "images", "nav.xhtml", "original", "style", "toc.ncx"]
     # Check the contents of the "original" folder
-    original_folder = abspath(join(extract_dir, "original"))
-    new_files = sort_alphanum(listdir(original_folder))
-    assert new_files == ["00.png", "blah.json", "Other.jpeg", "Text.txt"]
+    original_folder = abspath(join(epub_dir, "original"))
+    files = sort_alphanum(listdir(original_folder))
+    assert files == ["00.png", "blah.json", "Other.jpeg", "Text.txt"]
     # Check the contents of the "content" folder
-    content_folder = abspath(join(extract_dir, "content"))
-    new_files = sort_alphanum(listdir(content_folder))
-    assert new_files == ["00.png", "00.xhtml", "Other.jpeg", "Other.xhtml", "style.css", "Text.xhtml"]
+    content_folder = abspath(join(epub_dir, "content"))
+    files = sort_alphanum(listdir(content_folder))
+    assert files == ["00.xhtml", "Other.xhtml", "Text.xhtml"]
+    # Check the contents of the "images" folder
+    content_folder = abspath(join(epub_dir, "images"))
+    files = sort_alphanum(listdir(content_folder))
+    assert files == ["00.png", "Other.jpeg"]
+    # Check the contents of the "style" folder
+    content_folder = abspath(join(epub_dir, "style"))
+    files = sort_alphanum(listdir(content_folder))
+    assert files == ["epubstyle.css"]

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from argparse import ArgumentParser
+from ebooklib.epub import EpubBook, EpubHtml, EpubItem, EpubNav, EpubNcx, Link, Section, write_epub
 from html_string_tools.main.html_string_tools import get_extension, regex_replace
 from metadata_magic.main.comic_archive.comic_archive import create_cbz
 from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
@@ -35,42 +36,20 @@ def newline_to_tag(lines:str) -> str:
         tags = tags + "{{{br}}}"
     return tags
 
-def format_xhtml(html:str, title:str, indent:bool=True) -> str:
+def get_title_from_file(file:str) -> str:
     """
-    Creates text for an epub XHTML content file with given html string in the body
-    
-    :param html: String in HTML format
-    :type html: str, required
-    :param title: Title to use in the XHTML head
-    :type title: str, required
-    :param indent: Whether to add indents to the XHTML file, defaults to True
-    :type indent: bool, optional
-    :return: XHTML text
+    Gets an id/title for a file from the filename.
+
+    :param file: File path or file name
+    :type file: str, required
+    :return: ID/title
     :rtype: str
     """
-    # Set the base element for the XHTML 
-    base = Element("html")
-    base.attrib = {"xmlns":"http://www.w3.org/1999/xhtml"}
-    # Create the head subelement
-    head = SubElement(base, "head")
-    title_element = SubElement(head, "title")
-    title_element.text = title
-    meta = SubElement(head, "meta")
-    meta.attrib = {"charset":"UTF-8"}
-    link = SubElement(head, "link")
-    link.attrib = {"rel":"stylesheet", "href":"style.css"}
-    # Parse the given html text and add to body
-    final_html = resub("^\\s+|\\s+$|\\n", "", html)
-    body = xml_from_string(f"<body>{final_html}</body>")
-    base.append(body)
-    # Set indents to make the XML more readable
-    if indent:
-        xml_indent(base, space="   ")
-    # Get xml as string
-    xml = xml_to_string(base).decode("UTF-8")
-    return f"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n{xml}"
+    regex = "^\\s*\\[[^\\]]+\\]\\s*|\\s*\\.[^\\.]{1,5}$"
+    title = resub(regex, "", basename(file))
+    return title
 
-def create_image_page(image_file, indent:bool=True) -> str:
+def create_image_page(image_file) -> str:
     """
     Returns a epub formatted XHTML page containing a single full page image.
     
@@ -83,20 +62,19 @@ def create_image_page(image_file, indent:bool=True) -> str:
     """
     # Create the image element
     filename = basename(image_file)
-    img = Element("img")
-    img.attrib = {"class":"image-page", "src":filename, "alt":"Full Page Image"}
-    img_string = xml_to_string(img).decode("UTF-8")
-    # Create a full page
-    return format_xhtml(img_string, filename[:len(filename) - len(get_extension(filename))], indent)
+    base = Element("body")
+    img = SubElement(base, "img")
+    title = get_title_from_file(image_file)
+    img.attrib = {"class":"image-page", "src":f"../images/{filename}", "alt":title}
+    img_string = xml_to_string(base).decode("UTF-8")
+    return img_string
 
-def txt_to_xhtml(txt_file:str, indent:bool=True) -> str:
+def txt_to_xhtml(txt_file:str) -> str:
     """
     Creates text for an epub XHTML content file from a given txt file.
     
     :param txt_file: Path to a txt file.
     :type txt_file: str, required
-    :param indent: Whether to add indents to the XHTML file, defaults to True
-    :type indent: bool, optional
     :return: XHTML text
     :rtype: str
     """
@@ -115,224 +93,82 @@ def txt_to_xhtml(txt_file:str, indent:bool=True) -> str:
     # Get xml as string
     xml = xml_to_string(body).decode("UTF-8")
     xml = xml.replace("{{{br}}}", "<br/>")
-    xml = resub("^<body>|<\\/body>$", "", xml)
-    # Get title
-    title_name = basename(txt_file)
-    title_name = title_name[:len(title_name) - len(get_extension(title_name))]
-    # Return XHTML
-    return format_xhtml(xml, title_name, indent)
+    # Return the xml string
+    return xml
 
-def create_style_file(file_path:str):
+def get_style() -> str:
     """
     Creates the default css stylesheet for the epub book.
     
-    :param file_path: Path to save the stylesheet to
-    :type file_path: str, required
+    :return: CSS style sheet 
+    :rtype: str
     """
     # Get css style
-    style = "body {margin: 0px 0px 0px 0px;}"
-    style = style + "\n\n.image-page {\n"
-    style = style + "   display: block;\n"
-    style = style + "   width: 100%;\n"
-    style = style + "   height: auto;\n"
-    style = style + "   max-height: 500px;\n"
-    style = style + "   max-width: 500px;"
-    style = style + "   margin: 0;\n"
-    style = style + "   position: absolute;\n"
-    style = style + "   top: 50%;\n"
-    style = style + "   left: 50%;\n"
-    style = style + "   transform: translate(-50%, -50%);\n}"
-    # Create file
-    full_path = abspath(file_path)
-    create_text_file(full_path, style)
+    style = "body {margin: 14px 14px 14px 14px;"
+    style = f"{style}font-family: Georgia, serif;font-size:14px;}} "
+    style = f"{style}.image-page {{"
+    style = f"{style}display: block;"
+    style = f"{style}width: 100%;"
+    style = f"{style}height: auto;"
+    style = f"{style}margin-left: auto;"
+    style = f"{style}margin-right: auto;"
+    style = f"{style}margin-top: auto;"
+    style = f"{style}margin-bottom: auto;}}"
+    return style
 
-def create_nav_file(xhtmls:List[str], file_path, indent:bool=True):
+def create_metadata(metadata:dict) -> EpubBook:
     """
-    Creates the Table of Contents nav file for the epub file.
-    
-    :param xhtmls: List of XHTML files to include in the contents
-    :type xhtmls: str, required
-    :param file_path: Path of the file to save to
-    :type file_path: str, required
-    :param indent: Whether to add indents to the XHTML file, defaults to True
-    :type indent: bool, optional
-    """
-    # Create base of navigation file
-    attributes = {"xmlns":"http://www.w3.org/1999/xhtml"}
-    attributes["xmlns:epub"] = "http://www.idpf.org/2007/ops"
-    attributes["lang"] = "en"
-    attributes["xml:lang"] = "en"
-    base = Element("html")
-    base.attrib = attributes
-    # Create navigation head
-    head = SubElement(base, "head")
-    meta = SubElement(head, "meta")
-    meta.attrib = {"charset":"UTF-8"}
-    title = SubElement(head, "title")
-    title.text = "Table of Contents"
-    # Create navigation body and header
-    body = SubElement(base, "body")
-    h1 = SubElement(body, "h1")
-    h1.text = "Table of Contents"
-    # Create nav element
-    nav = SubElement(body, "nav")
-    nav.attrib = {"epub:type":"toc", "id":"toc"}
-    ol = SubElement(nav, "ol")
-    # Create entries for each XHTML file
-    for xhtml in xhtmls:
-        # Get title
-        filename = basename(xhtml)
-        name = filename[:len(filename) - len(get_extension(filename))]
-        # Create list item
-        li = SubElement(ol, "li")
-        a = SubElement(li, "a")
-        a.text = name
-        a.attrib = {"href":f"content/{filename}"}
-    # Set indents to make the XML more readable
-    if indent:
-        xml_indent(base, space="   ")
-    # Get xml as string
-    xml = xml_to_string(base).decode("UTF-8")
-    xml = f"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n{xml}"
-    # Write XML
-    full_path = abspath(file_path)
-    create_text_file(full_path, xml)
+    Creates an EpubBook object with the given metadata.
+    Metadata is the same as used for the get_comic_xml function.
 
-def create_manifest(files:List[str]) -> str:
-    """
-    Create the manifest section for the epub package file.
-    Uses all given files, and adds nav file by default.
-    
-    :param files: List of files to link in the manifest section
-    :type files: list[str], required
-    :return: Manifest section in xml format
-    :rtype: str
-    """
-    # Create the manifest base
-    base = Element("manifest")
-    # Add the nav file as item
-    nav_item = SubElement(base, "item")
-    nav_item.attrib = {"href":"nav.xhtml", "id":"toc", "media-type":"application/xhtml+xml", "properties":"nav"}
-    # Add files as items
-    for file in files:
-        filename = basename(file)
-        extension = get_extension(filename)
-        file_id = filename[:len(filename) - len(extension)]
-        media_type = ""
-        # Get the file mimetype
-        if extension == ".xhtml":
-            media_type = "application/xhtml+xml"
-        elif extension == ".css" or extension == ".html" or extension == ".htm":
-            media_type = "text/html"
-        elif extension == ".jpeg" or extension == ".jpg":
-            media_type = "image/jpeg"
-        elif extension == ".png":
-            media_type = "image/png"
-        elif extension == ".svg":
-            media_type = "image/svg+xml"
-        # Create item
-        item = SubElement(base, "item")
-        item.attrib = {"href":f"content/{filename}", "id":file_id, "media-type":media_type}
-    # Get xml as string
-    xml = xml_to_string(base).decode("UTF-8")
-    return xml
-
-def create_metadata_xml(metadata:dict) -> str:
-    """
-    Creates the metadata section for the epub package file based on given metadata.
-    
-    :param metadata: Metadata dict, same as given for cbz ComicInfo functions
+    :param metadata: Metadata dictionary
     :type metadata: dict, required
-    :return: Metadata section in xml format
-    :rtype: str
+    :return: EpubBook object containing metadata
+    :rtype: EpubBook
     """
-    # Create the metadata base
-    base = Element("metadata")
-    base.attrib = {"xmlns:dc":"http://purl.org/dc/elements/1.1/"}
+    # Create book
+    book = EpubBook()
     # Set the language
-    language = SubElement(base, "dc:language")
-    language.text = "en"
+    book.set_language("en")
     # Set the identifier
-    identifier = SubElement(base, "dc:identifier")
     if metadata["url"] is not None:
-        identifier.text = metadata["url"]
+        book.set_identifier(metadata["url"])
     else:
-        identifier.text = metadata["title"].lower()
+        book.set_identifier(metadata["title"].lower())
     # Set the title
-    title = SubElement(base, "dc:title")
-    title.text = metadata["title"]
-    # Add author(s)
+    book.set_title(metadata["title"])
+    # Set the description
+    if metadata["description"] is not None:
+        book.add_metadata("DC", "description", metadata["description"])
+    # Add Authors
     try:
         authors = metadata["writer"].split(",")
     except AttributeError: authors = []
     for i in range(0, len(authors)):
-        # Add creator tag
-        author_id = "author" + str(i+1)
-        creator = SubElement(base, "dc:creator")
-        creator.attrib = {"id":author_id}
-        creator.text = authors[i]
-        # Add role tag
-        role = SubElement(base, "meta")
-        role.attrib = {"refines":f"#{author_id}", "property":"role", "scheme":"marc:relators"}
-        role.text = "aut"
-    # Add illustrator(s)
+        book.add_author(authors[i], role="aut", uid=f"author{i}")
+    # Add Illustrator(s)
     try:
         illustrators = metadata["artist"].split(",")
     except AttributeError: illustrators = []
     for i in range(0, len(illustrators)):
-        # Add creator tag
-        illustrator_id = "illustrator" + str(i+1)
-        creator = SubElement(base, "dc:creator")
-        creator.attrib = {"id":illustrator_id}
-        creator.text = illustrators[i]
-        # Add role tag
-        role = SubElement(base, "meta")
-        role.attrib = {"refines":f"#{illustrator_id}", "property":"role", "scheme":"marc:relators"}
-        role.text = "ill"
-    # Add cover artist(s)
+        book.add_author(illustrators[i], role="ill", uid=f"illustrator{i}")
+    # Add Cover Artist(s)
     try:
         covartists = metadata["cover_artist"].split(",")
     except AttributeError: covartists = []
     for i in range(0, len(covartists)):
-        # Add creator tag
-        cover_id = "covartist" + str(i+1)
-        creator = SubElement(base, "dc:creator")
-        creator.attrib = {"id":cover_id}
-        creator.text = covartists[i]
-        # Add role tag
-        role = SubElement(base, "meta")
-        role.attrib = {"refines":f"#{cover_id}", "property":"role", "scheme":"marc:relators"}
-        role.text = "cov"
-    # Set the description
-    if metadata["description"] is not None:
-        description = SubElement(base, "dc:description")
-        description.text = metadata["description"]
-    # Set the publisher
+        book.add_author(covartists[i], role="cov", uid=f"covartist{i}")
+    # Add publisher
     if metadata["publisher"] is not None:
-        publisher = SubElement(base, "dc:publisher")
-        publisher.text = metadata["publisher"]
-    # Set the series info
-    if metadata["series"] is not None:
-        series_title = SubElement(base, "meta")
-        series_title.attrib = {"property":"belongs-to-collection", "id":"series-title"}
-        series_title.text = metadata["series"]
-        collection_type = SubElement(base, "meta")
-        collection_type.attrib = {"refines":"series-title", "property":"collection-type"}
-        collection_type.text = "series"
-        try:
-            num = float(metadata["series_number"])
-            series_number = SubElement(base, "meta")
-            series_number.attrib = {"refines":"series-title", "property":"group-position"}
-            series_number.text = metadata["series_number"]
-        except (TypeError, ValueError): pass
+        book.add_metadata("DC", "publisher", metadata["publisher"])
+    # Add date
+    if metadata["date"] is not None:
+        book.add_metadata("DC", "date", metadata["date"] + "T00:00:00+00:00")
     # Set the score
-    tag_string = metadata["tags"]
     try:
         score = int(metadata["score"])
         if score > -1 and score < 6:
-            score_element = SubElement(base, "meta")
-            score_element.attrib = {"property":"calibre:rating"}
-            score_element.text = str(float(score * 2))
+            book.add_metadata(None, "meta", str(float(score * 2)), {"property":"calibre:rating"})
     except (TypeError, ValueError): pass
     # Set the tags
     tag_string = metadata["tags"]
@@ -352,64 +188,96 @@ def create_metadata_xml(metadata:dict) -> str:
         tags = tag_string.split(",")
     except AttributeError: tags = []
     for tag in tags:
-        subject = SubElement(base, "dc:subject")
-        subject.text = tag
-    # Set the date
-    date = "0000-00-00T00:00:00+00:00"
-    if metadata["date"] is not None:
-        date = metadata["date"] + "T00:00:00+00:00"
-    modified = SubElement(base, "meta")
-    modified.attrib = {"property":"dcterms:modified"}
-    modified.text = date
-    date_element = SubElement(base, "dc:date")
-    date_element.text = date
-    # Get xml as string
-    xml = xml_to_string(base).decode("UTF-8")
-    return xml
+        book.add_metadata("DC", "subject", tag)
+    # Add series info
+    if metadata["series"] is not None:
+        attribs = {"property":"belongs-to-collection", "id":"series-title"}
+        book.add_metadata(None, "meta", metadata["series"], attribs)
+        attribs = {"refines":"#series-title", "property":"collection-type"}
+        book.add_metadata(None, "meta", "series", attribs)
+        try:
+            num = float(metadata["series_number"])
+            attribs = {"refines":"#series-title", "property":"group-position"}
+            book.add_metadata(None, "meta", metadata["series_number"], attribs)
+        except (TypeError, ValueError): pass
+    # Return ebook with metadata
+    return book
 
-def create_epub_files(directory:str, metadata:dict):
+def get_items(directory:str) -> List[EpubItem]:
     """
-    Creates the nav.xhtml and package.opf files required for an epub archive.
-    Saves files in the given directory.
-    Searches for files to include in spine and manifest from ./content directory within given directory.
-    
-    :param directory: Directory in which to save files
+    Creates a list of items to include in epub based on files in a given directory.
+
+    :param directory: Directory to search for files within
     :type directory: str, required
-    :param metadata: Metadata to use when creating the file
-    :type metadata: dict, required
+    :return: List of EpubItems
+    :rtype: list[EpubItem]
     """
-    # Get list of files in the content directory
+    # Get list of files in directory
     full_directory = abspath(directory)
-    content_dir = abspath(join(directory, "content"))
-    files = sort_alphanum(listdir(content_dir))
-    # Get the manifest and metadata sections
-    manifest = create_manifest(files)
-    meta_xml = create_metadata_xml(metadata)
-    # Get list of just the xhtml files in the content directory
-    for i in range(len(files)-1, -1, -1):
-        if not get_extension(files[i]) == ".xhtml":
-            del files[i]
-    # Create nav file
-    nav_file = abspath(join(full_directory, "nav.xhtml"))
-    create_nav_file(files, nav_file, True)
-    # Create the package xml contents
-    base = Element("package")
-    base.attrib = {"xmlns":"http://www.idpf.org/2007/opf", "unique-identifier":"uid", "version":"3.0"}
-    base.append(xml_from_string(meta_xml))
-    base.append(xml_from_string(manifest))
-    spine = SubElement(base, "spine")
+    files = sort_alphanum(listdir(full_directory))
+    # Run through files
+    items = []
     for file in files:
-        # Create spine items
-        filename = basename(file)
-        file_id = filename[:len(filename) - len(get_extension(filename))]
-        itemref = SubElement(spine, "itemref")
-        itemref.attrib = {"idref":file_id}
-    # Save package xml to file
-    xml_indent(base, space="   ")
-    xml = xml_to_string(base).decode("UTF-8")
-    xml = f"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n{xml}"
-    package_file = abspath(join(full_directory, "package.opf"))
-    create_text_file(package_file, xml)
+        # Read file
+        full_file = abspath(join(full_directory, file))
+        with open(full_file, "rb") as infile:
+            contents = infile.read()
+        # Create item
+        item = EpubItem(uid=basename(full_file).replace(".","-"),
+                    file_name="original/"+basename(full_file),
+                    content=contents)
+        # Copy image
+        if item.get_type() == 1:
+            title = get_title_from_file(full_file)
+            image = EpubItem(uid=title,
+                        file_name="images/"+basename(full_file),
+                        content=contents)
+            items.append(image)
+        items.append(item)
+    # Add style file
+    css = EpubItem(uid="epubstyle",
+                file_name="style/epubstyle.css",
+                media_type="text/css",
+                content=get_style())
+    items.append(css)
+    # Return items
+    return items
+
+def get_chapters(directory:str) -> List[EpubHtml]:
+    """
+    Returns a list of EpubHtml objects for each chapter of the epub.
+    Creates XHTML chapter files for each text file and image in a given directory.
+
+    :param directory: Directory to search for files within
+    :type directory: str, required
+    :return: List of EpubHtml objects for each chapter
+    :rtype: list[EpubHtml]
+    """
+    # Get list of files in directory
+    full_directory = abspath(directory)
+    files = sort_alphanum(listdir(full_directory))
+    # Run through files
+    chapters = []
+    for file in files:
+        # Get the XML body
+        xml = None
+        full_file = abspath(join(full_directory, file))
+        extension = get_extension(full_file)
+        if extension == ".txt":
+            xml = txt_to_xhtml(full_file)
+        if extension == ".jpg" or extension == ".jpeg" or extension == ".png":
+            xml = create_image_page(full_file)
+        # Create EpubHtml
+        if xml is not None:
+            title = get_title_from_file(full_file)
+            filename = basename(full_file)
+            filename = filename[:len(filename) - len(extension)]
+            chapter = EpubHtml(title=title, file_name=f"content/{filename}.xhtml", lang='en')
+            chapter.set_content(xml)
+            chapter.add_link(href="../style/epubstyle.css", rel="stylesheet", type="text/css")
+            chapters.append(chapter)
+    # Return chapters
+    return chapters
 
 def create_epub(directory:str, metadata:dict) -> str:
     """
@@ -423,44 +291,25 @@ def create_epub(directory:str, metadata:dict) -> str:
     :rtype: str
     """
     # Get the path of the epub file to create
-    input_directory = abspath(directory)
-    epub_file = abspath(join(input_directory, basename(input_directory)+".epub"))
-    # Create temporary directory to save contents into
-    temp_dir = get_temp_dir("dvk-metamagic-epub")
-    # Get list of all contents of the given directory
-    files = listdir(input_directory)
-    for i in range(0, len(files)):
-        files[i] = abspath(join(input_directory, files[i]))
-    # Copy all files into folder to contain all original unaltered files
-    original_folder = abspath(join(temp_dir, "original"))
-    mkdir(original_folder)
-    for file in files:
-        copy(file, abspath(join(original_folder, basename(file))))
-    # Create content folder and style sheet
-    content_folder = abspath(join(temp_dir, "content"))
-    mkdir(content_folder)
-    create_style_file(abspath(join(content_folder, "style.css")))
-    # Copy all images and convert all text to XHTML for the content folder
-    for file in files:
-        filename = basename(file)
-        extension = get_extension(filename)
-        if extension == ".txt":
-            # Create text extension
-            filename = filename[:len(filename) - len(extension)] + ".xhtml"
-            xml = txt_to_xhtml(file, True)
-            create_text_file(abspath(join(content_folder, filename)), xml)
-        if extension == ".png" or extension == ".jpg" or extension == ".jpeg" or extension == ".svg":
-            # Copy image file
-            copy(file, abspath(join(content_folder, filename)))
-            # Create image page
-            filename = filename[:len(filename) - len(extension)] + ".xhtml"
-            xml = create_image_page(file)
-            create_text_file(abspath(join(content_folder, filename)), xml)
-    # Create the package and nav files
-    create_epub_files(temp_dir, metadata)
-    # Zip files and copy to epub
-    cbz = create_cbz(temp_dir)
-    copy(cbz, epub_file)
+    full_directory = abspath(directory)
+    epub_file = abspath(join(full_directory, basename(full_directory) + ".epub"))
+    # Get book from metadata
+    book = create_metadata(metadata)
+    # Get XHTMLs and base content    
+    chapters = get_chapters(full_directory)
+    items = get_items(full_directory)
+    # Add items to the book
+    for chapter in chapters:
+        book.add_item(chapter)
+    for item in items:
+        book.add_item(item)
+    # Add spine and table of contents
+    book.spine = chapters
+    book.toc = chapters
+    book.add_item(EpubNcx())
+    book.add_item(EpubNav())
+    # Write book
+    write_epub(epub_file, book)
     return epub_file
     
 def user_create_epub(path:str,
