@@ -11,6 +11,7 @@ from metadata_magic.test.temp_file_tools import create_text_file
 from metadata_magic.test.temp_file_tools import read_text_file
 from os import getcwd, listdir, mkdir
 from os.path import abspath, basename, exists, join
+from PIL import Image, UnidentifiedImageError
 from python_print_tools.main.python_print_tools import color_print
 from re import sub as resub
 from re import findall
@@ -20,6 +21,44 @@ from xml.etree.ElementTree import indent as xml_indent
 from xml.etree.ElementTree import Element, SubElement
 from xml.etree.ElementTree import fromstring as xml_from_string
 from xml.etree.ElementTree import tostring as xml_to_string
+
+class DvkEpubHtml(EpubHtml):
+    def __init__(self, uid=None, file_name='', media_type='', content=None, title='',
+                 lang=None, direction=None, media_overlay=None, media_duration=None):
+        super().__init__(uid, file_name, media_type, content, title,
+                 lang, direction, media_overlay, media_duration)
+        self.metas = []
+    
+    def get_content(self, default=None):
+        # Get the default content
+        original_xml = super().get_content(default).decode("UTF-8")
+        original_xml = resub("\\s*<\\?xml[^>]*>\\s*", "", original_xml)
+        original_xml = resub("\\s*<!DOCTYPE[^>]*>\\s*", "", original_xml)
+        original_xml = resub("\\s*<html[^>]*>", "<html>", original_xml)
+        # Parse xml
+        base = xml_from_string(original_xml)
+        attributes = {"xmlns":"http://www.w3.org/1999/xhtml"}
+        attributes["xmlns:epub"] = "http://www.idpf.org/2007/ops"
+        attributes["epub:prefix"] = "z3998: http://www.daisy.org/z3998/2012/vocab/structure/#"
+        attributes["lang"] = "en"
+        attributes["xml:lang"] = "en"
+        base.attrib = attributes
+        # Add meta tags
+        myhead = base.find("head")
+        for meta in self.metas:
+            meta_el = SubElement(myhead, "meta")
+            meta_el.attrib = meta
+        # Return the xml
+        xml_indent(base, space="   ")
+        xml = xml_to_string(base).decode("UTF-8")
+        xml = f"<?xml version='1.0' encoding='utf-8'?>\n<!DOCTYPE html>\n{xml}"
+        return xml.encode("UTF-8")
+
+    def add_meta(self, **kwgs):
+        self.metas.append(kwgs)
+
+    def get_metas(self):
+        return (meta for meta in self.metas)
 
 def newline_to_tag(lines:str) -> str:
     """
@@ -60,14 +99,34 @@ def create_image_page(image_file) -> str:
     :return: XHTML text
     :rtype: str
     """
-    # Create the image element
-    filename = basename(image_file)
+    # Load image
+    try:
+        full_path = abspath(image_file)
+        image = Image.open(full_path)
+        width, height = image.size
+    except (FileNotFoundError, UnidentifiedImageError): return None
+    # Create image container
     base = Element("body")
-    img = SubElement(base, "img")
-    title = get_title_from_file(image_file)
-    img.attrib = {"class":"image-page", "src":f"../images/{filename}", "alt":title}
-    img_string = xml_to_string(base).decode("UTF-8")
-    return img_string
+    container = SubElement(base, "div")
+    container.attrib = {"class":"image-page-container"}
+    # Create the image element
+    filename = basename(full_path)
+    title = get_title_from_file(full_path)
+    img_element = SubElement(container, "img")
+    attributes = {"class":"vertical-image-page", "src":f"../images/{filename}", "alt":title}
+    if width > height:
+        attributes["class"] = "horizontal-image-page"
+    img_element.attrib = attributes
+    xml = xml_to_string(base).decode("UTF-8")
+    # Create DvkEpubHtml
+    filename = filename[:len(filename) - len(get_extension(filename))]
+    chapter = DvkEpubHtml(title=title, file_name=f"content/{filename}.xhtml", lang='en')
+    chapter.set_content(xml)
+    chapter.add_link(href="../style/epubstyle.css", rel="stylesheet", type="text/css")
+    # Add size limiting meta tag
+    chapter.add_meta(content=f"width={width}, height={height}", name="viewport")
+    # Return EpubHtml
+    return chapter
 
 def txt_to_xhtml(txt_file:str) -> str:
     """
@@ -87,14 +146,35 @@ def txt_to_xhtml(txt_file:str) -> str:
     paragraphs = content.split("\n\n")
     # Create paragraph elements
     body = Element("body")
+    text_container = SubElement(body, "div")
+    text_container.attrib = {"class":"text-container"}
     for paragraph in paragraphs:
-        p_element = SubElement(body, "p")
+        p_element = SubElement(text_container, "p")
         p_element.text = paragraph.replace("\n","{{{br}}}")
     # Get xml as string
     xml = xml_to_string(body).decode("UTF-8")
+    # Remove misformatted tags
     xml = xml.replace("{{{br}}}", "<br/>")
-    # Return the xml string
-    return xml
+    xml = xml.replace("{{br}}", "<br/>")
+    xml = xml.replace("{{i}}", "<i>")
+    xml = xml.replace("{{/i}}", "</i>")
+    xml = xml.replace("{{b}}", "<b>")
+    xml = xml.replace("{{/b}}", "</b>")
+    xml = resub("(<br\\/>|\\s)*<\\/p?>", "</p>", xml)
+    xml = resub("<\\/i>\\s+(?=[,.?!])", "</i>", xml)
+    xml = resub("<\\/b>\\s+(?=[,.?!])", "</b>", xml)
+    xml = resub("\\s+<\\/i>", "</i>", xml)
+    xml = resub("\\s+<\\/b>", "</b>", xml)
+    # Get the title for the file
+    title = get_title_from_file(full_path)
+    filename = basename(full_path)
+    filename = filename[:len(filename) - len(get_extension(full_path))]
+    # Create EpubHtml
+    chapter = EpubHtml(title=title, file_name=f"content/{filename}.xhtml", lang='en')
+    chapter.set_content(xml)
+    chapter.add_link(href="../style/epubstyle.css", rel="stylesheet", type="text/css")
+    # Return the EpubHtml
+    return chapter
 
 def get_style() -> str:
     """
@@ -103,17 +183,51 @@ def get_style() -> str:
     :return: CSS style sheet 
     :rtype: str
     """
-    # Get css style
-    style = "body {margin: 14px 14px 14px 14px;"
-    style = f"{style}font-family: Georgia, serif;font-size:14px;}} "
-    style = f"{style}.image-page {{"
-    style = f"{style}display: block;"
-    style = f"{style}width: 100%;"
-    style = f"{style}height: auto;"
-    style = f"{style}margin-left: auto;"
-    style = f"{style}margin-right: auto;"
-    style = f"{style}margin-top: auto;"
-    style = f"{style}margin-bottom: auto;}}"
+    # Body Style
+    style = ""
+    style = f"{style}body {{\n"
+    style = f"{style}    margin: 0px 0px 0px 0px;\n"
+    style = f"{style}}}\n\n"
+    # Header style
+    style = f"{style}.header {{\n"
+    style = f"{style}    width: 100%;\n"
+    style = f"{style}    font-size: 2em;\n"
+    style = f"{style}    line-height: 1.5em;\n"
+    style = f"{style}}}\n\n"
+    # Subheader style
+    style = f"{style}.subheader {{\n"
+    style = f"{style}    width: 100%;\n"
+    style = f"{style}    font-size: 1.5em;\n"
+    style = f"{style}    line-height: 1.5em;\n"
+    style = f"{style}}}\n\n"
+    # Center style
+    style = f"{style}.center {{\n"
+    style = f"{style}    text-align: center;\n"
+    style = f"{style}}}\n\n"
+    # Text Container
+    style = f"{style}.text-container {{\n"
+    style = f"{style}    margin: 3em 3em 3em 3em;\n"
+    style = f"{style}    line-height: 1.5em;\n"
+    style = f"{style}}}\n\n"
+    # Vertical Image Page
+    style = f"{style}.vertical-image-page {{\n"
+    style = f"{style}    display: block;\n"
+    style = f"{style}    height: 100%;\n"
+    style = f"{style}    width: auto;\n"
+    style = f"{style}    margin: auto auto auto auto;\n"
+    style = f"{style}}}\n\n"
+    # Horizontal Image Page
+    style = f"{style}.horizontal-image-page {{\n"
+    style = f"{style}    display: block;\n"
+    style = f"{style}    width: 100%;\n"
+    style = f"{style}    height: auto;\n"
+    style = f"{style}    margin: auto auto auto auto;\n"
+    style = f"{style}}}\n\n"
+    # Image Page Container
+    style = f"{style}.image-page-container {{\n"
+    style = f"{style}    height: 100vh;\n"
+    style = f"{style}}}"
+    # Return style
     return style
 
 def create_metadata(metadata:dict) -> EpubBook:
@@ -264,18 +378,13 @@ def get_chapters(directory:str) -> List[EpubHtml]:
         full_file = abspath(join(full_directory, file))
         extension = get_extension(full_file)
         if extension == ".txt":
-            xml = txt_to_xhtml(full_file)
-        if extension == ".jpg" or extension == ".jpeg" or extension == ".png":
-            xml = create_image_page(full_file)
-        # Create EpubHtml
-        if xml is not None:
-            title = get_title_from_file(full_file)
-            filename = basename(full_file)
-            filename = filename[:len(filename) - len(extension)]
-            chapter = EpubHtml(title=title, file_name=f"content/{filename}.xhtml", lang='en')
-            chapter.set_content(xml)
-            chapter.add_link(href="../style/epubstyle.css", rel="stylesheet", type="text/css")
+            chapter = txt_to_xhtml(full_file)
             chapters.append(chapter)
+            continue
+        if extension == ".jpg" or extension == ".jpeg" or extension == ".png":
+            chapter = create_image_page(full_file)
+            if chapter is not None:
+                chapters.append(chapter)
     # Return chapters
     return chapters
 
