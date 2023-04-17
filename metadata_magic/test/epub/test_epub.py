@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
 
-from ebooklib.epub import EpubHtml
 from os import mkdir, listdir
 from os.path import abspath, basename, exists, isdir, join
-from PIL import Image
 from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
 from metadata_magic.main.comic_archive.comic_xml import get_empty_metadata
-from metadata_magic.main.epub.epub import get_chapters
-from metadata_magic.main.epub.epub import get_items
-from metadata_magic.main.epub.epub import get_style
-from metadata_magic.main.epub.epub import get_title_from_file
 from metadata_magic.main.epub.epub import create_epub
+from metadata_magic.main.epub.epub import create_epub_files
 from metadata_magic.main.epub.epub import create_image_page
 from metadata_magic.main.epub.epub import create_nav_file
 from metadata_magic.main.epub.epub import create_ncx_file
@@ -51,7 +46,7 @@ def test_get_title_from_file():
 
 def test_format_xhtml():
     """
-    Tests the get_title_from_file function.
+    Tests the format_xhtml function.
     """
     # Test single tag
     start = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
@@ -266,7 +261,7 @@ def test_txt_to_xhtml():
     body = f"{body}</html>"
     assert chapter == body
 
-def test_get_style():
+def test_create_style_file():
     """
     Tests the create_style_file function()
     """
@@ -446,202 +441,165 @@ def test_create_metadata_xml():
     """
     Tests the create_metadata_xml function.
     """
-    # Test setting title for the book
+    # Test setting title in the XML file
+    start = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\"><dc:language>en</dc:language>"
+    end = "<meta property=\"dcterms:modified\">0000-00-00T00:00:00+00:00</meta>"
+    end = f"{end}<dc:date>0000-00-00T00:00:00+00:00</dc:date></metadata>"
     meta = get_empty_metadata()
     meta["title"] = "This's a title\\'"
-    book = create_metadata(meta)
-    title = book.get_metadata("DC", "title")
-    assert title == [("This's a title\\'", None)]
-    identifier = book.get_metadata("DC", "identifier")
-    assert identifier == [("this's a title\\'", {"id":"id"})]
+    xml = create_metadata_xml(meta)
+    compare = f"{start}<dc:identifier>this's a title\\'</dc:identifier>"
+    compare = f"{compare}<dc:title>This's a title\\'</dc:title>{end}"
+    assert xml == compare
     # Test setting identifier in the XML file
-    meta = get_empty_metadata()
-    meta["url"] = "this/is/a/test"
-    meta["title"] = "Title."
-    book = create_metadata(meta)
-    title = book.get_metadata("DC", "title")
-    assert title == [("Title.", None)]
-    identifier = book.get_metadata("DC", "identifier")
-    assert identifier == [("this/is/a/test", {"id":"id"})]
-    # Test that language is set
-    language = book.get_metadata("DC", "language")
-    assert language == [("en", None)]
+    base_meta = get_empty_metadata()
+    base_meta["url"] = "this/is/a/test"
+    base_meta["title"] = "Title."
+    start = f"{start}<dc:identifier>this/is/a/test</dc:identifier>"
+    start = f"{start}<dc:title>Title.</dc:title>"
+    xml = create_metadata_xml(base_meta)
+    assert xml == f"{start}{end}"
     # Test setting description in the XML file
+    meta = base_meta
     meta["description"] = "Description of the thing."
-    book = create_metadata(meta)
-    description = book.get_metadata("DC", "description")
-    assert description == [("Description of the thing.", None)]
+    xml = create_metadata_xml(meta)
+    assert xml == f"{start}<dc:description>Description of the thing.</dc:description>{end}"
     meta["description"] = "'Tis this & That's >.<"
-    book = create_metadata(meta)
-    description = book.get_metadata("DC", "description")
-    assert description == [("'Tis this & That's >.<", None)]
+    xml = create_metadata_xml(meta)
+    assert xml == f"{start}<dc:description>'Tis this &amp; That's &gt;.&lt;</dc:description>{end}"
     # Test setting writer() in XML file
     meta["description"] = None
     meta["writer"] = "Person!"
-    book = create_metadata(meta)
-    writers = book.get_metadata("DC", "creator")
-    refines = book.get_metadata(None, "meta")
-    assert writers == [("Person!", {"id":"author0"})]
-    assert refines == [("aut", {"refines":"#author0", "property":"role", "scheme":"marc:relators"})]
+    xml = create_metadata_xml(meta)
+    compare = f"{start}<dc:creator id=\"author1\">Person!</dc:creator>"
+    compare = f"{compare}<meta refines=\"#author1\" property=\"role\" scheme=\"marc:relators\">aut</meta>"
+    assert xml == f"{compare}{end}"
     meta["writer"] = "More,People"
-    book = create_metadata(meta)
-    writers = book.get_metadata("DC", "creator")
-    refines = book.get_metadata(None, "meta")
-    assert len(writers) == 2
-    assert writers[0] == ("More", {"id":"author0"})
-    assert writers[1] == ("People", {"id":"author1"})
-    assert len(refines) == 2
-    assert refines[0] == ("aut", {"refines":"#author0", "property":"role", "scheme":"marc:relators"})
-    assert refines[1] == ("aut", {"refines":"#author1", "property":"role", "scheme":"marc:relators"})
+    xml = create_metadata_xml(meta)
+    compare = f"{start}<dc:creator id=\"author1\">More</dc:creator>"
+    compare = f"{compare}<meta refines=\"#author1\" property=\"role\" scheme=\"marc:relators\">aut</meta>"
+    compare = f"{compare}<dc:creator id=\"author2\">People</dc:creator>"
+    compare = f"{compare}<meta refines=\"#author2\" property=\"role\" scheme=\"marc:relators\">aut</meta>"
+    assert xml == f"{compare}{end}"
     # Test setting cover artist in XML file
     meta["writer"] = None
     meta["cover_artist"] = "Guest"
-    book = create_metadata(meta)
-    writers = book.get_metadata("DC", "creator")
-    refines = book.get_metadata(None, "meta")
-    assert writers == [("Guest", {"id":"covartist0"})]
-    assert refines == [("cov", {"refines":"#covartist0", "property":"role", "scheme":"marc:relators"})]
+    xml = create_metadata_xml(meta)
+    compare = f"{start}<dc:creator id=\"covartist1\">Guest</dc:creator>"
+    compare = f"{compare}<meta refines=\"#covartist1\" property=\"role\" scheme=\"marc:relators\">cov</meta>"
+    assert xml == f"{compare}{end}"
     meta["cover_artist"] = "Other,Folks"
-    book = create_metadata(meta)
-    writers = book.get_metadata("DC", "creator")
-    refines = book.get_metadata(None, "meta")
-    assert len(writers) == 2
-    assert writers[0] == ("Other", {"id":"covartist0"})
-    assert writers[1] == ("Folks", {"id":"covartist1"})
-    assert len(refines) == 2
-    assert refines[0] == ("cov", {"refines":"#covartist0", "property":"role", "scheme":"marc:relators"})
-    assert refines[1] == ("cov", {"refines":"#covartist1", "property":"role", "scheme":"marc:relators"})
+    xml = create_metadata_xml(meta)
+    compare = f"{start}<dc:creator id=\"covartist1\">Other</dc:creator>"
+    compare = f"{compare}<meta refines=\"#covartist1\" property=\"role\" scheme=\"marc:relators\">cov</meta>"
+    compare = f"{compare}<dc:creator id=\"covartist2\">Folks</dc:creator>"
+    compare = f"{compare}<meta refines=\"#covartist2\" property=\"role\" scheme=\"marc:relators\">cov</meta>"
+    assert xml == f"{compare}{end}"
     # Test setting illustrator in XML file
     meta["cover_artist"] = None
     meta["artist"] = "Bleh"
-    book = create_metadata(meta)
-    writers = book.get_metadata("DC", "creator")
-    refines = book.get_metadata(None, "meta")
-    assert writers == [("Bleh", {"id":"illustrator0"})]
-    assert refines == [("ill", {"refines":"#illustrator0", "property":"role", "scheme":"marc:relators"})]
+    xml = create_metadata_xml(meta)
+    compare = f"{start}<dc:creator id=\"illustrator1\">Bleh</dc:creator>"
+    compare = f"{compare}<meta refines=\"#illustrator1\" property=\"role\" scheme=\"marc:relators\">ill</meta>"
+    assert xml == f"{compare}{end}"
     meta["artist"] = "Other,Artist"
-    book = create_metadata(meta)
-    writers = book.get_metadata("DC", "creator")
-    refines = book.get_metadata(None, "meta")
-    assert len(writers) == 2
-    assert writers[0] == ("Other", {"id":"illustrator0"})
-    assert writers[1] == ("Artist", {"id":"illustrator1"})
-    assert len(refines) == 2
-    assert refines[0] == ("ill", {"refines":"#illustrator0", "property":"role", "scheme":"marc:relators"})
-    assert refines[1] == ("ill", {"refines":"#illustrator1", "property":"role", "scheme":"marc:relators"})
+    xml = create_metadata_xml(meta)
+    compare = f"{start}<dc:creator id=\"illustrator1\">Other</dc:creator>"
+    compare = f"{compare}<meta refines=\"#illustrator1\" property=\"role\" scheme=\"marc:relators\">ill</meta>"
+    compare = f"{compare}<dc:creator id=\"illustrator2\">Artist</dc:creator>"
+    compare = f"{compare}<meta refines=\"#illustrator2\" property=\"role\" scheme=\"marc:relators\">ill</meta>"
+    assert xml == f"{compare}{end}"
     # Test setting publisher in XML file
     meta["artist"] = None
     meta["publisher"] = "Company"
-    book = create_metadata(meta)
-    publisher = book.get_metadata("DC", "publisher")
-    assert publisher == [("Company", None)]
+    xml = create_metadata_xml(meta)
+    compare = f"{start}<dc:publisher>Company</dc:publisher>{end}"
+    assert xml == compare
     # Test setting date in the XML file
     meta["publisher"] = None
     meta["date"] = "2023-01-15"
-    book = create_metadata(meta)
-    date = book.get_metadata("DC", "date")
-    assert date == [("2023-01-15T00:00:00+00:00", None)]
+    xml = create_metadata_xml(meta)
+    end = "<meta property=\"dcterms:modified\">2023-01-15T00:00:00+00:00</meta>"
+    end = f"{end}<dc:date>2023-01-15T00:00:00+00:00</dc:date></metadata>"
+    assert xml == f"{start}{end}"
     meta["date"] = "2014-12-08"
-    book = create_metadata(meta)
-    date = book.get_metadata("DC", "date")
-    assert date == [("2014-12-08T00:00:00+00:00", None)]
+    xml = create_metadata_xml(meta)
+    end = "<meta property=\"dcterms:modified\">2014-12-08T00:00:00+00:00</meta>"
+    end = f"{end}<dc:date>2014-12-08T00:00:00+00:00</dc:date></metadata>"
+    assert xml == f"{start}{end}"
     # Test setting series info in the XML file
     meta["series"] = "Name!!"
     meta["series_number"] = "2.5"
     meta["series_total"] = "5"
-    book = create_metadata(meta)
-    series = book.get_metadata(None, "meta")
-    assert len(series) == 3
-    assert series[0] == ("Name!!", {"id":"series-title", "property":"belongs-to-collection"})
-    assert series[1] == ("series", {"refines":"#series-title", "property":"collection-type"})
-    assert series[2] == ("2.5", {"refines":"#series-title", "property":"group-position"})
+    xml = create_metadata_xml(meta)
+    compare = f"{start}<meta property=\"belongs-to-collection\" id=\"series-title\">Name!!</meta>"
+    compare = f"{compare}<meta refines=\"series-title\" property=\"collection-type\">series</meta>"
+    compare = f"{compare}<meta refines=\"series-title\" property=\"group-position\">2.5</meta>{end}"
+    assert xml == compare
     # Test setting invalid series number
-    meta["series"] = "New Series"
     meta["series_number"] = "NotNumber"
-    book = create_metadata(meta)
-    series = book.get_metadata(None, "meta")
-    assert len(series) == 2
-    assert series[0] == ("New Series", {"id":"series-title", "property":"belongs-to-collection"})
-    assert series[1] == ("series", {"refines":"#series-title", "property":"collection-type"})
+    xml = create_metadata_xml(meta)
+    compare = f"{start}<meta property=\"belongs-to-collection\" id=\"series-title\">Name!!</meta>"
+    compare = f"{compare}<meta refines=\"series-title\" property=\"collection-type\">series</meta>{end}"
+    assert xml == compare
     # Test setting tags in XML file
     meta["series"] = None
     meta["series_number"] = None
     meta["tags"] = "Some,Tags,&,stuff"
-    book = create_metadata(meta)
-    tags = book.get_metadata("DC", "subject")
-    assert len(tags) == 4
-    assert tags[0] == ("Some", None)
-    assert tags[1] == ("Tags", None)
-    assert tags[2] == ("&", None)
-    assert tags[3] == ("stuff", None)
+    xml = create_metadata_xml(meta)
+    compare = f"{start}<dc:subject>Some</dc:subject>"
+    compare = f"{compare}<dc:subject>Tags</dc:subject>"
+    compare = f"{compare}<dc:subject>&amp;</dc:subject>"
+    compare = f"{compare}<dc:subject>stuff</dc:subject>{end}"
+    assert xml == compare
     # Test setting the score in the XML file
     meta["tags"] = None
     meta["score"] = "0"
-    book = create_metadata(meta)
-    scores = book.get_metadata(None, "meta")
-    assert scores == [("0.0", {"property":"calibre:rating"})]
+    xml = create_metadata_xml(meta)
+    assert xml == f"{start}<meta property=\"calibre:rating\">0.0</meta>{end}"
     meta["score"] = "2"
-    book = create_metadata(meta)
-    scores = book.get_metadata(None, "meta")
-    tags = book.get_metadata("DC", "subject")
-    assert scores == [("4.0", {"property":"calibre:rating"})]
-    assert tags == [("★★", None)]
+    xml = create_metadata_xml(meta)
+    compare = f"{start}<meta property=\"calibre:rating\">4.0</meta>"
+    compare = f"{compare}<dc:subject>&#9733;&#9733;</dc:subject>{end}"
+    assert xml == compare
     meta["score"] = "5"
-    book = create_metadata(meta)
-    scores = book.get_metadata(None, "meta")
-    tags = book.get_metadata("DC", "subject")
-    assert scores == [("10.0", {"property":"calibre:rating"})]
-    assert tags == [("★★★★★", None)]
+    xml = create_metadata_xml(meta)
+    compare = f"{start}<meta property=\"calibre:rating\">10.0</meta>"
+    compare = f"{compare}<dc:subject>&#9733;&#9733;&#9733;&#9733;&#9733;</dc:subject>{end}"
+    assert xml == compare
     # Test setting invalid score in XML file
     meta["score"] = "Blah"
-    book = create_metadata(meta)
-    try:
-        scores = book.get_metadata(None, "meta")
-        assert 1 == 0
-    except KeyError: pass
-    assert book.get_metadata("DC", "subject") == []
+    xml = create_metadata_xml(meta)
+    assert xml == f"{start}{end}"
     meta["score"] = "6"
-    book = create_metadata(meta)
-    try:
-        scores = book.get_metadata(None, "meta")
-        assert 1 == 0
-    except KeyError: pass
-    assert book.get_metadata("DC", "subject") == []
+    xml = create_metadata_xml(meta)
+    assert xml == f"{start}{end}"
     meta["score"] = "-3"
-    book = create_metadata(meta)
-    try:
-        scores = book.get_metadata(None, "meta")
-        assert 1 == 0
-    except KeyError: pass
-    assert book.get_metadata("DC", "subject") == []
+    xml = create_metadata_xml(meta)
+    assert xml == f"{start}{end}"
     # Test adding score as tags
     meta["tags"] = "These,are,things"
     meta["score"] = "3"
-    book = create_metadata(meta)
-    scores = book.get_metadata(None, "meta")
-    tags = book.get_metadata("DC", "subject")
-    assert scores == [("6.0", {"property":"calibre:rating"})]
-    assert len(tags) == 4
-    assert tags[0] == ("★★★", None)
-    assert tags[1] == ("These", None)
-    assert tags[2] == ("are", None)
-    assert tags[3] == ("things", None)
+    xml = create_metadata_xml(meta)
+    compare = f"{start}<meta property=\"calibre:rating\">6.0</meta>"
+    compare = f"{compare}<dc:subject>&#9733;&#9733;&#9733;</dc:subject>"
+    compare = f"{compare}<dc:subject>These</dc:subject>"
+    compare = f"{compare}<dc:subject>are</dc:subject>"
+    compare = f"{compare}<dc:subject>things</dc:subject>{end}"
+    assert xml == compare
     meta["score"] = "5"
     meta["tags"] = None
-    book = create_metadata(meta)
-    scores = book.get_metadata(None, "meta")
-    tags = book.get_metadata("DC", "subject")
-    assert scores == [("10.0", {"property":"calibre:rating"})]
-    assert tags == [("★★★★★", None)]
+    xml = create_metadata_xml(meta)
+    compare = f"{start}<meta property=\"calibre:rating\">10.0</meta>"
+    compare = f"{compare}<dc:subject>&#9733;&#9733;&#9733;&#9733;&#9733;</dc:subject>{end}"
+    assert xml == compare
     meta["score"] = "0"
-    book = create_metadata(meta)
-    scores = book.get_metadata(None, "meta")
-    tags = book.get_metadata("DC", "subject")
-    assert scores == [("0.0", {"property":"calibre:rating"})]
+    xml = create_metadata_xml(meta)
+    assert xml == f"{start}<meta property=\"calibre:rating\">0.0</meta>{end}"
 
-def test_get_items():
+def test_create_epub_files():
     """
-    Tests the get_items function.
+    Tests the create_epub_files function.
     """
     # Create test files
     temp_dir = get_temp_dir()
