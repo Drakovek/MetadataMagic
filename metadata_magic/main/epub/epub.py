@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from argparse import ArgumentParser
+from ebooklib.epub import EpubBook, EpubHtml, EpubItem, EpubNav, EpubNcx, Link, Section, write_epub
 from html_string_tools.main.html_string_tools import get_extension, regex_replace
 from metadata_magic.main.comic_archive.comic_archive import create_cbz
 from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
@@ -22,6 +23,44 @@ from xml.etree.ElementTree import Element, SubElement
 from xml.etree.ElementTree import fromstring as xml_from_string
 from xml.etree.ElementTree import tostring as xml_to_string
 from zipfile import ZipFile, ZIP_DEFLATED, ZIP_STORED
+
+class DvkEpubHtml(EpubHtml):
+    def __init__(self, uid=None, file_name='', media_type='', content=None, title='',
+                 lang=None, direction=None, media_overlay=None, media_duration=None):
+        super().__init__(uid, file_name, media_type, content, title,
+                 lang, direction, media_overlay, media_duration)
+        self.metas = []
+    
+    def get_content(self, default=None):
+        # Get the default content
+        original_xml = super().get_content(default).decode("UTF-8")
+        original_xml = resub("\\s*<\\?xml[^>]*>\\s*", "", original_xml)
+        original_xml = resub("\\s*<!DOCTYPE[^>]*>\\s*", "", original_xml)
+        original_xml = resub("\\s*<html[^>]*>", "<html>", original_xml)
+        # Parse xml
+        base = xml_from_string(original_xml)
+        attributes = {"xmlns":"http://www.w3.org/1999/xhtml"}
+        attributes["xmlns:epub"] = "http://www.idpf.org/2007/ops"
+        attributes["epub:prefix"] = "z3998: http://www.daisy.org/z3998/2012/vocab/structure/#"
+        attributes["lang"] = "en"
+        attributes["xml:lang"] = "en"
+        base.attrib = attributes
+        # Add meta tags
+        myhead = base.find("head")
+        for meta in self.metas:
+            meta_el = SubElement(myhead, "meta")
+            meta_el.attrib = meta
+        # Return the xml
+        xml_indent(base, space="   ")
+        xml = xml_to_string(base).decode("UTF-8")
+        xml = f"<?xml version='1.0' encoding='utf-8'?>\n<!DOCTYPE html>\n{xml}"
+        return xml.encode("UTF-8")
+
+    def add_meta(self, **kwgs):
+        self.metas.append(kwgs)
+
+    def get_metas(self):
+        return (meta for meta in self.metas)
 
 def newline_to_tag(lines:str) -> str:
     """
@@ -52,15 +91,11 @@ def get_title_from_file(file:str) -> str:
 
 def format_xhtml(html:str, title:str, head_tags:List[dict]=[], indent:bool=True) -> str:
     """
-    Creates text for an epub XHTML content file with given html string in the body
-    
-    :param html: String in HTML format
-    :type html: str, required
-    :param title: Title to use in the XHTML head
-    :type title: str, required
-    :param indent: Whether to add indents to the XHTML file, defaults to True
-    :type indent: bool, optional
-    :return: XHTML text
+    Gets an id/title for a file from the filename.
+
+    :param file: File path or file name
+    :type file: str, required
+    :return: ID/title
     :rtype: str
     """
     # Set the base element for the XHTML 
@@ -90,7 +125,7 @@ def format_xhtml(html:str, title:str, head_tags:List[dict]=[], indent:bool=True)
     xml = xml_to_string(base).decode("UTF-8")
     return f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
 
-def create_image_page(image_file, indent:bool=True) -> str:
+def create_image_page(image_file) -> str:
     """
     Returns a epub formatted XHTML page containing a single full page image.
     
@@ -125,14 +160,12 @@ def create_image_page(image_file, indent:bool=True) -> str:
     # Return EpubHtml
     return format_xhtml(xml, title, [tag], indent)
 
-def txt_to_xhtml(txt_file:str, indent:bool=True) -> str:
+def txt_to_xhtml(txt_file:str) -> str:
     """
     Creates text for an epub XHTML content file from a given txt file.
     
     :param txt_file: Path to a txt file.
     :type txt_file: str, required
-    :param indent: Whether to add indents to the XHTML file, defaults to True
-    :type indent: bool, optional
     :return: XHTML text
     :rtype: str
     """
@@ -170,7 +203,7 @@ def txt_to_xhtml(txt_file:str, indent:bool=True) -> str:
     # Return XHTML
     return format_xhtml(xml, title, indent=indent)
 
-def create_style_file(file_path:str):
+def get_style() -> str:
     """
     Creates the default css stylesheet for the epub book.
     
@@ -378,102 +411,59 @@ def create_manifest(files:List[str]) -> str:
     xml = xml_to_string(base).decode("UTF-8")
     return xml
 
-def create_metadata_xml(metadata:dict) -> str:
+def create_metadata(metadata:dict) -> EpubBook:
     """
-    Creates the metadata section for the epub package file based on given metadata.
-    
-    :param metadata: Metadata dict, same as given for cbz ComicInfo functions
+    Creates an EpubBook object with the given metadata.
+    Metadata is the same as used for the get_comic_xml function.
+
+    :param metadata: Metadata dictionary
     :type metadata: dict, required
-    :return: Metadata section in xml format
-    :rtype: str
+    :return: EpubBook object containing metadata
+    :rtype: EpubBook
     """
-    # Create the metadata base
-    base = Element("metadata")
-    base.attrib = {"xmlns:dc":"http://purl.org/dc/elements/1.1/"}
+    # Create book
+    book = EpubBook()
     # Set the language
-    language = SubElement(base, "dc:language")
-    language.text = "en"
+    book.set_language("en")
     # Set the identifier
-    identifier = SubElement(base, "dc:identifier")
     if metadata["url"] is not None:
-        identifier.text = metadata["url"]
+        book.set_identifier(metadata["url"])
     else:
-        identifier.text = metadata["title"].lower()
+        book.set_identifier(metadata["title"].lower())
     # Set the title
-    title = SubElement(base, "dc:title")
-    title.text = metadata["title"]
-    # Add author(s)
+    book.set_title(metadata["title"])
+    # Set the description
+    if metadata["description"] is not None:
+        book.add_metadata("DC", "description", metadata["description"])
+    # Add Authors
     try:
         authors = metadata["writer"].split(",")
     except AttributeError: authors = []
     for i in range(0, len(authors)):
-        # Add creator tag
-        author_id = "author" + str(i+1)
-        creator = SubElement(base, "dc:creator")
-        creator.attrib = {"id":author_id}
-        creator.text = authors[i]
-        # Add role tag
-        role = SubElement(base, "meta")
-        role.attrib = {"refines":f"#{author_id}", "property":"role", "scheme":"marc:relators"}
-        role.text = "aut"
-    # Add illustrator(s)
+        book.add_author(authors[i], role="aut", uid=f"author{i}")
+    # Add Illustrator(s)
     try:
         illustrators = metadata["artist"].split(",")
     except AttributeError: illustrators = []
     for i in range(0, len(illustrators)):
-        # Add creator tag
-        illustrator_id = "illustrator" + str(i+1)
-        creator = SubElement(base, "dc:creator")
-        creator.attrib = {"id":illustrator_id}
-        creator.text = illustrators[i]
-        # Add role tag
-        role = SubElement(base, "meta")
-        role.attrib = {"refines":f"#{illustrator_id}", "property":"role", "scheme":"marc:relators"}
-        role.text = "ill"
-    # Add cover artist(s)
+        book.add_author(illustrators[i], role="ill", uid=f"illustrator{i}")
+    # Add Cover Artist(s)
     try:
         covartists = metadata["cover_artist"].split(",")
     except AttributeError: covartists = []
     for i in range(0, len(covartists)):
-        # Add creator tag
-        cover_id = "covartist" + str(i+1)
-        creator = SubElement(base, "dc:creator")
-        creator.attrib = {"id":cover_id}
-        creator.text = covartists[i]
-        # Add role tag
-        role = SubElement(base, "meta")
-        role.attrib = {"refines":f"#{cover_id}", "property":"role", "scheme":"marc:relators"}
-        role.text = "cov"
-    # Set the description
-    if metadata["description"] is not None:
-        description = SubElement(base, "dc:description")
-        description.text = metadata["description"]
-    # Set the publisher
+        book.add_author(covartists[i], role="cov", uid=f"covartist{i}")
+    # Add publisher
     if metadata["publisher"] is not None:
-        publisher = SubElement(base, "dc:publisher")
-        publisher.text = metadata["publisher"]
-    # Set the series info
-    if metadata["series"] is not None:
-        series_title = SubElement(base, "meta")
-        series_title.attrib = {"property":"belongs-to-collection", "id":"series-title"}
-        series_title.text = metadata["series"]
-        collection_type = SubElement(base, "meta")
-        collection_type.attrib = {"refines":"series-title", "property":"collection-type"}
-        collection_type.text = "series"
-        try:
-            num = float(metadata["series_number"])
-            series_number = SubElement(base, "meta")
-            series_number.attrib = {"refines":"series-title", "property":"group-position"}
-            series_number.text = metadata["series_number"]
-        except (TypeError, ValueError): pass
+        book.add_metadata("DC", "publisher", metadata["publisher"])
+    # Add date
+    if metadata["date"] is not None:
+        book.add_metadata("DC", "date", metadata["date"] + "T00:00:00+00:00")
     # Set the score
-    tag_string = metadata["tags"]
     try:
         score = int(metadata["score"])
         if score > -1 and score < 6:
-            score_element = SubElement(base, "meta")
-            score_element.attrib = {"property":"calibre:rating"}
-            score_element.text = str(float(score * 2))
+            book.add_metadata(None, "meta", str(float(score * 2)), {"property":"calibre:rating"})
     except (TypeError, ValueError): pass
     # Set the tags
     tag_string = metadata["tags"]
@@ -493,33 +483,31 @@ def create_metadata_xml(metadata:dict) -> str:
         tags = tag_string.split(",")
     except AttributeError: tags = []
     for tag in tags:
-        subject = SubElement(base, "dc:subject")
-        subject.text = tag
-    # Set the date
-    date = "0000-00-00T00:00:00+00:00"
-    if metadata["date"] is not None:
-        date = metadata["date"] + "T00:00:00+00:00"
-    modified = SubElement(base, "meta")
-    modified.attrib = {"property":"dcterms:modified"}
-    modified.text = date
-    date_element = SubElement(base, "dc:date")
-    date_element.text = date
-    # Get xml as string
-    xml = xml_to_string(base).decode("UTF-8")
-    return xml
+        book.add_metadata("DC", "subject", tag)
+    # Add series info
+    if metadata["series"] is not None:
+        attribs = {"property":"belongs-to-collection", "id":"series-title"}
+        book.add_metadata(None, "meta", metadata["series"], attribs)
+        attribs = {"refines":"#series-title", "property":"collection-type"}
+        book.add_metadata(None, "meta", "series", attribs)
+        try:
+            num = float(metadata["series_number"])
+            attribs = {"refines":"#series-title", "property":"group-position"}
+            book.add_metadata(None, "meta", metadata["series_number"], attribs)
+        except (TypeError, ValueError): pass
+    # Return ebook with metadata
+    return book
 
-def create_epub_files(directory:str, metadata:dict):
+def get_items(directory:str) -> List[EpubItem]:
     """
-    Creates the nav.xhtml and package.opf files required for an epub archive.
-    Saves files in the given directory.
-    Searches for files to include in spine and manifest from ./content directory within given directory.
-    
-    :param directory: Directory in which to save files
+    Creates a list of items to include in epub based on files in a given directory.
+
+    :param directory: Directory to search for files within
     :type directory: str, required
-    :param metadata: Metadata to use when creating the file
-    :type metadata: dict, required
+    :return: List of EpubItems
+    :rtype: list[EpubItem]
     """
-    # Get list of files in the content directory
+    # Get list of files in directory
     full_directory = abspath(directory)
     content_dir = abspath(join(directory, "content"))
     content_files = sort_alphanum(listdir(content_dir))
