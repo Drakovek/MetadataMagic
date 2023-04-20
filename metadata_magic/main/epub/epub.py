@@ -2,6 +2,8 @@
 
 from argparse import ArgumentParser
 from html_string_tools.main.html_string_tools import get_extension, regex_replace
+from lxml.html import fromstring as html_from_string
+from lxml.etree import tostring as lxml_to_string
 from metadata_magic.main.comic_archive.comic_archive import create_cbz
 from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
 from metadata_magic.main.comic_archive.comic_xml import generate_info_from_jsons
@@ -125,6 +127,38 @@ def create_image_page(image_file, indent:bool=True) -> str:
     # Return EpubHtml
     return format_xhtml(xml, title, [tag], indent)
 
+def html_to_xhtml(html_file:str, indent:bool=False) -> str:
+    """
+    Creates text for an epub XHTML content file from a given html file.
+    
+    :param txt_file: Path to an html file.
+    :type txt_file: str, required
+    :param indent: Whether to add indents to the XHTML file, defaults to True
+    :type indent: bool, optional
+    :return: XHTML text
+    :rtype: str
+    """
+    # Read html file
+    full_path = abspath(html_file)
+    content = read_text_file(full_path)
+    print(content)
+    # Parse as XML
+    root = html_from_string(content)
+    # Extract body if necessary
+    try:
+        body = root.xpath("//body")[0]
+        body_text = lxml_to_string(body).decode("UTF-8")
+        print(lxml_to_string(root))
+        body_text = findall("(?<=^<body>).+(?=<\\/body>$)", body_text)[0]
+    except IndexError:
+        body_text = lxml_to_string(root).decode("UTF-8")
+        inner_text = findall("(?<=^<div>).+(?=<\\/div>$)", body_text)
+        if len(inner_text) == 1:
+            body_text = inner_text[0]
+    # Format html as xml
+    body_text = f"<div class=\"text-container\">{body_text}</div>"
+    return format_xhtml(body_text, get_title_from_file(full_path), indent=indent)
+
 def txt_to_xhtml(txt_file:str, indent:bool=True) -> str:
     """
     Creates text for an epub XHTML content file from a given txt file.
@@ -163,12 +197,8 @@ def txt_to_xhtml(txt_file:str, indent:bool=True) -> str:
     xml = resub("<\\/b>\\s+(?=[,.?!])", "</b>", xml)
     xml = resub("\\s+<\\/i>", "</i>", xml)
     xml = resub("\\s+<\\/b>", "</b>", xml)
-    # Get the title for the file
-    title = get_title_from_file(full_path)
-    filename = basename(full_path)
-    filename = filename[:len(filename) - len(get_extension(full_path))]
     # Return XHTML
-    return format_xhtml(xml, title, indent=indent)
+    return format_xhtml(xml, get_title_from_file(full_path), indent=indent)
 
 def create_style_file(file_path:str):
     """
@@ -642,6 +672,11 @@ def create_epub(directory:str, metadata:dict) -> str:
             # Create text extension
             filename = filename[:len(filename) - len(extension)] + ".xhtml"
             xml = txt_to_xhtml(file, True)
+            create_text_file(abspath(join(content_folder, filename)), xml)
+        if extension == ".html" or extension == ".htm" or extension == ".xhtml":
+            # Create text extension
+            filename = filename[:len(filename) - len(extension)] + ".xhtml"
+            xml = html_to_xhtml(file, True)
             create_text_file(abspath(join(content_folder, filename)), xml)
         if extension == ".png" or extension == ".jpg" or extension == ".jpeg" or extension == ".svg":
             # Copy image file

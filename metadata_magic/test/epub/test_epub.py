@@ -13,6 +13,7 @@ from metadata_magic.main.epub.epub import create_manifest
 from metadata_magic.main.epub.epub import create_metadata_xml
 from metadata_magic.main.epub.epub import create_style_file
 from metadata_magic.main.epub.epub import get_title_from_file
+from metadata_magic.main.epub.epub import html_to_xhtml
 from metadata_magic.main.epub.epub import format_xhtml
 from metadata_magic.main.epub.epub import newline_to_tag
 from metadata_magic.main.epub.epub import txt_to_xhtml
@@ -156,6 +157,60 @@ def test_create_image_page():
     body = f"{body}   </body>\n"
     body = f"{body}</html>"
     assert chapter == body
+
+def test_html_to_xhtml():
+    """
+    Tests the html_to_xml function.
+    """
+    # Test HTML inside a body
+    temp_dir = get_temp_dir()
+    html_file = abspath(join(temp_dir, "thing.html"))
+    text = "<!DOCTYPE html><html><body><p>This is text!</p><br><p><b>YAY!</b></p></body></html>"
+    create_text_file(html_file, text)
+    assert exists(html_file)
+    contents = html_to_xhtml(html_file, indent=False)
+    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+    compare = f"{compare}<html xmlns=\"http://www.w3.org/1999/xhtml\"><head>"
+    compare = f"{compare}<title>thing</title><meta charset=\"utf-8\" />"
+    compare = f"{compare}<link rel=\"stylesheet\" href=\"../style/epubstyle.css\" "
+    compare = f"{compare}type=\"text/css\" /></head><body>"
+    compare = f"{compare}<div class=\"text-container\"><p>This is text!</p>"
+    compare = f"{compare}<br /><p><b>YAY!</b></p></div></body></html>"
+    assert contents == compare
+    # Test simple HTML with no body
+    html_file = abspath(join(temp_dir, "New.htm"))
+    text = "<b>A thing</b> and Thing.<hr>Other!"
+    create_text_file(html_file, text)
+    assert exists(html_file)
+    contents = html_to_xhtml(html_file, indent=False)
+    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+    compare = f"{compare}<html xmlns=\"http://www.w3.org/1999/xhtml\">"
+    compare = f"{compare}<head><title>New</title><meta charset=\"utf-8\" />"
+    compare = f"{compare}<link rel=\"stylesheet\" href=\"../style/epubstyle.css\" "
+    compare = f"{compare}type=\"text/css\" /></head><body>"
+    compare = f"{compare}<div class=\"text-container\"><b>A thing</b> and Thing."
+    compare = f"{compare}<hr />Other!</div></body></html>"
+    assert contents == compare
+    # Test adding indents
+    html_file = abspath(join(temp_dir, "Final.htm"))
+    text = "Some Words..."
+    create_text_file(html_file, text)
+    assert exists(html_file)
+    contents = html_to_xhtml(html_file, indent=True)
+    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+    compare = f"{compare}<html xmlns=\"http://www.w3.org/1999/xhtml\">\n"
+    compare = f"{compare}   <head>\n"
+    compare = f"{compare}      <title>Final</title>\n"
+    compare = f"{compare}      <meta charset=\"utf-8\" />\n"
+    compare = f"{compare}      <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />\n"
+    compare = f"{compare}   </head>\n"
+    compare = f"{compare}   <body>\n"
+    compare = f"{compare}      <div class=\"text-container\">\n"
+    compare = f"{compare}         <p>Some Words...</p>\n"
+    compare = f"{compare}      </div>\n"
+    compare = f"{compare}   </body>\n"
+    compare = f"{compare}</html>"
+    assert contents == compare
 
 def test_txt_to_xhtml():
     """
@@ -720,9 +775,11 @@ def test_create_epub():
     temp_dir = get_temp_dir()
     json = abspath(join(temp_dir, "blah.json"))
     text_page = abspath(join(temp_dir, "Text.txt"))
+    html_page = abspath(join(temp_dir, "Html.htm"))
     cover_file = abspath(join(temp_dir, "[00] Cover.png"))
     internal_file = abspath(join(temp_dir, "Other.jpeg"))
     create_text_file(json, "Some thing")
+    create_text_file(html_page, "<p>Some things</p>")
     create_text_file(text_page, "This is some text!!!")
     cover_image = Image.new("RGB", (100, 200), color=(255,0,0))
     internal_image = Image.new("RGB", (500, 300), color=(0,255,0))
@@ -730,6 +787,7 @@ def test_create_epub():
     internal_image.save(internal_file)
     assert exists(json)
     assert exists(text_page)
+    assert exists(html_page)
     assert exists(cover_file)
     assert exists(internal_file)
     # Attempt to create an epub archive
@@ -752,11 +810,11 @@ def test_create_epub():
     # Check the contents of the "original" folder
     original_folder = abspath(join(epub_dir, "original"))
     files = sort_alphanum(listdir(original_folder))
-    assert files == ["[00] Cover.png", "blah.json", "Other.jpeg", "Text.txt"]
+    assert files == ["[00] Cover.png", "blah.json", "Html.htm", "Other.jpeg", "Text.txt"]
     # Check the contents of the "content" folder
     content_folder = abspath(join(epub_dir, "content"))
     files = sort_alphanum(listdir(content_folder))
-    assert files == ["[00] Cover.xhtml", "Other.xhtml", "Text.xhtml"]
+    assert files == ["[00] Cover.xhtml", "Html.xhtml", "Other.xhtml", "Text.xhtml"]
     # Check the contents of the cover image xhtml
     xml = read_text_file(abspath(join(content_folder, "[00] Cover.xhtml")))
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
