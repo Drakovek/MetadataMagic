@@ -8,9 +8,10 @@ from metadata_magic.main.meta_finder import get_pairs
 from metadata_magic.main.meta_reader import load_metadata
 from metadata_magic.main.rename.rename_tools import rename_file
 from python_print_tools.main.python_print_tools import color_print
+from re import sub as resub
 from tqdm import tqdm
 
-def rename_json_pairs(path:str, add_id:bool=False):
+def rename_json_pairs(path:str, add_id:bool=False, add_artist=False):
     """
     Renames all JSON-media pairs of files to match the title found in the JSON metadata
     
@@ -35,9 +36,18 @@ def rename_json_pairs(path:str, add_id:bool=False):
             extension = get_extension(title)
             title = title[:len(title) - len(extension)]
         # Add ID if specified
+        header = ""
         media_id = meta["id"]
         if add_id and media_id is not None:
-            title = f"[{media_id}] {title}"
+            header = media_id
+        # Add artist if specified
+        artist = meta["artist"]
+        if add_artist and artist is not None:
+            header = f"{artist}-{header}"
+            header = resub("-+$", "", header)
+        # Add header to data
+        if not header == "":
+            title = f"[{header}] {title}"
         # Rename JSON
         new_file = rename_file(json, title)
         # Rename media
@@ -61,6 +71,11 @@ def main():
             type=str,
             default=str(getcwd()))
     parser.add_argument(
+            "-a",
+            "--artist",
+            help="Add media artist to the beginning of renamed files.",
+            action="store_true")
+    parser.add_argument(
             "-i",
             "--id",
             help="Add media ID to the beginning of renamed files.",
@@ -71,7 +86,7 @@ def main():
     if not exists(directory):
         color_print("Invalid directory.", "red")
     else:
-        rename_json_pairs(directory, args.id)
+        rename_json_pairs(directory, add_id=args.id, add_artist=args.artist)
         color_print("Finished renaming.", "green")
 
 if __name__ == "__main__":
