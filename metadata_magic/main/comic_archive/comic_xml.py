@@ -7,6 +7,7 @@ from re import findall
 from re import sub as resub
 from os import listdir
 from os.path import abspath, exists, isdir, join
+from metadata_magic.main.meta_reader import get_empty_metadata
 from metadata_magic.main.meta_reader import load_metadata
 from metadata_magic.main.rename.sort_rename import sort_alphanum
 from xml.etree.ElementTree import Element, SubElement
@@ -14,27 +15,6 @@ from xml.etree.ElementTree import indent as xml_indent
 from xml.etree.ElementTree import parse as xml_parse
 from xml.etree.ElementTree import ParseError
 from xml.etree.ElementTree import tostring as xml_to_string
-
-def get_empty_metadata() -> dict:
-    """
-    Returns a dictionary with keys for multiple metadata fields, populated as None.
-    """
-    meta_dict = dict()
-    meta_dict["title"] = None
-    meta_dict["series"] = None
-    meta_dict["series_number"] = None
-    meta_dict["series_total"] = None
-    meta_dict["description"] = None
-    meta_dict["date"] = None
-    meta_dict["writer"] = None
-    meta_dict["artist"] = None
-    meta_dict["cover_artist"] = None
-    meta_dict["publisher"] = None
-    meta_dict["tags"] = None
-    meta_dict["url"] = None
-    meta_dict["age_rating"] = None
-    meta_dict["score"] = None
-    return meta_dict
 
 def get_comic_xml(metadata:dict, indent:bool=True) -> str:
     """

@@ -3,7 +3,7 @@
 from os import mkdir, listdir
 from os.path import abspath, basename, exists, isdir, join
 from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
-from metadata_magic.main.comic_archive.comic_xml import get_empty_metadata
+from metadata_magic.main.meta_reader import get_empty_metadata
 from metadata_magic.main.epub.epub import create_epub
 from metadata_magic.main.epub.epub import create_epub_files
 from metadata_magic.main.epub.epub import create_image_page

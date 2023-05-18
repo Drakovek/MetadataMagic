@@ -7,7 +7,7 @@ from metadata_magic.main.comic_archive.comic_archive import get_comic_info_from_
 from metadata_magic.main.comic_archive.comic_archive import update_cbz_info
 from metadata_magic.main.comic_archive.comic_archive import create_or_update_cbz
 from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
-from metadata_magic.main.comic_archive.comic_xml import get_empty_metadata
+from metadata_magic.main.meta_reader import get_empty_metadata
 from metadata_magic.main.comic_archive.comic_xml import read_comic_info
 from metadata_magic.test.temp_file_tools import create_json_file, create_text_file, read_text_file
 from shutil import copy

@@ -6,7 +6,7 @@ from metadata_magic.main.comic_archive.comic_archive import create_cbz
 from metadata_magic.main.comic_archive.comic_archive import get_info_from_cbz
 from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
 from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
-from metadata_magic.main.comic_archive.comic_xml import get_empty_metadata
+from metadata_magic.main.meta_reader import get_empty_metadata
 from metadata_magic.main.comic_archive.series_info import get_comic_archives
 from metadata_magic.main.comic_archive.series_info import label_files_with_numbers
 from metadata_magic.main.comic_archive.series_info import list_file_labels

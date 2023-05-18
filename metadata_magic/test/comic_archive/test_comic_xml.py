@@ -1,33 +1,13 @@
 #!/usr/bin/env python3
 
 from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
+from metadata_magic.main.meta_reader import get_empty_metadata
 from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
-from metadata_magic.main.comic_archive.comic_xml import get_empty_metadata
 from metadata_magic.main.comic_archive.comic_xml import generate_info_from_jsons
 from metadata_magic.main.comic_archive.comic_xml import read_comic_info
 from metadata_magic.test.temp_file_tools import create_text_file, create_json_file
 from os import mkdir
 from os.path import abspath, exists, join
-
-def test_get_empty_metadata():
-    """
-    Tests the get_empty_metadata function.
-    """
-    meta = get_empty_metadata()
-    assert meta["title"] is None
-    assert meta["series"] is None
-    assert meta["series_number"] is None
-    assert meta["series_total"] is None
-    assert meta["description"] is None
-    assert meta["date"] is None
-    assert meta["writer"] is None
-    assert meta["artist"] is None
-    assert meta["cover_artist"] is None
-    assert meta["publisher"] is None
-    assert meta["tags"] is None
-    assert meta["url"] is None
-    assert meta["age_rating"] == None
-    assert meta["score"] is None
 
 def test_get_comic_xml():
     """

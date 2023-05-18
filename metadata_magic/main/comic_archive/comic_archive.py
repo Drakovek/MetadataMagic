@@ -6,7 +6,7 @@ from os.path import abspath, basename, exists, isdir, join, relpath
 from html_string_tools.main.html_string_tools import get_extension
 from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
 from metadata_magic.main.comic_archive.comic_xml import generate_info_from_jsons
-from metadata_magic.main.comic_archive.comic_xml import get_empty_metadata
+from metadata_magic.main.meta_reader import get_empty_metadata
 from metadata_magic.main.comic_archive.comic_xml import read_comic_info
 from metadata_magic.main.rename.sort_rename import sort_alphanum
 from python_print_tools.main.python_print_tools import color_print

@@ -13,8 +13,10 @@ def create_filename(string:str) -> str:
     :return: String with all invalid characters removed or replaced
     :rtype: str
     """
+    # Replace colons
+    new_text = string.replace(":", " - ")
     # Replace elipses
-    new_text = resub("\\.\\s*\\.\\s*\\.", "…", string)
+    new_text = resub("\\.\\s*\\.\\s*\\.", "…", new_text)
     # Replace special latin characters
     new_text = resub("[À-Å]", "A", new_text)
     new_text = resub("[È-Ë]", "E", new_text)
@@ -31,7 +33,7 @@ def create_filename(string:str) -> str:
     new_text = new_text.replace("Ý", "Y")
     new_text = new_text.replace("ñ", "n")
     # Replace all invalid characters
-    new_text = resub("<|>|:|\"|\\/|\\\\|\\||\\?|\\*|\\.+$", "-", new_text)
+    new_text = resub("<|>|\"|\\/|\\\\|\\||\\?|\\*|\\.+$", "-", new_text)
     # Remove whitespace and hyphens at begining and end of text
     new_text = resub("^[\\s-]+|[\\s-]+$", "", new_text)
     # Remove duplicate spacers
@@ -72,7 +74,7 @@ def rename_file(file:str, new_filename:str) -> str:
     base_filename = filename
     parent = abspath(join(path, pardir))
     while exists(abspath(join(parent,f"{filename}{extension}"))):
-        filename = f"{base_filename}{num}"
+        filename = f"{base_filename}-{num}"
         num += 1
     # Rename file
     try:
