@@ -9,7 +9,7 @@ from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
 from metadata_magic.main.comic_archive.comic_xml import generate_info_from_jsons
 from metadata_magic.main.meta_reader import get_empty_metadata
 from metadata_magic.main.comic_archive.comic_xml import read_comic_info
-from metadata_magic.main.rename.rename_tools import sort_alphanum
+from metadata_magic.main.rename.rename_tools import sort_alphanum, create_filename, get_available_filename
 from python_print_tools.main.python_print_tools import color_print
 from tqdm import tqdm
 from re import findall
@@ -58,6 +58,7 @@ def create_cbz(directory:str, name:str=None, metadata:dict=None, remove_files:bo
     if move_files:
         # Create new folder to contain files
         folder_name = files[0][:len(files[0]) - len(get_extension(files[0]))]
+        folder_name = get_available_filename("AAAAAAAAAA", create_filename(folder_name), full_directory)
         new_folder = abspath(join(full_directory, folder_name))
         mkdir(new_folder)
         # Move existing files to the new folder
@@ -166,14 +167,16 @@ def create_comic_archive(path:str,
     filename = None
     full_path = abspath(path)
     files = listdir(full_path)
+    for i in range(len(files)-1,-1,-1):
+        if files[i].startswith("."):
+            del files[i]
     if len(files) == 1 and get_extension(files[0]) == ".cbz":
         # Get metadata from the .cbz file
-        filename = files[0][:len(files[0]-4)]
+        filename = files[0][:len(files[0])-4]
         metadata = get_info_from_cbz(abspath(join(full_path, files[0])))
     else:
         # Get metadate from any existing JSON files
         metadata = generate_info_from_jsons(full_path)
-    metadata = get_comic_info_from_path(full_path)
     # Remove metadata fields the user wishes to replace
     if rp_description:
         metadata["description"] = None

@@ -84,7 +84,7 @@ def test_create_cbz():
     assert sorted(listdir(extract_directory)) == ["AA", "Another_one.txt", "BB", "ComicInfo.xml"]
     # Test creating CBZ with metadata and no subdirectories
     cbz_directory = get_temp_dir("dvk_cbz_test")
-    text_file = abspath(join(cbz_directory, "new.txt"))
+    text_file = abspath(join(cbz_directory, "new"))
     media_file = abspath(join(cbz_directory, "things.txt"))
     create_text_file(text_file, "NEWER")
     create_text_file(media_file, "More things")
@@ -94,9 +94,9 @@ def test_create_cbz():
     assert listdir(cbz_directory) == ["None.cbz"]
     extract_directory = get_temp_dir("dvk_extract_test")
     assert extract_zip(cbz_file, extract_directory)
-    assert sorted(listdir(extract_directory)) == ["ComicInfo.xml", "new"]
-    sub_directory = abspath(join(extract_directory, "new"))
-    assert sorted(listdir(sub_directory)) == ["new.txt", "things.txt"]
+    assert sorted(listdir(extract_directory)) == ["ComicInfo.xml", "new-2"]
+    sub_directory = abspath(join(extract_directory, "new-2"))
+    assert sorted(listdir(sub_directory)) == ["new", "things.txt"]
     # Test that CBZ is only updated with new metadata if CBZ already exists
     metadata["title"] = "New!"
     metadata["tags"] = "Some, More, Stuff"
@@ -104,9 +104,9 @@ def test_create_cbz():
     assert listdir(cbz_directory) == ["None.cbz"]
     extract_directory = get_temp_dir("dvk_extract_test")
     assert extract_zip(cbz_file, extract_directory)
-    assert sorted(listdir(extract_directory)) == ["ComicInfo.xml", "new"]
-    sub_directory = abspath(join(extract_directory, "new"))
-    assert sorted(listdir(sub_directory)) == ["new.txt", "things.txt"]
+    assert sorted(listdir(extract_directory)) == ["ComicInfo.xml", "new-2"]
+    sub_directory = abspath(join(extract_directory, "new-2"))
+    assert sorted(listdir(sub_directory)) == ["new", "things.txt"]
     read_meta = read_comic_info(abspath(join(extract_directory, "ComicInfo.xml")))
     assert read_meta["title"] == "New!"
     assert read_meta["tags"] == "Some,More,Stuff"

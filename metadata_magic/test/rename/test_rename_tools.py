@@ -4,6 +4,7 @@ from os import pardir
 from os.path import abspath, basename, exists, join
 from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.rename.rename_tools import get_section
+from metadata_magic.main.rename.rename_tools import get_available_filename
 from metadata_magic.main.rename.rename_tools import compare_sections
 from metadata_magic.main.rename.rename_tools import compare_alphanum
 from metadata_magic.main.rename.rename_tools import sort_alphanum
@@ -95,7 +96,7 @@ def test_create_filename():
     """
     # Test replacing invalid characters
     assert create_filename("**What?!?!") == "What-!-!"
-    assert create_filename("This:That") == "This - That"
+    assert create_filename(".This:That") == "This - That"
     assert create_filename("Blah...") == "Blah…"
     assert create_filename("<\"This/That\\Other\">") == "This-That-Other"
     assert create_filename("(A|||B)") == "(A-B)"
@@ -103,7 +104,7 @@ def test_create_filename():
     assert create_filename(" This    &    That ") == "This & That"
     assert create_filename("thing--stuff  @*-   blah") == "thing-stuff @ blah"
     assert create_filename("This..") == "This"
-    assert create_filename("Dots.....") == "Dots…"
+    assert create_filename("..Dots.....") == "Dots…"
     assert create_filename("Spaced .  .   .") == "Spaced …"
     assert create_filename("  This is the end >.<  ") == "This is the end"
     assert create_filename(" No, THIS is the end. -.-.. ") == "No, THIS is the end"
@@ -126,6 +127,30 @@ def test_create_filename():
     # Test getting filename with no length
     assert create_filename("") == "0"
     assert create_filename("---") == "0"
+
+def test_get_available_filename():
+    """
+    Tests the get_available_filename function.
+    """
+    # Test getting filename with unacceptable characters.
+    temp_dir = get_temp_dir()
+    assert get_available_filename("a.txt", "Name?", temp_dir) == "Name.txt"
+    assert get_available_filename("b.png", ".dat", temp_dir) == "dat.png"
+    # Test getting filename if desired filename already exists
+    text_file = abspath(join(temp_dir, "name.txt"))
+    create_text_file(text_file, "some text")
+    assert exists(text_file)
+    assert get_available_filename("a.txt", "name", temp_dir) == "name-2.txt"
+    # Test if filename exists with a different extension
+    assert get_available_filename("b.png", "name", temp_dir) == "name.png"
+    # Test if filename alternate filename is also taken
+    text_file_2 = abspath(join(temp_dir, "name-2.txt"))
+    text_file_3 = abspath(join(temp_dir, "name-3.txt"))
+    create_text_file(text_file_2, "more")
+    create_text_file(text_file_3, "text")
+    assert exists(text_file_2)
+    assert exists(text_file_3)
+    assert get_available_filename("a.txt", "name", temp_dir) == "name-4.txt"
 
 def test_rename_file():
     """

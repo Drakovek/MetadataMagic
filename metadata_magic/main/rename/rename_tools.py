@@ -142,13 +142,41 @@ def create_filename(string:str) -> str:
     new_text = resub(" {2,}", " ", new_text)
     # Remove hanging hyphens
     new_text = resub("(?<= )-(?=[^ \\-])|(?<=[^ \\-])-(?= )", "", new_text)
-    # Remove any remaining whitespace & trailing periods
-    new_text = resub("^\\s+|[\\s\\.\\-]+$", "", new_text)
+    # Remove any remaining whitespace & heading/trailing periods
+    new_text = resub("^[\\s\\.\\-]+|[\\s\\.\\-]+$", "", new_text)
     # Return "0" if there is no text
     if new_text == "":
         return "0"
     # Return modified string
     return new_text
+
+def get_available_filename(file:str, new_filename:str, end_path:str) -> str:
+    """
+    Returns a filename as close as possible to the desired filename in a given directory
+    Number will be appended to filename if file already exists with that name.
+    
+    :param file: Path of the file intended to be named, used for extension
+    :type file: str, required
+    :param new_filename: Filename to set new file to
+    :type new_filename: str, required
+    :param end_path: Path to check for already existing files within
+    :type end_path: str, required
+    :return: Name of the new filename
+    :rtype: str
+    """
+    # Get the prefered new filename
+    full_file = abspath(file)
+    extension = get_extension(file)
+    filename = create_filename(new_filename)
+    # Update name if the filename already exists
+    file_num = 1
+    base_filename = filename
+    full_end_path = abspath(end_path)
+    while exists(abspath(join(full_end_path, f"{filename}{extension}"))):
+        file_num += 1
+        filename = f"{base_filename}-{file_num}"
+    # Return the filename
+    return f"{filename}{extension}"
 
 def rename_file(file:str, new_filename:str) -> str:
     """
@@ -171,15 +199,11 @@ def rename_file(file:str, new_filename:str) -> str:
     if basename(path) == f"{filename}{extension}":
         return path
     # Update filename if file already exists
-    num = 2
-    base_filename = filename
-    parent = abspath(join(path, pardir))
-    while exists(abspath(join(parent,f"{filename}{extension}"))):
-        filename = f"{base_filename}-{num}"
-        num += 1
+    parent_dir = abspath(join(path, pardir))
+    filename = get_available_filename(file, new_filename, parent_dir)
     # Rename file
     try:
-        new_file = abspath(join(parent,f"{filename}{extension}"))
+        new_file = abspath(join(parent_dir, filename))
         rename(path, new_file)
         return new_file
     except FileNotFoundError:

@@ -104,6 +104,22 @@ def test_extract_zip():
     assert listdir(sub_dir) == ["text.txt"]
     read_file = abspath(join(sub_dir, "text.txt"))
     assert read_text_file(read_file) == "This is text!"
+    # Test if added directory already exists
+    zip_dir = get_temp_dir("dvk_zip_test")
+    text_file = abspath(join(zip_dir, "thing.txt"))
+    zip_file = abspath(join(zip_dir, "duplicate.zip"))
+    create_text_file(text_file, "This is a file")
+    assert exists(text_file)
+    assert create_zip(zip_dir, zip_file)
+    assert exists(zip_file)
+    extract_dir = get_temp_dir("dvk_extract_test")
+    duplicate_file = abspath(join(extract_dir, "duplicate"))
+    create_text_file(duplicate_file, "test")
+    assert sorted(listdir(extract_dir)) == ["duplicate"]
+    assert extract_zip(zip_file, extract_dir, create_folder=True)
+    assert sorted(listdir(extract_dir)) == ["duplicate", "duplicate-2"]
+    sub_dir = abspath(join(extract_dir, "duplicate-2"))
+    assert listdir(sub_dir) == ["thing.txt"]
     # Test extracting zip while removing given files
     zip_dir = get_temp_dir("dvk_zip_test")
     text_file = abspath(join(zip_dir, "text.txt"))
@@ -160,6 +176,32 @@ def test_extract_zip():
     assert exists(text_file)
     extract_dir = get_temp_dir("dvk_extract_test")
     assert not extract_zip(text_file, extract_dir)
+    # Test if extracted files already exist
+    zip_dir = get_temp_dir("dvk_zip_test")
+    sub_zip_dir = abspath(join(zip_dir, "Internal"))
+    text_file = abspath(join(zip_dir, "text.txt"))
+    media_file = abspath(join(sub_zip_dir, "deep.png"))
+    zip_file = abspath(join(zip_dir, "Another One!.cbz"))
+    mkdir(sub_zip_dir)
+    create_text_file(text_file, "this is text")
+    create_text_file(media_file, "media")
+    assert exists(text_file)
+    assert exists(media_file)
+    assert create_zip(zip_dir, zip_file)
+    assert exists(zip_file)
+    extract_dir = get_temp_dir("dvk_extract_test")
+    sub_dir = abspath(join(extract_dir, "Internal"))
+    duplicate_file = abspath(join(extract_dir, "text.txt"))
+    mkdir(sub_dir)
+    create_text_file(duplicate_file, "Different Text")
+    assert exists(sub_dir)
+    assert exists(duplicate_file)
+    assert extract_zip(zip_file, extract_dir)
+    assert sorted(listdir(extract_dir)) == ["Internal", "Internal-2", "text-2.txt", "text.txt"]
+    assert read_text_file(abspath(join(extract_dir, "text-2.txt"))) == "this is text"
+    assert read_text_file(abspath(join(extract_dir, "text.txt"))) == "Different Text"
+    assert listdir(abspath(join(extract_dir, "Internal"))) == []
+    assert listdir(abspath(join(extract_dir, "Internal-2"))) == ["deep.png"]
 
 def test_extract_file_from_zip():
     """
@@ -193,3 +235,7 @@ def test_extract_file_from_zip():
     assert extract_file_from_zip(zip_file, extract_dir, "sub") is None
     # Test extracting a file from a non-ZIP archive
     assert extract_file_from_zip(text_file, extract_dir, "blah.txt") is None
+    # Test if file already exists
+    extracted = extract_file_from_zip(zip_file, extract_dir, "text.txt")
+    assert exists(extracted)
+    assert basename(extracted) == "text-2.txt"
