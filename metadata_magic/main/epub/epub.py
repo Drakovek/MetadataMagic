@@ -5,9 +5,9 @@ from html_string_tools.main.html_string_tools import get_extension, regex_replac
 from lxml.html import fromstring as html_from_string
 from lxml.etree import tostring as lxml_to_string
 from metadata_magic.main.comic_archive.comic_archive import create_cbz
-from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
+from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.comic_archive.comic_xml import generate_info_from_jsons
-from metadata_magic.main.rename.sort_rename import sort_alphanum
+from metadata_magic.main.rename.rename_tools import sort_alphanum
 from metadata_magic.test.temp_file_tools import create_text_file
 from metadata_magic.test.temp_file_tools import read_text_file
 from os import getcwd, listdir, mkdir

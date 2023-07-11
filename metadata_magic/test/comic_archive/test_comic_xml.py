@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
+from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.meta_reader import get_empty_metadata
 from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
 from metadata_magic.main.comic_archive.comic_xml import generate_info_from_jsons
@@ -305,15 +305,18 @@ def test_generate_info_from_jsons():
     temp_dir = get_temp_dir()
     sub_dir = abspath(join(temp_dir, "sub"))
     mkdir(sub_dir)
-    not_json = abspath(join(temp_dir, "aaa.txt"))
+    main_media = abspath(join(temp_dir, "json.txt"))
     main_json = abspath(join(temp_dir, "json.json"))
+    sub_media = abspath(join(sub_dir, "blah.png"))
     sub_json = abspath(join(sub_dir, "blah.json"))
     json_meta = {"title":"This is a title!"}
-    create_text_file(not_json, "This is text")
+    create_text_file(main_media, "This is text")
     create_json_file(main_json, json_meta)
+    create_text_file(sub_media, "Not actually an image")
     create_json_file(sub_json, {"no":"info"})
-    assert exists(not_json)
+    assert exists(main_media)
     assert exists(main_json)
+    assert exists(sub_media)
     assert exists(sub_json)
     meta = generate_info_from_jsons(temp_dir)
     assert meta["title"] == "This is a title!"
@@ -387,20 +390,28 @@ def test_generate_info_from_jsons():
     assert meta["age_rating"] == "Unknown"
     # Test getting age rating
     temp_dir = get_temp_dir()
+    media_everyone = abspath(join(temp_dir, "everyone.png"))
     json_everyone = abspath(join(temp_dir, "everyone.json"))
+    create_text_file(media_everyone, "E For All")
     create_json_file(json_everyone, {"title":"Thing!", "url":"newgrounds.com/", "rating":"E"})
     meta = generate_info_from_jsons(temp_dir)
     assert meta["title"] == "Thing!"
     assert meta["age_rating"] == "Everyone"
+    media_teen = abspath(join(temp_dir, "teen.gif"))
     json_teen = abspath(join(temp_dir, "teen.json"))
+    create_json_file(media_teen, "Edgy")
     create_json_file(json_teen, {"rating":"t", "url":"www.newgrounds.com"})
     meta = generate_info_from_jsons(temp_dir)
     assert meta["age_rating"] == "Teen"
+    media_mature = abspath(join(temp_dir, "mature.txt"))
     json_mature = abspath(join(temp_dir, "mature.json"))
+    create_text_file(media_mature, "Blood Bleeder")
     create_json_file(json_mature, {"url":"newgrounds", "rating":"m"})
     meta = generate_info_from_jsons(temp_dir)
     assert meta["age_rating"] == "Mature 17+"
+    media_adult = abspath(join(temp_dir, "adult.png"))
     json_adult = abspath(join(temp_dir, "adult.json"))
+    create_text_file(media_adult, "AAAAAAAAAA!")
     create_json_file(json_adult, {"url":"www.newgrounds.com/thing", "rating":"A"})
     meta = generate_info_from_jsons(temp_dir)
     assert meta["age_rating"] == "X18+"
@@ -412,13 +423,19 @@ def test_generate_info_from_jsons():
     temp_dir = get_temp_dir()
     sub1 = abspath(join(temp_dir, "aaaa"))
     sub2 = abspath(join(temp_dir, "bbbb"))
+    main_media = abspath(join(sub1, "thing.png"))
     main_json = abspath(join(sub1, "thing.json"))
+    sub_media = abspath(join(sub2, "first.txt"))
     sub_json = abspath(join(sub2, "first.json"))
     mkdir(sub1)
     mkdir(sub2)
+    create_text_file(main_media, "Main File")
     create_json_file(main_json, {"title":"Real Title."})
+    create_text_file(sub_media, "Sub file")
     create_json_file(sub_json, {"title":"Not this one."})
+    assert exists(main_media)
     assert exists(main_json)
+    assert exists(sub_media)
     assert exists(sub_json)
     meta = generate_info_from_jsons(temp_dir)
     assert meta["title"] == "Real Title."

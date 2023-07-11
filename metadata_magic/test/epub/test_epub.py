@@ -2,7 +2,7 @@
 
 from os import mkdir, listdir
 from os.path import abspath, basename, exists, isdir, join
-from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
+from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.meta_reader import get_empty_metadata
 from metadata_magic.main.epub.epub import create_epub
 from metadata_magic.main.epub.epub import create_epub_files
@@ -17,7 +17,7 @@ from metadata_magic.main.epub.epub import html_to_xhtml
 from metadata_magic.main.epub.epub import format_xhtml
 from metadata_magic.main.epub.epub import newline_to_tag
 from metadata_magic.main.epub.epub import txt_to_xhtml
-from metadata_magic.main.rename.sort_rename import sort_alphanum
+from metadata_magic.main.rename.rename_tools import sort_alphanum
 from metadata_magic.test.temp_file_tools import create_text_file, read_text_file
 from PIL import Image
 from zipfile import ZipFile

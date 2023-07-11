@@ -7,9 +7,10 @@ from re import findall
 from re import sub as resub
 from os import listdir
 from os.path import abspath, exists, isdir, join
+from metadata_magic.main.meta_finder import get_pairs
 from metadata_magic.main.meta_reader import get_empty_metadata
 from metadata_magic.main.meta_reader import load_metadata
-from metadata_magic.main.rename.sort_rename import sort_alphanum
+from metadata_magic.main.rename.rename_tools import sort_alphanum
 from xml.etree.ElementTree import Element, SubElement
 from xml.etree.ElementTree import indent as xml_indent
 from xml.etree.ElementTree import parse as xml_parse
@@ -192,27 +193,14 @@ def generate_info_from_jsons(path:str) -> dict:
     :return: Dictionary containing the metadata info
     :rtype: dict
     """
-    # Get list of all files in a directory
-    full_directory = abspath(path)
-    files = listdir(full_directory)
-    for i in range(0, len(files)):
-        files[i] = abspath(join(full_directory, files[i]))
-    for file in files:
-        if isdir(file):
-            sub_files = listdir(file)
-            for i in range(0, len(sub_files)):
-                files.append(abspath(join(file, sub_files[i])))
-    # Get all the JSONS
-    jsons = []
-    for file in files:
-        if get_extension(file) == ".json":
-            jsons.append(file)
-    jsons = sort_alphanum(jsons)
-    # Get metadata from all JSONs
+    # Get all the JSON pairs
+    pairs = get_pairs(path)
+    # Read all JSON metadata
+    json_metas = []
+    for pair in pairs:
+        json_metas.append(load_metadata(pair["json"]))
+    # Get first instance of JSON metadata
     try:
-        json_metas = []
-        for json in jsons:
-            json_metas.append(load_metadata(json))
         main_meta = json_metas[0]
     except IndexError: return get_empty_metadata()
     # Get most metadata from first JSON

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from html_string_tools.main.html_string_tools import get_extension
+from metadata_magic.main.rename.rename_tools import sort_alphanum
 from os import listdir, pardir
 from os.path import abspath, basename, exists, join, isdir
 from tqdm import tqdm
@@ -38,8 +39,8 @@ def separate_files(path:str) -> tuple:
         jsons.extend(new_jsons)
         media.extend(new_media)
     # Return JSON and media files separated
-    jsons.sort()
-    media.sort()
+    jsons = sort_alphanum(jsons)
+    media = sort_alphanum(media)
     return (jsons, media)
 
 def get_pairs(path:str) -> List[dict]:

@@ -4,75 +4,87 @@ from argparse import ArgumentParser
 from os import getcwd, listdir, mkdir, pardir, remove
 from os.path import abspath, basename, exists, isdir, join, relpath
 from html_string_tools.main.html_string_tools import get_extension
+from metadata_magic.main.file_tools.file_tools import create_zip, extract_file_from_zip, extract_zip, get_temp_dir
 from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
 from metadata_magic.main.comic_archive.comic_xml import generate_info_from_jsons
 from metadata_magic.main.meta_reader import get_empty_metadata
 from metadata_magic.main.comic_archive.comic_xml import read_comic_info
-from metadata_magic.main.rename.sort_rename import sort_alphanum
+from metadata_magic.main.rename.rename_tools import sort_alphanum
 from python_print_tools.main.python_print_tools import color_print
-from tempfile import gettempdir
 from tqdm import tqdm
 from re import findall
 from re import sub as resub
-from shutil import copy, rmtree
-from zipfile import BadZipFile, is_zipfile, ZipFile
+from shutil import copy, move, rmtree
+from zipfile import is_zipfile
+from metadata_magic.test.temp_file_tools import create_text_file
 
-def get_temp_dir(folder_name:str="dvk_meta_magic") -> str:
+def create_cbz(directory:str, name:str=None, metadata:dict=None, remove_files:bool=False) -> str:
     """
-    Creates and returns test directory.
-
-    :param folder_name: Name to give the temporary directory, defaults to "dvk_meta_magic"
-    :type folder_name: str, optional
-    :return: File path of the test directory
-    :rtype: str
-    """
-    temp_dir = abspath(join(abspath(gettempdir()), folder_name))
-    if(exists(temp_dir)):
-        rmtree(temp_dir)
-    mkdir(temp_dir)
-    return temp_dir
-
-def create_cbz(directory:str) -> str:
-    """
-    Creates a cbz archive containing all the files in a given directory.
+    Creates a cbz archive containing the files of a given directory.
     
-    :param directory: Directory with files to compress into archive
+    :param directory: Directory with files to archive
     :type directory: str, required
-    :return: Full path of the created cbz archive
+    :param name: Name of the CBZ file, will use default name if not present, defaults to None
+    :type name: str, optional
+    :param metadata: Metadata to include as ComicInfo.xml, defaults to None
+    :type metadata: dict, optional
+    :param remove_files: Whether to delete the files now in the archive once the CBZ is completed, defaults to False
+    :type remove_files: bool, optional
+    :return: Path of the newly created CBZ file
     :rtype: str
     """
-    try:
-        # Get filenames
-        full_directory = abspath(directory)
-        cbz = abspath(join(full_directory, basename(full_directory) + ".cbz"))
-        # Simply update filename if cbz already exists
-        if exists(cbz):
-            xml_file = abspath(join(full_directory, "ComicInfo.xml"))
-            metadata = read_comic_info(xml_file)
-            update_cbz_info(cbz, metadata)
-            return cbz
-        # Get list of files in the directory
-        files = listdir(full_directory)
-        for i in range(0, len(files)):
-            files[i] = abspath(join(full_directory, files[i]))
-        # Expand list of files to include subdirectories
-        for file in files:
-            if isdir(file):
-                sub_files = listdir(file)
-                for i in range(0, len(sub_files)):
-                    files.append(abspath(join(file, sub_files[i])))
-        # Create empty cbz file
-        with ZipFile(cbz, "w") as out_file: pass
-        assert exists(cbz)
-        # Write contents of directory to cbz file
-        for file in tqdm(files):
-            relative = relpath(file, full_directory)
-            with ZipFile(cbz, "a") as out_file:
-                out_file.write(file, relative)
-        # Return the path of the written cbz archive
-        return cbz
-    except FileNotFoundError:
+    # Return None if directory is empty
+    full_directory = abspath(directory)
+    if len(listdir(full_directory)) == 0:
         return None
+    # Create CBZ filename
+    filename = basename(full_directory) + ".cbz"
+    if name is not None:
+        filename = f"{name}.cbz"
+    cbz_file = abspath(join(full_directory, filename))
+    # Update CBZ if it already exists
+    if exists(cbz_file):
+        if metadata is not None:
+            update_cbz_info(cbz_file, metadata)
+        return cbz_file
+    # Check if there are existing directories
+    move_files = True
+    files = sort_alphanum(listdir(full_directory))
+    for file in files:
+        if isdir(abspath(join(full_directory, file))):
+            move_files = False
+            break
+    # Move files if required
+    if move_files:
+        # Create new folder to contain files
+        folder_name = files[0][:len(files[0]) - len(get_extension(files[0]))]
+        new_folder = abspath(join(full_directory, folder_name))
+        mkdir(new_folder)
+        # Move existing files to the new folder
+        for file in files:
+            current_file = abspath(join(full_directory, file))
+            new_file = abspath(join(new_folder, file))
+            move(current_file, new_file)
+    # Create metadata file, if specified
+    meta_file = abspath(join(full_directory, "ComicInfo.xml"))
+    if metadata is not None:
+        create_text_file(meta_file, get_comic_xml(metadata))
+    # Create cbz file
+    assert create_zip(full_directory, cbz_file)
+    # Remove all old files besides the CBZ, if specified.
+    if remove_files:
+        files = listdir(full_directory)
+        for file in files:
+            full_file = abspath(join(full_directory, file))
+            if isdir(full_file):
+                rmtree(full_file)
+            elif not full_file == cbz_file:
+                remove(full_file)
+    # Remove ComicInfo.xml file, if exists
+    if exists(meta_file):
+        remove(meta_file)
+    # Return CBZ file
+    return cbz_file
 
 def get_info_from_cbz(cbz_file:str) -> dict:
     """
@@ -88,12 +100,9 @@ def get_info_from_cbz(cbz_file:str) -> dict:
     extract_dir = get_temp_dir("dvk_meta_extract")
     assert exists(extract_dir)
     # Extract ComicInfo.xml from given file
-    try:
-        with ZipFile(file, mode="r") as zfile:
-            zfile.extract("ComicInfo.xml", path=extract_dir)
-    except (BadZipFile, KeyError): return get_empty_metadata()
-    xml_file = abspath(join(extract_dir, "ComicInfo.xml"))
-    assert exists(xml_file)
+    xml_file = extract_file_from_zip(cbz_file, extract_dir, "ComicInfo.xml")
+    if xml_file is None or not exists(xml_file):
+        return get_empty_metadata()
     # Read XML file
     return read_comic_info(xml_file)
 
@@ -111,104 +120,16 @@ def update_cbz_info(cbz_file:str, metadata:dict):
     if is_zipfile(file):
         # Extract cbz into temp file
         temp_dir = get_temp_dir("dvk_comic_info")
-        with ZipFile(cbz_file, mode="r") as ext_file:
-            ext_file.extractall(path=temp_dir)
+        extract_zip(cbz_file, temp_dir)
         # Create/Overwrite ComicInfo.xml file
-        xml = get_comic_xml(metadata)
         xml_file = abspath(join(temp_dir, "ComicInfo.xml"))
-        with open(xml_file, "w") as out_file:
-            out_file.write(xml)
+        create_text_file(xml_file, get_comic_xml(metadata))
         # Pack files into archive
         new_cbz = create_cbz(temp_dir)
         # Replace the old cbz file
         remove(file)
         copy(new_cbz, file)
         remove(new_cbz)
-
-def get_comic_info_from_path(path:str) -> dict:
-    """
-    Attempts to get comic metadata from a given path in either cbz, standalone ComicInfo.xml, or JSON format.
-    In order of preference, metadata is gathered from cbz, ComicInfo.xml, then JSON.
-    
-    :param path: Path for either a directory or cbz file
-    :type path: str, required
-    :return: Comic metadata
-    :rtype: dict
-    """
-    # Get full path
-    full_path = abspath(path)
-    empty = get_empty_metadata()
-    empty["age_rating"] = "Unknown"
-    # Check if cbz file is present
-    cbz_file = None
-    if not isdir(full_path):
-        cbz_file = full_path
-    else:
-        files = listdir(full_path)
-        files = sort_alphanum(files)
-        for file in files:
-            if get_extension(file) == ".cbz":
-                cbz_file = abspath(join(full_path, file))
-                break
-    # Try to get info from cbz file, if available
-    if cbz_file is not None:
-        try:
-            metadata = get_info_from_cbz(cbz_file)
-        except FileNotFoundError: metadata = get_empty_metadata()
-        if not metadata == get_empty_metadata() and not metadata == empty:
-            return metadata
-        else:
-            full_path = abspath(join(cbz_file, pardir))
-    # Get metadata from XML file, if available
-    xml_file = abspath(join(full_path, "ComicInfo.xml"))
-    if exists(xml_file):
-        metadata = read_comic_info(xml_file)
-        if not metadata == get_empty_metadata() and not metadata == empty:
-            return metadata
-    # Get metadata from JSONS
-    try:
-        metadata = generate_info_from_jsons(full_path)
-        return metadata
-    except FileNotFoundError: return get_empty_metadata()
-
-def create_or_update_cbz(path:str, metadata:dict) -> str:
-    """
-    Attempts to either create a cbz archive or update an existing archive.
-    If a cbz file or directory containing cbz file is given, existing cbz is updated with giben metadata.
-    If a directory not containing cbz file is given, contents of the directory are archived as cbz.
-    
-    :param path: Path to either a directory or cbz file
-    :type path: str, required
-    :param metadata: Metadata to use when creating ComicInfo.xml
-    :type metadata: dict, required
-    :return: Path of the created or updated cbz file
-    :rtype: str
-    """
-    # Check if path is a directory
-    cbz_file = None
-    full_path = abspath(path)
-    if isdir(full_path):
-        # Create ComicInfo.xml from metadata
-        xml = get_comic_xml(metadata)
-        with open(abspath(join(full_path, "ComicInfo.xml")), "w") as out_file:
-            out_file.write(xml)
-        # See if cbz file already exists
-        files = listdir(full_path)
-        files = sort_alphanum(files)
-        for file in files:
-            if get_extension(file) == ".cbz":
-                cbz_file = abspath(join(full_path, file))
-                break
-        if cbz_file is None:
-            # Create cbz archive
-            print("Creating archive:")
-            cbz_file = create_cbz(full_path)
-            return cbz_file
-    # Update cbz file if applicable
-    if cbz_file is None:
-        cbz_file = full_path
-    update_cbz_info(cbz_file, metadata)
-    return cbz_file
     
 def create_comic_archive(path:str,
                 rp_description:bool=False,
@@ -241,8 +162,17 @@ def create_comic_archive(path:str,
     :param rp_score: Whether to replace the score from gathered metadata, defaults to False
     :type rp_score: bool, optional
     """
-    # Get default metadata
+    # Check if there is an existing .cbz file to update
+    filename = None
     full_path = abspath(path)
+    files = listdir(full_path)
+    if len(files) == 1 and get_extension(files[0]) == ".cbz":
+        # Get metadata from the .cbz file
+        filename = files[0][:len(files[0]-4)]
+        metadata = get_info_from_cbz(abspath(join(full_path, files[0])))
+    else:
+        # Get metadate from any existing JSON files
+        metadata = generate_info_from_jsons(full_path)
     metadata = get_comic_info_from_path(full_path)
     # Remove metadata fields the user wishes to replace
     if rp_description:
@@ -336,7 +266,7 @@ def create_comic_archive(path:str,
         if not score == "":
             metadata["score"] = score
     # Create/Update .cbz
-    create_or_update_cbz(full_path, metadata)
+    create_cbz(full_path, name=filename, metadata=metadata)
 
 def main():
     """
@@ -406,6 +336,3 @@ def main():
                 rp_tags=args.tags,
                 rp_age=args.rating,
                 rp_score=args.grade)
-            
-if __name__ == "__main__":
-    main()

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
+from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.error_finding.missing_metadata import find_missing_metadata
 from metadata_magic.test.temp_file_tools import create_text_file
 from os import mkdir, pardir

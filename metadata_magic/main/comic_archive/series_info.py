@@ -5,7 +5,7 @@ from metadata_magic.main.comic_archive.comic_archive import get_info_from_cbz
 from metadata_magic.main.comic_archive.comic_archive import update_cbz_info
 from html_string_tools.main.html_string_tools import get_extension
 from math import floor
-from metadata_magic.main.rename.sort_rename import sort_alphanum
+from metadata_magic.main.rename.rename_tools import sort_alphanum
 from os import name as os_name
 from os import getcwd, listdir, system
 from os.path import abspath, basename, exists, isdir, join

@@ -4,7 +4,7 @@ from os import listdir, mkdir, pardir
 from os.path import abspath, basename, exists, isdir, join
 from metadata_magic.main.comic_archive.comic_archive import create_cbz
 from metadata_magic.main.comic_archive.comic_archive import get_info_from_cbz
-from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
+from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
 from metadata_magic.main.meta_reader import get_empty_metadata
 from metadata_magic.main.comic_archive.series_info import get_comic_archives
@@ -141,28 +141,24 @@ def test_write_series_info():
     temp_dir = get_temp_dir()
     cbz_sub = abspath(join(temp_dir, "cbz_sub"))
     mkdir(cbz_sub)
-    assert isdir(cbz_sub)
+    text_file = abspath(join(cbz_sub, "text.txt"))
+    create_text_file(text_file, "This is text")
+    assert exists(text_file)
     metadata = get_empty_metadata()
     metadata["title"] = "This is CBZ"
     metadata["description"] = "Some words."
-    xml = get_comic_xml(metadata)
-    xml_file = abspath(join(cbz_sub, "ComicInfo.xml"))
-    create_text_file(xml_file, xml)
-    assert exists(xml_file)
-    cbz_file = create_cbz(cbz_sub)
+    cbz_file = create_cbz(cbz_sub, metadata=metadata)
     assert exists(cbz_file)
-    # Create second cb7 file
+    # Create second cbz file
     next_sub = abspath(join(temp_dir, "other_sub"))
     mkdir(next_sub)
-    assert isdir(next_sub)
+    media_file = abspath(join(next_sub, "thing.png"))
+    create_text_file(media_file, "Still text.")
+    assert exists(media_file)
     metadata = get_empty_metadata()
     metadata["title"] = "This is now also CBZ"
     metadata["description"] = "Other words."
-    xml = get_comic_xml(metadata)
-    xml_file = abspath(join(next_sub, "ComicInfo.xml"))
-    create_text_file(xml_file, xml)
-    assert exists(xml_file)
-    next_file = create_cbz(next_sub)
+    next_file = create_cbz(next_sub, metadata=metadata)
     assert exists(next_file)
     # Test that existing metadata is intact
     read_meta = get_info_from_cbz(cbz_file)

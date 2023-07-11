@@ -11,14 +11,14 @@ console_scripts = [
     "sort-rename = metadata_magic.main.rename.sort_rename:main",
     "archive-comic = metadata_magic.main.comic_archive.comic_archive:main",
     "archive-series = metadata_magic.main.comic_archive.series_info:main",
-    "archive-book = metadata_magic.main.epub.epub:main",]
+    "archive-book = metadata_magic.main.epub.epub:main"]
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="Metadata-Magic",
-    version="0.4.4",
+    version="0.5.0",
     author="Drakovek",
     author_email="DrakovekMail@gmail.com",
     description="Utility for managing metadata.",

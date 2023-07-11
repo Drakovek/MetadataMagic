@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
+from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.meta_reader import get_artist
 from metadata_magic.main.meta_reader import get_date
 from metadata_magic.main.meta_reader import get_description

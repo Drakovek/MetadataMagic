@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-from os import listdir, mkdir
+from os import listdir, mkdir, remove
 from os.path import abspath, exists, join
-from metadata_magic.main.comic_archive.comic_archive import get_temp_dir
+from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.meta_reader import get_empty_metadata
-from metadata_magic.main.comic_archive.comic_archive import create_or_update_cbz
+from metadata_magic.main.comic_archive.comic_archive import create_cbz
 from metadata_magic.main.rename.meta_rename import get_filename_from_metadata
 from metadata_magic.main.rename.meta_rename import rename_cbz_files
 from metadata_magic.main.rename.meta_rename import rename_json_pairs
@@ -13,6 +13,9 @@ from metadata_magic.test.temp_file_tools import create_text_file
 from shutil import copy
 
 def test_rename_cbz_files():
+    """
+    Tests the rename_cbz_files() function
+    """
     # Write test media files
     temp_dir = get_temp_dir("dvk_meta_cbz")
     sub_dir_1 = abspath(join(temp_dir, "sub1"))
@@ -33,66 +36,32 @@ def test_rename_cbz_files():
     metadata2["title"] = "Thing"
     metadata2["writer"] = "Dude"
     metadata2["date"] = "2018-11-15"
-    cbz1 = create_or_update_cbz(sub_dir_1, metadata1)
-    cbz2 = create_or_update_cbz(sub_dir_2, metadata2)
+    cbz1 = create_cbz(sub_dir_1, metadata=metadata1, remove_files=True)
+    cbz2 = create_cbz(sub_dir_2, metadata=metadata2, remove_files=True)
     assert exists(cbz1)
     assert exists(cbz2)
     # Test renaming cbz files
     rename_cbz_files(temp_dir)
-    files = sorted(listdir(sub_dir_1))
-    assert len(files) == 3
-    assert files[0] == "ComicInfo.xml"
-    assert files[1] == "Some Name.cbz"
-    assert files[2] == "file1.txt"
-    files = sorted(listdir(sub_dir_2))
-    assert len(files) == 3
-    assert files[0] == "ComicInfo.xml"
-    assert files[1] == "Thing.cbz"
-    assert files[2] == "file2.txt"
+    assert sorted(listdir(sub_dir_1)) == ["Some Name.cbz"]
+    assert sorted(listdir(sub_dir_2)) == ["Thing.cbz"]
     # Test renaming with added artist
     rename_cbz_files(temp_dir, add_artist=True)
-    files = sorted(listdir(sub_dir_1))
-    assert len(files) == 3
-    assert files[0] == "ComicInfo.xml"
-    assert files[1] == "[Person] Some Name.cbz"
-    assert files[2] == "file1.txt"
-    files = sorted(listdir(sub_dir_2))
-    assert len(files) == 3
-    assert files[0] == "ComicInfo.xml"
-    assert files[1] == "[Dude] Thing.cbz"
-    assert files[2] == "file2.txt"
+    assert sorted(listdir(sub_dir_1)) == ["[Person] Some Name.cbz"]
+    assert sorted(listdir(sub_dir_2)) == ["[Dude] Thing.cbz"]
     # Test renaming with added date
     rename_cbz_files(temp_dir, add_date=True)
-    files = sorted(listdir(sub_dir_1))
-    assert len(files) == 3
-    assert files[0] == "ComicInfo.xml"
-    assert files[1] == "[2020-05-30] Some Name.cbz"
-    assert files[2] == "file1.txt"
-    files = sorted(listdir(sub_dir_2))
-    assert len(files) == 3
-    assert files[0] == "ComicInfo.xml"
-    assert files[1] == "[2018-11-15] Thing.cbz"
-    assert files[2] == "file2.txt"
+    assert sorted(listdir(sub_dir_1)) == ["[2020-05-30] Some Name.cbz"]
+    assert sorted(listdir(sub_dir_2)) == ["[2018-11-15] Thing.cbz"]
     # Test renaming with no title
     new_metadata = get_empty_metadata()
-    new_cbz = create_or_update_cbz(temp_dir, new_metadata)
+    new_cbz = create_cbz(temp_dir, metadata=new_metadata)
     rename_cbz_files(temp_dir)
-    files = sorted(listdir(temp_dir))
-    assert len(files) == 4
-    assert files[0] == "ComicInfo.xml"
-    assert files[1] == "dvk_meta_cbz.cbz"
-    assert files[2] == "sub1"
-    assert files[3] == "sub2"
+    assert sorted(listdir(temp_dir)) == ["dvk_meta_cbz.cbz", "sub1", "sub2"]
     # Test renaming files with identical names
     cbz1 = abspath(join(sub_dir_1, "Some Name.cbz"))
     copy(cbz1, abspath(join(sub_dir_1, "newer_cbz.cbz")))
     rename_cbz_files(temp_dir)
-    files = sorted(listdir(sub_dir_1))
-    assert len(files) == 4
-    assert files[0] == "ComicInfo.xml"
-    assert files[1] == "Some Name-2.cbz"
-    assert files[2] == "Some Name.cbz"
-    assert files[3] == "file1.txt"
+    assert sorted(listdir(sub_dir_1)) == ["Some Name-2.cbz", "Some Name.cbz"]
 
 def test_rename_json_pairs():
     """
@@ -187,7 +156,7 @@ def test_get_filename_from_metadata():
     # Test getting filename from CBZ
     metadata = get_empty_metadata()
     metadata["title"] = "CBZ Time"
-    cbz_file = create_or_update_cbz(temp_dir, metadata)
+    cbz_file = create_cbz(temp_dir, metadata=metadata)
     assert exists(cbz_file)
     assert get_filename_from_metadata(cbz_file) == "CBZ Time"
     # Test getting filename with no metadata
@@ -199,13 +168,15 @@ def test_get_filename_from_metadata():
     create_json_file(json_file, {"title":"Thing", "date":"2020-03-01"})
     assert get_filename_from_metadata(json_file, add_date=True) == "[2020-03-01] Thing"
     metadata["date"] = "2017-08-05"
-    cbz_file = create_or_update_cbz(temp_dir, metadata)
+    remove(cbz_file)
+    cbz_file = create_cbz(temp_dir, metadata=metadata)
     assert get_filename_from_metadata(cbz_file, add_date=True) == "[2017-08-05] CBZ Time"
     # Test adding an artist/writer
     create_json_file(json_file, {"title":"Other", "artist":"Person"})
     assert get_filename_from_metadata(json_file, add_artist=True) == "[Person] Other"
     metadata["writer"] = "Writer"
-    cbz_file = create_or_update_cbz(temp_dir, metadata)
+    remove(cbz_file)
+    cbz_file = create_cbz(temp_dir, metadata=metadata)
     assert get_filename_from_metadata(cbz_file, add_artist=True) == "[Writer] CBZ Time"
     # Test adding an ID
     create_json_file(json_file, {"title":"Identifier", "id":"ID12345"})
