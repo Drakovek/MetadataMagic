@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-from html_string_tools.main.html_string_tools import get_extension
 from metadata_magic.main.rename.rename_tools import sort_alphanum
+from html_string_tools.main.html_string_tools import get_extension
 from os import listdir, pardir
-from os.path import abspath, basename, exists, join, isdir
+from os.path import abspath, basename, exists, isdir, join
 from tqdm import tqdm
 from typing import List
 

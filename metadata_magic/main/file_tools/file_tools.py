@@ -4,9 +4,9 @@ from json import dump as dump_json
 from json import load as load_json
 from json import JSONDecodeError
 from html_string_tools.main.html_string_tools import get_extension
+from metadata_magic.main.rename.rename_tools import get_available_filename
 from os import listdir, mkdir, remove
 from os.path import abspath, basename, exists, isdir, join, relpath
-from metadata_magic.main.rename.rename_tools import get_available_filename
 from shutil import copy, copytree, rmtree
 from tempfile import gettempdir
 from typing import List

@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 
-from argparse import ArgumentParser
+from re import sub as re_sub
+from re import findall as re_find
 from metadata_magic.main.meta_finder import get_pairs
-from metadata_magic.main.rename.rename_tools import create_filename
 from metadata_magic.main.rename.rename_tools import rename_file
 from metadata_magic.main.rename.rename_tools import sort_alphanum
+from argparse import ArgumentParser
 from os import getcwd, listdir, pardir
 from os.path import abspath, basename, exists, isdir, join
 from python_print_tools.main.python_print_tools import color_print
 from tqdm import tqdm
-from re import findall
-from re import sub as resub
 
 def sort_rename(path:str, name:str, start_index:int=1):
     """
@@ -57,7 +56,7 @@ def sort_rename(path:str, name:str, start_index:int=1):
             del sort_pairs[i]
     # Rename files in order
     pad_num = 0
-    name_num = findall("#+", name)
+    name_num = re_find("#+", name)
     if len(name_num) > 0:
         pad_num = len(name_num[0])
     print("Renaming Files:")
@@ -70,7 +69,7 @@ def sort_rename(path:str, name:str, start_index:int=1):
             # Replace # with item number
             while len(filename) < pad_num:
                 filename = f"0{filename}"
-            filename = resub("#+", filename, name, 1)
+            filename = re_sub("#+", filename, name, 1)
         # Rename media file
         rename_file(sort_pairs[i]["media"], filename)
         # Rename json file, if it exits
@@ -119,6 +118,3 @@ def main():
         except (TypeError, ValueError): index = 1
         # Start renaming
         sort_rename(directory, name, index)
-
-if __name__ == "__main__":
-    main()

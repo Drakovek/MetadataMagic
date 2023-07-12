@@ -1,21 +1,16 @@
 #!/usr/bin/env python3
 
-from html_string_tools.main.html_string_tools import get_extension
-from html_string_tools.main.html_string_tools import remove_whitespace
-from html_string_tools.main.html_string_tools import replace_entities
-from re import findall
-from re import sub as resub
-from os import listdir
-from os.path import abspath, exists, isdir, join
+from re import sub as re_sub
+from xml.etree.ElementTree import indent as xml_indent
+from xml.etree.ElementTree import tostring as xml_to_string
+from xml.etree.ElementTree import parse as xml_parse
+from xml.etree.ElementTree import Element, SubElement, ParseError
 from metadata_magic.main.meta_finder import get_pairs
 from metadata_magic.main.meta_reader import get_empty_metadata
 from metadata_magic.main.meta_reader import load_metadata
-from metadata_magic.main.rename.rename_tools import sort_alphanum
-from xml.etree.ElementTree import Element, SubElement
-from xml.etree.ElementTree import indent as xml_indent
-from xml.etree.ElementTree import parse as xml_parse
-from xml.etree.ElementTree import ParseError
-from xml.etree.ElementTree import tostring as xml_to_string
+from html_string_tools.main.html_string_tools import replace_entities
+from html_string_tools.main.html_string_tools import remove_whitespace
+from os.path import abspath
 
 def get_comic_xml(metadata:dict, indent:bool=True) -> str:
     """
@@ -157,9 +152,9 @@ def read_comic_info(xml_file:str) -> dict:
     metadata["score"] = base.findtext("CommunityRating")
     # Get the tags, removing score tags if necessary
     try:
-        metadata["tags"] = resub("\\s*,+\\s*", ",", base.findtext("Tags"))
-        metadata["tags"] = resub("^\\s+|\\s+$|★{1,5},|,★{1,5}$", "", metadata["tags"])
-        metadata["tags"] = resub("^★{1,5}$", "", metadata["tags"])
+        metadata["tags"] = re_sub("\\s*,+\\s*", ",", base.findtext("Tags"))
+        metadata["tags"] = re_sub("^\\s+|\\s+$|★{1,5},|,★{1,5}$", "", metadata["tags"])
+        metadata["tags"] = re_sub("^★{1,5}$", "", metadata["tags"])
         if metadata["tags"] == "":
             metadata["tags"] = None
     except TypeError: metadata["tags"] = None
@@ -216,9 +211,9 @@ def generate_info_from_jsons(path:str) -> dict:
     description = main_meta["description"]
     if description is not None:
         description = replace_entities(description)
-        description = resub("<a [^<>]*>|<\\/a[^<>]*>|<b>|<i>|</b>|</i>", "", description)
-        description = resub("<[^<>]*>", " ", description)
-        description = resub("\\s+", " ", description)
+        description = re_sub("<a [^<>]*>|<\\/a[^<>]*>|<b>|<i>|</b>|</i>", "", description)
+        description = re_sub("<[^<>]*>", " ", description)
+        description = re_sub("\\s+", " ", description)
         description = remove_whitespace(description)
     metadata["description"] = description
     # Get tag metadata

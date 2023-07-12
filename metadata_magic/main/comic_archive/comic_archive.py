@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
 
-from argparse import ArgumentParser
-from os import getcwd, listdir, mkdir, pardir, remove
-from os.path import abspath, basename, exists, isdir, join, relpath
-from html_string_tools.main.html_string_tools import get_extension
-from metadata_magic.main.file_tools.file_tools import create_zip, extract_file_from_zip, extract_zip, get_temp_dir
-from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
-from metadata_magic.main.comic_archive.comic_xml import generate_info_from_jsons
+from re import sub as re_sub
+from re import findall as re_find
 from metadata_magic.main.meta_reader import get_empty_metadata
+from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
 from metadata_magic.main.comic_archive.comic_xml import read_comic_info
-from metadata_magic.main.rename.rename_tools import sort_alphanum, create_filename, get_available_filename
-from python_print_tools.main.python_print_tools import color_print
-from tqdm import tqdm
-from re import findall
-from re import sub as resub
-from shutil import copy, move, rmtree
-from zipfile import is_zipfile
+from metadata_magic.main.comic_archive.comic_xml import generate_info_from_jsons
+from metadata_magic.main.rename.rename_tools import create_filename
+from metadata_magic.main.rename.rename_tools import get_available_filename
+from metadata_magic.main.rename.rename_tools import sort_alphanum
+from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.file_tools.file_tools import write_text_file
+from metadata_magic.main.file_tools.file_tools import create_zip
+from metadata_magic.main.file_tools.file_tools import extract_zip
+from metadata_magic.main.file_tools.file_tools import extract_file_from_zip
+from html_string_tools.main.html_string_tools import get_extension
+from argparse import ArgumentParser
+from os import getcwd, listdir, mkdir, remove
+from os.path import abspath, basename, exists, isdir, join
+from python_print_tools.main.python_print_tools import color_print
+from shutil import copy, move, rmtree
 
 def create_cbz(directory:str, name:str=None, metadata:dict=None, remove_files:bool=False) -> str:
     """
@@ -118,10 +121,9 @@ def update_cbz_info(cbz_file:str, metadata:dict):
     """
     # Check if given file is a valid cbz file
     file = abspath(cbz_file)
-    if is_zipfile(file):
-        # Extract cbz into temp file
-        temp_dir = get_temp_dir("dvk_comic_info")
-        extract_zip(cbz_file, temp_dir)
+    # Extract cbz into temp file
+    temp_dir = get_temp_dir("dvk_comic_info")
+    if extract_zip(cbz_file, temp_dir):
         # Create/Overwrite ComicInfo.xml file
         xml_file = abspath(join(temp_dir, "ComicInfo.xml"))
         write_text_file(xml_file, get_comic_xml(metadata))
@@ -211,7 +213,7 @@ def create_comic_archive(path:str,
     if metadata["date"] is None:
         date = ""
         regex = "(19[7-9][0-9]|2[0-1][0-9]{2})\\-(0[1-9]|1[0-2])\\-(0[1-9]|[1-2][0-9]|3[0-1])"
-        while len(findall(regex, date)) == 0:
+        while len(re_find(regex, date)) == 0:
             date = str(input("Date (YYYY-MM-DD): "))
         metadata["date"] = date
     # Get the Main Artist
@@ -248,7 +250,7 @@ def create_comic_archive(path:str,
     if metadata["tags"] is None:
         url = str(input("Tags: "))
         if not url == "":
-            metadata["tags"] = resub("\\s*,\\s*", ",", url)
+            metadata["tags"] = re_sub("\\s*,\\s*", ",", url)
     # Get age rating
     while metadata["age_rating"] is None:
         print("0) Unknown\n1) Everyone\n2) Teen\n3) Mature 17+\n4) X18+")

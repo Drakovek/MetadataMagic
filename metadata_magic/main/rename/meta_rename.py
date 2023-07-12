@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 
-from argparse import ArgumentParser
-from html_string_tools.main.html_string_tools import get_extension
-from json.decoder import JSONDecodeError
-from os import getcwd, listdir
-from os.path import abspath, basename, exists, isdir, join
-from metadata_magic.main.meta_reader import get_empty_metadata
+from re import sub as re_sub
 from metadata_magic.main.meta_finder import get_pairs
-from metadata_magic.main.comic_archive.comic_archive import get_info_from_cbz
 from metadata_magic.main.meta_reader import load_metadata as get_info_from_json
+from metadata_magic.main.comic_archive.comic_archive import get_info_from_cbz
 from metadata_magic.main.rename.rename_tools import rename_file
+from json.decoder import JSONDecodeError
+from html_string_tools.main.html_string_tools import get_extension
+from argparse import ArgumentParser
+from os import listdir, getcwd
+from os.path import abspath, basename, exists, isdir, join
 from python_print_tools.main.python_print_tools import color_print
-from re import sub as resub
 from tqdm import tqdm
 
 def rename_cbz_files(path:str,
@@ -117,7 +116,7 @@ def get_filename_from_metadata(file:str,
     # Return filename if metadata could not be found
     if metadata["title"] is None:
         filename = basename(full_file)
-        filename = resub("\\.json$", "", filename)
+        filename = re_sub("\\.json$", "", filename)
         return filename[:len(filename) - len(get_extension(filename))]
     # Get title
     title = metadata["title"]
@@ -147,7 +146,7 @@ def get_filename_from_metadata(file:str,
     if artist is not None:
         header = f"{artist}_{header}"
     # Add header to title
-    header = resub("[-_\\s]+$", "", header)
+    header = re_sub("[-_\\s]+$", "", header)
     if not header == "":
         title = f"[{header}] {title}"
     # Return title
@@ -190,6 +189,3 @@ def main():
         print()
         rename_cbz_files(directory, add_artist=args.artist, add_date=args.date)
         color_print("Finished renaming.", "green")
-
-if __name__ == "__main__":
-    main()

@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 
-from os import listdir, mkdir, remove
-from os.path import abspath, exists, join
-from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.meta_reader import get_empty_metadata
 from metadata_magic.main.comic_archive.comic_archive import create_cbz
 from metadata_magic.main.rename.meta_rename import get_filename_from_metadata
 from metadata_magic.main.rename.meta_rename import rename_cbz_files
 from metadata_magic.main.rename.meta_rename import rename_json_pairs
+from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.file_tools.file_tools import write_json_file
 from metadata_magic.main.file_tools.file_tools import write_text_file
+from os import listdir, mkdir, remove
+from os.path import abspath, exists, join
 from shutil import copy
 
 def test_rename_cbz_files():

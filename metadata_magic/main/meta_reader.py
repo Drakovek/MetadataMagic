@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
+from re import findall as re_find
 from metadata_magic.main.file_tools.file_tools import read_json_file
 from os.path import abspath
-from re import findall
 from typing import List
 
 def get_empty_metadata() -> dict:
@@ -74,7 +74,7 @@ def get_id(json:dict) -> str:
         return None
     # Strip out leading three letter ID tag if ID is from a DVK file
     try:
-        leader = findall("^[A-Z]{3}[^0-9A-Z]*(?=[0-9])", value)
+        leader = re_find("^[A-Z]{3}[^0-9A-Z]*(?=[0-9])", value)
         new_value = value[len(leader[0]):]
         value = new_value
     except (IndexError, TypeError): pass
@@ -135,12 +135,12 @@ def get_date(json:dict) -> str:
         return None
     # Format date into standard format
     regex = "(19[7-9][0-9]|2[0-1][0-9]{2})[\\-/](0[1-9]|1[0-2])[\\-/](0[1-9]|[1-2][0-9]|3[0-1])"
-    date = findall(regex, value)
+    date = re_find(regex, value)
     if len(date) > 0:
         year, month, day = date[0]
         return f"{year}-{month}-{day}"
     regex = "(19[7-9][0-9]|2[0-1][0-9]{2})(0[1-9]|1[0-2])(0[1-9]|[1-2][0-9]|3[0-1])"
-    date = findall(regex, value)
+    date = re_find(regex, value)
     if len(date) > 0:
         year, month, day = date[0]
         return f"{year}-{month}-{day}"

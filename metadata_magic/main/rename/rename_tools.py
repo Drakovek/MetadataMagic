@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 from _functools import cmp_to_key
+from re import sub as re_sub
+from re import findall as re_find
 from html_string_tools.main.html_string_tools import get_extension
-from os import rename, pardir
+from os import pardir, rename
 from os.path import abspath, basename, exists, join
-from re import findall
-from re import sub as resub
 from typing import List
 
 def get_section(string:str) -> str:
@@ -19,11 +19,11 @@ def get_section(string:str) -> str:
     :rtype: str
     """
     # Check if string starts with a number
-    if len(findall("^[0-9]", string)) > 0:
+    if len(re_find("^[0-9]", string)) > 0:
         # Return number section if string starts with a number
-        return findall("[0-9]+[0-9,\\.]*", string)[0]
+        return re_find("[0-9]+[0-9,\\.]*", string)[0]
     # Return non-number section if string doesn't start with number
-    sections = findall("[^0-9]+", string)
+    sections = re_find("[^0-9]+", string)
     if len(sections) > 0:
         return sections[0]
     # Return empty string if no sections could be found
@@ -117,33 +117,33 @@ def create_filename(string:str) -> str:
     # Replace colons
     new_text = string.replace(":", " - ")
     # Replace elipses
-    new_text = resub("\\.\\s*\\.\\s*\\.", "…", new_text)
+    new_text = re_sub("\\.\\s*\\.\\s*\\.", "…", new_text)
     # Replace special latin characters
-    new_text = resub("[À-Å]", "A", new_text)
-    new_text = resub("[È-Ë]", "E", new_text)
-    new_text = resub("[Ì-Ï]", "I", new_text)
-    new_text = resub("[Ò-Ö]", "O", new_text)
-    new_text = resub("[Ù-Ü]", "U", new_text)
-    new_text = resub("[à-å]", "a", new_text)
-    new_text = resub("[è-ë]", "e", new_text)
-    new_text = resub("[ì-ï]", "i", new_text)
-    new_text = resub("[ò-ö]", "o", new_text)
-    new_text = resub("[ù-ü]", "u", new_text)
-    new_text = resub("[ýÿ]", "y", new_text)
+    new_text = re_sub("[À-Å]", "A", new_text)
+    new_text = re_sub("[È-Ë]", "E", new_text)
+    new_text = re_sub("[Ì-Ï]", "I", new_text)
+    new_text = re_sub("[Ò-Ö]", "O", new_text)
+    new_text = re_sub("[Ù-Ü]", "U", new_text)
+    new_text = re_sub("[à-å]", "a", new_text)
+    new_text = re_sub("[è-ë]", "e", new_text)
+    new_text = re_sub("[ì-ï]", "i", new_text)
+    new_text = re_sub("[ò-ö]", "o", new_text)
+    new_text = re_sub("[ù-ü]", "u", new_text)
+    new_text = re_sub("[ýÿ]", "y", new_text)
     new_text = new_text.replace("Ñ", "N")
     new_text = new_text.replace("Ý", "Y")
     new_text = new_text.replace("ñ", "n")
     # Replace all invalid characters
-    new_text = resub("<|>|\"|\\/|\\\\|\\||\\?|\\*|\\.+$", "-", new_text)
+    new_text = re_sub("<|>|\"|\\/|\\\\|\\||\\?|\\*|\\.+$", "-", new_text)
     # Remove whitespace and hyphens at begining and end of text
-    new_text = resub("^[\\s-]+|[\\s-]+$", "", new_text)
+    new_text = re_sub("^[\\s-]+|[\\s-]+$", "", new_text)
     # Remove duplicate spacers
-    new_text = resub("-{2,}", "-", new_text)
-    new_text = resub(" {2,}", " ", new_text)
+    new_text = re_sub("-{2,}", "-", new_text)
+    new_text = re_sub(" {2,}", " ", new_text)
     # Remove hanging hyphens
-    new_text = resub("(?<= )-(?=[^ \\-])|(?<=[^ \\-])-(?= )", "", new_text)
+    new_text = re_sub("(?<= )-(?=[^ \\-])|(?<=[^ \\-])-(?= )", "", new_text)
     # Remove any remaining whitespace & heading/trailing periods
-    new_text = resub("^[\\s\\.\\-]+|[\\s\\.\\-]+$", "", new_text)
+    new_text = re_sub("^[\\s\\.\\-]+|[\\s\\.\\-]+$", "", new_text)
     # Return "0" if there is no text
     if new_text == "":
         return "0"

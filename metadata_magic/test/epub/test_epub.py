@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
 
-from os import mkdir, listdir
-from os.path import abspath, basename, exists, isdir, join
-from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.meta_reader import get_empty_metadata
 from metadata_magic.main.epub.epub import create_epub
 from metadata_magic.main.epub.epub import create_epub_files
@@ -12,15 +9,20 @@ from metadata_magic.main.epub.epub import create_ncx_file
 from metadata_magic.main.epub.epub import create_manifest
 from metadata_magic.main.epub.epub import create_metadata_xml
 from metadata_magic.main.epub.epub import create_style_file
+from metadata_magic.main.epub.epub import format_xhtml
 from metadata_magic.main.epub.epub import get_title_from_file
 from metadata_magic.main.epub.epub import html_to_xhtml
-from metadata_magic.main.epub.epub import format_xhtml
 from metadata_magic.main.epub.epub import newline_to_tag
 from metadata_magic.main.epub.epub import txt_to_xhtml
+from metadata_magic.main.file_tools.file_tools import get_temp_dir
+from metadata_magic.main.file_tools.file_tools import extract_zip
+from metadata_magic.main.file_tools.file_tools import read_text_file
+from metadata_magic.main.file_tools.file_tools import write_text_file
 from metadata_magic.main.rename.rename_tools import sort_alphanum
-from metadata_magic.main.file_tools.file_tools import write_text_file, read_text_file
+from os import listdir, mkdir
+from os.path import abspath, basename, exists, isdir, join
+
 from PIL import Image
-from zipfile import ZipFile
 
 def test_newline_to_tag():
     """
@@ -799,8 +801,7 @@ def test_create_epub():
     # Extract epub and check its contents
     extract_dir = abspath(join(temp_dir, "ext"))
     mkdir(extract_dir)
-    with ZipFile(epub, mode="r") as file:
-        file.extractall(path=extract_dir)
+    extract_zip(epub, extract_dir)
     files = sort_alphanum(listdir(extract_dir))
     assert files == ["EPUB", "META-INF", "mimetype"]
     # Check the contents of the EPUB folder

@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
-from argparse import ArgumentParser
 from metadata_magic.main.meta_finder import get_pairs_from_lists
 from metadata_magic.main.meta_finder import separate_files
+from argparse import ArgumentParser
 from os import getcwd
 from os.path import abspath, exists
 from python_print_tools.main.python_print_tools import color_print
 from python_print_tools.main.python_print_tools import print_files
-from tqdm import tqdm
 from typing import List
+from tqdm import tqdm
 
 def find_missing_media(path:str) -> List[str]:
     """
@@ -59,6 +59,3 @@ def main():
             color_print(f"{length} JSONs with missing media.", "red")
         else:
             color_print("No JSONs with missing media found.", "green")
-
-if __name__ == "__main__":
-    main()

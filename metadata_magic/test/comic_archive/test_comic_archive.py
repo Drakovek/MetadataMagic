@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 
-from metadata_magic.main.comic_archive.comic_archive import create_cbz
-from metadata_magic.main.comic_archive.comic_archive import get_info_from_cbz
-from metadata_magic.main.comic_archive.comic_archive import update_cbz_info
-from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
 from metadata_magic.main.meta_reader import get_empty_metadata
+from metadata_magic.main.comic_archive.comic_archive import create_cbz
+from metadata_magic.main.comic_archive.comic_archive import update_cbz_info
+from metadata_magic.main.comic_archive.comic_archive import get_info_from_cbz
 from metadata_magic.main.comic_archive.comic_xml import read_comic_info
-from metadata_magic.main.file_tools.file_tools import get_temp_dir, extract_zip, write_json_file, write_text_file, read_text_file
-from shutil import copy
-from os import listdir, mkdir, pardir, remove
-from os.path import abspath, basename, exists, isdir, join
+from metadata_magic.main.file_tools.file_tools import get_temp_dir
+from metadata_magic.main.file_tools.file_tools import extract_zip
+from metadata_magic.main.file_tools.file_tools import read_text_file
+from metadata_magic.main.file_tools.file_tools import write_text_file
+from os import listdir, mkdir, remove
+from os.path import abspath, basename, exists, join
 
 def test_create_cbz():
     """

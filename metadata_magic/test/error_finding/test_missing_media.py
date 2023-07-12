@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.error_finding.missing_media import find_missing_media
+from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.file_tools.file_tools import write_text_file
 from os import mkdir, pardir
-from os.path import abspath, basename, join, exists
+from os.path import abspath, basename, exists, join
 
 def test_find_missing_media():
     """

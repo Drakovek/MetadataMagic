@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 
-from os import pardir
-from os.path import abspath, basename, exists, join
-from metadata_magic.main.file_tools.file_tools import get_temp_dir
-from metadata_magic.main.rename.rename_tools import get_section
-from metadata_magic.main.rename.rename_tools import get_available_filename
-from metadata_magic.main.rename.rename_tools import compare_sections
 from metadata_magic.main.rename.rename_tools import compare_alphanum
 from metadata_magic.main.rename.rename_tools import sort_alphanum
+from metadata_magic.main.rename.rename_tools import compare_sections
+from metadata_magic.main.rename.rename_tools import get_section
 from metadata_magic.main.rename.rename_tools import create_filename
 from metadata_magic.main.rename.rename_tools import rename_file
-from metadata_magic.main.file_tools.file_tools import write_json_file
-from metadata_magic.main.file_tools.file_tools import write_text_file
+from metadata_magic.main.rename.rename_tools import get_available_filename
+from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.file_tools.file_tools import read_text_file
+from metadata_magic.main.file_tools.file_tools import write_text_file
+from os import pardir
+from os.path import abspath, basename, exists, join
 
 def test_get_section():
     """

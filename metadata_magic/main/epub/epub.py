@@ -1,28 +1,28 @@
 #!/usr/bin/env python3
 
-from argparse import ArgumentParser
-from html_string_tools.main.html_string_tools import get_extension, regex_replace
+from re import sub as re_sub
+from re import findall as re_find
 from lxml.html import fromstring as html_from_string
 from lxml.etree import tostring as lxml_to_string
-from metadata_magic.main.comic_archive.comic_archive import create_cbz
-from metadata_magic.main.file_tools.file_tools import get_temp_dir
-from metadata_magic.main.comic_archive.comic_xml import generate_info_from_jsons
-from metadata_magic.main.rename.rename_tools import sort_alphanum
-from metadata_magic.main.file_tools.file_tools import write_text_file
-from metadata_magic.main.file_tools.file_tools import read_text_file
-from os import getcwd, listdir, mkdir
-from os.path import abspath, basename, exists, isdir, join, relpath
-from PIL import Image, UnidentifiedImageError
-from python_print_tools.main.python_print_tools import color_print
-from re import sub as resub
-from re import findall
-from shutil import copy
-from tqdm import tqdm
-from typing import List
-from xml.etree.ElementTree import indent as xml_indent
 from xml.etree.ElementTree import Element, SubElement
 from xml.etree.ElementTree import fromstring as xml_from_string
+from xml.etree.ElementTree import indent as xml_indent
 from xml.etree.ElementTree import tostring as xml_to_string
+from metadata_magic.main.comic_archive.comic_xml import generate_info_from_jsons
+from metadata_magic.main.file_tools.file_tools import get_temp_dir
+from metadata_magic.main.file_tools.file_tools import read_text_file
+from metadata_magic.main.file_tools.file_tools import write_text_file
+from metadata_magic.main.rename.rename_tools import sort_alphanum
+from html_string_tools.main.html_string_tools import get_extension
+from html_string_tools.main.html_string_tools import regex_replace
+from argparse import ArgumentParser
+from os import getcwd, listdir, mkdir
+from os.path import abspath, basename, exists, isdir, join, relpath
+from python_print_tools.main.python_print_tools import color_print
+from PIL import Image, UnidentifiedImageError
+from shutil import copy
+from typing import List
+from tqdm import tqdm
 from zipfile import ZipFile, ZIP_DEFLATED, ZIP_STORED
 
 def newline_to_tag(lines:str) -> str:
@@ -49,7 +49,7 @@ def get_title_from_file(file:str) -> str:
     :rtype: str
     """
     regex = "^\\s*\\[[^\\]]+\\]\\s*|\\s*\\.[^\\.]{1,5}$"
-    title = resub(regex, "", basename(file))
+    title = re_sub(regex, "", basename(file))
     return title
 
 def format_xhtml(html:str, title:str, head_tags:List[dict]=[], indent:bool=True) -> str:
@@ -82,7 +82,7 @@ def format_xhtml(html:str, title:str, head_tags:List[dict]=[], indent:bool=True)
     link = SubElement(head, "link")
     link.attrib = {"rel":"stylesheet", "href":"../style/epubstyle.css", "type":"text/css"}
     # Parse the given html text and add to body
-    final_html = resub("^\\s+|\\s+$|\\n", "", html)
+    final_html = re_sub("^\\s+|\\s+$|\\n", "", html)
     body = xml_from_string(f"<body>{final_html}</body>")
     base.append(body)
     # Set indents to make the XML more readable
@@ -149,10 +149,10 @@ def html_to_xhtml(html_file:str, indent:bool=False) -> str:
         body = root.xpath("//body")[0]
         body_text = lxml_to_string(body).decode("UTF-8")
         print(lxml_to_string(root))
-        body_text = findall("(?<=^<body>).+(?=<\\/body>$)", body_text)[0]
+        body_text = re_find("(?<=^<body>).+(?=<\\/body>$)", body_text)[0]
     except IndexError:
         body_text = lxml_to_string(root).decode("UTF-8")
-        inner_text = findall("(?<=^<div>).+(?=<\\/div>$)", body_text)
+        inner_text = re_find("(?<=^<div>).+(?=<\\/div>$)", body_text)
         if len(inner_text) == 1:
             body_text = inner_text[0]
     # Format html as xml
@@ -192,11 +192,11 @@ def txt_to_xhtml(txt_file:str, indent:bool=True) -> str:
     xml = xml.replace("{{/i}}", "</i>")
     xml = xml.replace("{{b}}", "<b>")
     xml = xml.replace("{{/b}}", "</b>")
-    xml = resub("(<br\\/>|\\s)*<\\/p?>", "</p>", xml)
-    xml = resub("<\\/i>\\s+(?=[,.?!])", "</i>", xml)
-    xml = resub("<\\/b>\\s+(?=[,.?!])", "</b>", xml)
-    xml = resub("\\s+<\\/i>", "</i>", xml)
-    xml = resub("\\s+<\\/b>", "</b>", xml)
+    xml = re_sub("(<br\\/>|\\s)*<\\/p?>", "</p>", xml)
+    xml = re_sub("<\\/i>\\s+(?=[,.?!])", "</i>", xml)
+    xml = re_sub("<\\/b>\\s+(?=[,.?!])", "</b>", xml)
+    xml = re_sub("\\s+<\\/i>", "</i>", xml)
+    xml = re_sub("\\s+<\\/b>", "</b>", xml)
     # Return XHTML
     return format_xhtml(xml, get_title_from_file(full_path), indent=indent)
 
@@ -756,7 +756,7 @@ def user_create_epub(path:str,
     if metadata["date"] is None:
         date = ""
         regex = "(19[7-9][0-9]|2[0-1][0-9]{2})\\-(0[1-9]|1[0-2])\\-(0[1-9]|[1-2][0-9]|3[0-1])"
-        while len(findall(regex, date)) == 0:
+        while len(re_find(regex, date)) == 0:
             date = str(input("Date (YYYY-MM-DD): "))
         metadata["date"] = date
     # Get the Writer
@@ -789,7 +789,7 @@ def user_create_epub(path:str,
     if metadata["tags"] is None:
         url = str(input("Tags: "))
         if not url == "":
-            metadata["tags"] = resub("\\s*,\\s*", ",", url)
+            metadata["tags"] = re_sub("\\s*,\\s*", ",", url)
     # Get score
     if rp_score:
         score = str(input("Score (Range 0-5): "))
@@ -860,6 +860,3 @@ def main():
                 rp_url=args.url,
                 rp_tags=args.tags,
                 rp_score=args.grade)
-            
-if __name__ == "__main__":
-    main()

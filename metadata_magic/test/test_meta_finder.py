@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
+from metadata_magic.main.meta_finder import get_pairs
+from metadata_magic.main.meta_finder import separate_files
 from metadata_magic.main.file_tools.file_tools import get_temp_dir
-from metadata_magic.main.meta_finder import get_pairs, separate_files
 from metadata_magic.main.file_tools.file_tools import write_text_file
 from os import mkdir
-from os.path import abspath, basename, join, exists
+from os.path import abspath, basename, exists, join
 
 def test_separate_files():
     """

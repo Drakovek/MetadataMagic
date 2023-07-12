@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 
-from argparse import ArgumentParser
 from metadata_magic.main.comic_archive.comic_archive import get_info_from_cbz
 from metadata_magic.main.comic_archive.comic_archive import update_cbz_info
+from metadata_magic.main.rename.rename_tools import sort_alphanum
 from html_string_tools.main.html_string_tools import get_extension
 from math import floor
-from metadata_magic.main.rename.rename_tools import sort_alphanum
-from os import name as os_name
-from os import getcwd, listdir, system
+from argparse import ArgumentParser
+from os import getcwd, listdir
 from os.path import abspath, basename, exists, isdir, join
 from python_print_tools.main.python_print_tools import color_print
-from tqdm import tqdm
 from typing import List
+from tqdm import tqdm
 
 def get_comic_archives(path:str, include_subdirs:bool=False) -> List[str]:
     """
@@ -212,6 +211,3 @@ def main():
             set_single_series(directory)
         else:
             set_series_info(directory)
-            
-if __name__ == "__main__":
-    main()

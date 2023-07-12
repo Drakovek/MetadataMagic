@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 
 from metadata_magic.main.file_tools.file_tools import get_temp_dir
-from metadata_magic.main.file_tools.file_tools import create_zip, extract_zip, extract_file_from_zip
-from metadata_magic.main.file_tools.file_tools import write_text_file, read_text_file, write_json_file, read_json_file
-from metadata_magic.main.rename.rename_tools import sort_alphanum
-from os import mkdir, listdir, remove
+from metadata_magic.main.file_tools.file_tools import create_zip
+from metadata_magic.main.file_tools.file_tools import extract_zip
+from metadata_magic.main.file_tools.file_tools import extract_file_from_zip
+from metadata_magic.main.file_tools.file_tools import read_json_file
+from metadata_magic.main.file_tools.file_tools import write_json_file
+from metadata_magic.main.file_tools.file_tools import read_text_file
+from metadata_magic.main.file_tools.file_tools import write_text_file
+from os import listdir, mkdir, remove
 from os.path import abspath, basename, exists, isdir, join
 
 def test_get_temp_dir():
@@ -106,7 +110,7 @@ def test_create_zip():
     extracted = abspath(join(temp_dir, "extracted"))
     mkdir(extracted)
     assert extract_zip(zip_file, extracted)
-    assert sort_alphanum(listdir(extracted)) == ["media.jpg", "text.txt"]
+    assert sorted(listdir(extracted)) == ["media.jpg", "text.txt"]
     assert read_text_file(abspath(join(extracted, "media.jpg"))) == "This is not a photo."
     assert read_text_file(abspath(join(extracted, "text.txt"))) == "TEXT!"
     # Test Creating Zip with internal directories
@@ -131,11 +135,11 @@ def test_create_zip():
     extracted = abspath(join(temp_dir, extracted))
     mkdir(extracted)
     assert extract_zip(zip_file, extracted)
-    assert sort_alphanum(listdir(extracted)) == ["main.txt", "sub"]
+    assert sorted(listdir(extracted)) == ["main.txt", "sub"]
     extracted = abspath(join(extracted, "sub"))
-    assert sort_alphanum(listdir(extracted)) == ["deep", "subtext.txt"]
+    assert sorted(listdir(extracted)) == ["deep", "subtext.txt"]
     extracted = abspath(join(extracted, "deep"))
-    assert sort_alphanum(listdir(extracted)) == ["deep.png"]
+    assert sorted(listdir(extracted)) == ["deep.png"]
     assert read_text_file(abspath(join(extracted, "deep.png"))) == "Deepest yet."
 
 def test_extract_zip():

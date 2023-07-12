@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 
-from metadata_magic.main.file_tools.file_tools import get_temp_dir
+from metadata_magic.main.meta_reader import get_empty_metadata
+from metadata_magic.main.meta_reader import get_value_from_keylist
+from metadata_magic.main.meta_reader import load_metadata
+from metadata_magic.main.meta_reader import get_id
+from metadata_magic.main.meta_reader import get_title
 from metadata_magic.main.meta_reader import get_artist
 from metadata_magic.main.meta_reader import get_date
 from metadata_magic.main.meta_reader import get_description
-from metadata_magic.main.meta_reader import get_id
-from metadata_magic.main.meta_reader import get_publisher
-from metadata_magic.main.meta_reader import get_tags
-from metadata_magic.main.meta_reader import get_title
 from metadata_magic.main.meta_reader import get_url
-from metadata_magic.main.meta_reader import get_value_from_keylist
+from metadata_magic.main.meta_reader import get_tags
+from metadata_magic.main.meta_reader import get_publisher
 from metadata_magic.main.meta_reader import get_age_rating
-from metadata_magic.main.meta_reader import load_metadata
-from metadata_magic.main.meta_reader import get_empty_metadata
+from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.file_tools.file_tools import write_json_file
 from os.path import abspath, exists, join
 

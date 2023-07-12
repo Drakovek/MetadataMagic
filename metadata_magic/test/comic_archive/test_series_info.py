@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 
-from os import listdir, mkdir, pardir
-from os.path import abspath, basename, exists, isdir, join
+from metadata_magic.main.meta_reader import get_empty_metadata
 from metadata_magic.main.comic_archive.comic_archive import create_cbz
 from metadata_magic.main.comic_archive.comic_archive import get_info_from_cbz
-from metadata_magic.main.file_tools.file_tools import get_temp_dir
-from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
-from metadata_magic.main.meta_reader import get_empty_metadata
 from metadata_magic.main.comic_archive.series_info import get_comic_archives
 from metadata_magic.main.comic_archive.series_info import label_files_with_numbers
 from metadata_magic.main.comic_archive.series_info import list_file_labels
 from metadata_magic.main.comic_archive.series_info import write_series_info
+from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.file_tools.file_tools import write_text_file
+from os import listdir, mkdir, pardir
+from os.path import abspath, basename, exists, isdir, join
 
 def test_get_comic_archives():
     """
