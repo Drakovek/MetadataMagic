@@ -5,7 +5,7 @@ from metadata_magic.main.meta_reader import get_empty_metadata
 from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
 from metadata_magic.main.comic_archive.comic_xml import generate_info_from_jsons
 from metadata_magic.main.comic_archive.comic_xml import read_comic_info
-from metadata_magic.test.temp_file_tools import create_text_file, create_json_file
+from metadata_magic.main.file_tools.file_tools import write_text_file, write_json_file
 from os import mkdir
 from os.path import abspath, exists, join
 
@@ -149,7 +149,7 @@ def test_read_comic_info():
     meta_write = get_empty_metadata()
     meta_write["title"] = "This is a title!"
     xml = get_comic_xml(meta_write, False)
-    create_text_file(xml_file, xml)
+    write_text_file(xml_file, xml)
     assert exists(xml_file)
     meta_read = read_comic_info(xml_file)
     assert meta_read["title"] == "This is a title!"
@@ -159,7 +159,7 @@ def test_read_comic_info():
     meta_write["series_number"] = "3.0"
     meta_write["series_total"] = "4"
     xml = get_comic_xml(meta_write, False)
-    create_text_file(xml_file, xml)
+    write_text_file(xml_file, xml)
     meta_read = read_comic_info(xml_file)
     assert meta_read["title"] == "This is a title!"
     assert meta_read["series"] == "The Thing"
@@ -169,14 +169,14 @@ def test_read_comic_info():
     # Test getting description from ComicInfo.xml
     meta_write["description"] = "Some words and such."
     xml = get_comic_xml(meta_write, False)
-    create_text_file(xml_file, xml)
+    write_text_file(xml_file, xml)
     meta_read = read_comic_info(xml_file)
     assert meta_read["title"] == "This is a title!"
     assert meta_read["description"] == "Some words and such."
     assert meta_read["date"] is None
     meta_write["description"] = "'Tis this & That\\Other >.<"
     xml = get_comic_xml(meta_write, False)
-    create_text_file(xml_file, xml)
+    write_text_file(xml_file, xml)
     meta_read = read_comic_info(xml_file)
     assert meta_read["title"] == "This is a title!"
     assert meta_read["description"] == "'Tis this & That\\Other >.<"
@@ -184,14 +184,14 @@ def test_read_comic_info():
     # Test getting date from ComicInfo.xml
     meta_write["date"] = "2012-03-09"
     xml = get_comic_xml(meta_write, False)
-    create_text_file(xml_file, xml)
+    write_text_file(xml_file, xml)
     meta_read = read_comic_info(xml_file)
     assert meta_read["title"] == "This is a title!"
     assert meta_read["date"] == "2012-03-09"
     assert meta_read["writer"] is None
     meta_write["date"] = "2021-12-12"
     xml = get_comic_xml(meta_write, False)
-    create_text_file(xml_file, xml)
+    write_text_file(xml_file, xml)
     meta_read = read_comic_info(xml_file)
     assert meta_read["title"] == "This is a title!"
     assert meta_read["date"] == "2021-12-12"
@@ -199,7 +199,7 @@ def test_read_comic_info():
     # Test getting writer from ComicInfo.xml
     meta_write["writer"] = "Author Dude"
     xml = get_comic_xml(meta_write, False)
-    create_text_file(xml_file, xml)
+    write_text_file(xml_file, xml)
     meta_read = read_comic_info(xml_file)
     assert meta_read["title"] == "This is a title!"
     assert meta_read["writer"] == "Author Dude"
@@ -207,7 +207,7 @@ def test_read_comic_info():
     # Test getting cover artist from ComicInfo.xml
     meta_write["cover_artist"] = "Person"
     xml = get_comic_xml(meta_write, False)
-    create_text_file(xml_file, xml)
+    write_text_file(xml_file, xml)
     meta_read = read_comic_info(xml_file)
     assert meta_read["title"] == "This is a title!"
     assert meta_read["cover_artist"] == "Person"
@@ -215,7 +215,7 @@ def test_read_comic_info():
     # Test getting main artist from ComicInfo.xml
     meta_write["artist"] = "ArtGirl"
     xml = get_comic_xml(meta_write, False)
-    create_text_file(xml_file, xml)
+    write_text_file(xml_file, xml)
     meta_read = read_comic_info(xml_file)
     assert meta_read["title"] == "This is a title!"
     assert meta_read["artist"] == "ArtGirl"
@@ -223,7 +223,7 @@ def test_read_comic_info():
     # Test getting the publisher from ComicInfo.xml
     meta_write["publisher"] = "Website"
     xml = get_comic_xml(meta_write, False)
-    create_text_file(xml_file, xml)
+    write_text_file(xml_file, xml)
     meta_read = read_comic_info(xml_file)
     assert meta_read["title"] == "This is a title!"
     assert meta_read["publisher"] == "Website"
@@ -231,7 +231,7 @@ def test_read_comic_info():
     # Test getting url from ComicInfo.xml
     meta_write["url"] = "/web/page/"
     xml = get_comic_xml(meta_write, False)
-    create_text_file(xml_file, xml)
+    write_text_file(xml_file, xml)
     meta_read = read_comic_info(xml_file)
     assert meta_read["title"] == "This is a title!"
     assert meta_read["url"] == "/web/page/"
@@ -240,7 +240,7 @@ def test_read_comic_info():
     # Test getting age rating from ComicInfo.xml
     meta_write["age_rating"] = "Everyone"
     xml = get_comic_xml(meta_write, False)
-    create_text_file(xml_file, xml)
+    write_text_file(xml_file, xml)
     meta_read = read_comic_info(xml_file)
     assert meta_read["title"] == "This is a title!"
     assert meta_read["age_rating"] == "Everyone"
@@ -248,7 +248,7 @@ def test_read_comic_info():
     # Test getting score from ComicInfo.xml
     meta_write["score"] = "4"
     xml = get_comic_xml(meta_write, False)
-    create_text_file(xml_file, xml)
+    write_text_file(xml_file, xml)
     meta_read = read_comic_info(xml_file)
     assert meta_read["title"] == "This is a title!"
     assert meta_read["score"] == "4"
@@ -257,7 +257,7 @@ def test_read_comic_info():
     meta_write["title"] = None
     meta_write["tags"] = " these, are , some tags  "
     xml = get_comic_xml(meta_write, False)
-    create_text_file(xml_file, xml)
+    write_text_file(xml_file, xml)
     meta_read = read_comic_info(xml_file)
     assert meta_read["tags"] == "these,are,some tags"
     assert meta_read["title"] is None
@@ -265,33 +265,33 @@ def test_read_comic_info():
     meta_write["title"] = "Hooray!"
     meta_write["tags"] = "★★★★"
     xml = get_comic_xml(meta_write, False)
-    create_text_file(xml_file, xml)
+    write_text_file(xml_file, xml)
     meta_read = read_comic_info(xml_file)
     assert meta_read["title"] == "Hooray!"
     assert meta_read["tags"] == None
     meta_write["tags"] = "★, Some,Tags!,Yay"
     xml = get_comic_xml(meta_write, False)
-    create_text_file(xml_file, xml)
+    write_text_file(xml_file, xml)
     meta_read = read_comic_info(xml_file)
     assert meta_read["tags"] == "Some,Tags!,Yay"
     meta_write["tags"] = "More, tags, and, such, ★★★"
     xml = get_comic_xml(meta_write, False)
-    create_text_file(xml_file, xml)
+    write_text_file(xml_file, xml)
     meta_read = read_comic_info(xml_file)
     assert meta_read["tags"] == "More,tags,and,such"
     meta_write["tags"] = "Other, ★★★★★, Final "
     xml = get_comic_xml(meta_write, False)
-    create_text_file(xml_file, xml)
+    write_text_file(xml_file, xml)
     meta_read = read_comic_info(xml_file)
     assert meta_read["tags"] == "Other,Final"
     meta_write["tags"] = "Larger,Star,Count,★★★★★★★★★★"
     xml = get_comic_xml(meta_write, False)
-    create_text_file(xml_file, xml)
+    write_text_file(xml_file, xml)
     meta_read = read_comic_info(xml_file)
     assert meta_read["tags"] == "Larger,Star,Count,★★★★★★★★★★"
     # Test if given file is not a proper XML file
     unrelated = abspath(join(temp_dir, "blah.xml"))
-    create_text_file(unrelated, "This is some unimportant non-xml text.")
+    write_text_file(unrelated, "This is some unimportant non-xml text.")
     assert exists(unrelated)
     meta_read = read_comic_info(unrelated)
     assert meta_read["title"] is None
@@ -310,10 +310,10 @@ def test_generate_info_from_jsons():
     sub_media = abspath(join(sub_dir, "blah.png"))
     sub_json = abspath(join(sub_dir, "blah.json"))
     json_meta = {"title":"This is a title!"}
-    create_text_file(main_media, "This is text")
-    create_json_file(main_json, json_meta)
-    create_text_file(sub_media, "Not actually an image")
-    create_json_file(sub_json, {"no":"info"})
+    write_text_file(main_media, "This is text")
+    write_json_file(main_json, json_meta)
+    write_text_file(sub_media, "Not actually an image")
+    write_json_file(sub_json, {"no":"info"})
     assert exists(main_media)
     assert exists(main_json)
     assert exists(sub_media)
@@ -324,7 +324,7 @@ def test_generate_info_from_jsons():
     assert meta["description"] is None
     # Test getting description
     json_meta["description"] = "Some caption."
-    create_json_file(main_json, json_meta)
+    write_json_file(main_json, json_meta)
     meta = generate_info_from_jsons(temp_dir)
     assert meta["title"] == "This is a title!"
     assert meta["description"] == "Some caption."
@@ -332,27 +332,27 @@ def test_generate_info_from_jsons():
     assert meta["cover_artist"] is None
     # Test simplifying description with HTML info contained
     json_meta["description"] = "Let's say there's a <a href='ajsdlf'>link</a>.<br>Other!!"
-    create_json_file(main_json, json_meta)
+    write_json_file(main_json, json_meta)
     meta = generate_info_from_jsons(temp_dir)
     assert meta["description"] == "Let's say there's a link. Other!!"
     json_meta["description"] = "<div><p>Way too many tags!</p><br>\n<br/> <b>B</b>ut it's <i>o</i>kay right?</div>"
-    create_json_file(main_json, json_meta)
+    write_json_file(main_json, json_meta)
     meta = generate_info_from_jsons(temp_dir)
     assert meta["description"] == "Way too many tags! But it's okay right?"
     json_meta["description"] = "What about 'em elements &amp; such? &gt;.&gt;"
-    create_json_file(main_json, json_meta)
+    write_json_file(main_json, json_meta)
     meta = generate_info_from_jsons(temp_dir)
     assert meta["description"] == "What about 'em elements & such? >.>"
     # Test getting date
     json_meta["date"] = "2012-12-21"
-    create_json_file(main_json, json_meta)
+    write_json_file(main_json, json_meta)
     meta = generate_info_from_jsons(temp_dir)
     assert meta["title"] == "This is a title!"
     assert meta["date"] == "2012-12-21"
     assert meta["cover_artist"] is None
     # Test getting artist data
     json_meta["artist"] = "Person!"
-    create_json_file(main_json, json_meta)
+    write_json_file(main_json, json_meta)
     meta = generate_info_from_jsons(temp_dir)
     assert meta["title"] == "This is a title!"
     assert meta["writer"] == "Person!"
@@ -361,28 +361,28 @@ def test_generate_info_from_jsons():
     assert meta["publisher"] is None
     # Test getting publisher
     json_meta["url"] = "youtube.com/something"
-    create_json_file(main_json, json_meta)
+    write_json_file(main_json, json_meta)
     meta = generate_info_from_jsons(temp_dir)
     assert meta["title"] == "This is a title!"
     assert meta["publisher"] == "YouTube"
     assert meta["tags"] is None
     # Test getting tags
     json_meta["tags"] = ["These", "Are", "Tags"]
-    create_json_file(main_json, json_meta)
+    write_json_file(main_json, json_meta)
     meta = generate_info_from_jsons(temp_dir)
     assert meta["title"] == "This is a title!"
     assert meta["tags"] == "These,Are,Tags"
     json_meta["tags"] = ["Tag"]
-    create_json_file(main_json, json_meta)
+    write_json_file(main_json, json_meta)
     meta = generate_info_from_jsons(temp_dir)
     assert meta["tags"] == "Tag"
     json_meta["tags"] = []
-    create_json_file(main_json, json_meta)
+    write_json_file(main_json, json_meta)
     meta = generate_info_from_jsons(temp_dir)
     assert meta["tags"] is None
     # Test getting url
     json_meta["url"] = "someurlthing.net"
-    create_json_file(main_json, json_meta)
+    write_json_file(main_json, json_meta)
     meta = generate_info_from_jsons(temp_dir)
     assert meta["title"] == "This is a title!"
     assert meta["url"] == "someurlthing.net"
@@ -392,27 +392,27 @@ def test_generate_info_from_jsons():
     temp_dir = get_temp_dir()
     media_everyone = abspath(join(temp_dir, "everyone.png"))
     json_everyone = abspath(join(temp_dir, "everyone.json"))
-    create_text_file(media_everyone, "E For All")
-    create_json_file(json_everyone, {"title":"Thing!", "url":"newgrounds.com/", "rating":"E"})
+    write_text_file(media_everyone, "E For All")
+    write_json_file(json_everyone, {"title":"Thing!", "url":"newgrounds.com/", "rating":"E"})
     meta = generate_info_from_jsons(temp_dir)
     assert meta["title"] == "Thing!"
     assert meta["age_rating"] == "Everyone"
     media_teen = abspath(join(temp_dir, "teen.gif"))
     json_teen = abspath(join(temp_dir, "teen.json"))
-    create_json_file(media_teen, "Edgy")
-    create_json_file(json_teen, {"rating":"t", "url":"www.newgrounds.com"})
+    write_json_file(media_teen, "Edgy")
+    write_json_file(json_teen, {"rating":"t", "url":"www.newgrounds.com"})
     meta = generate_info_from_jsons(temp_dir)
     assert meta["age_rating"] == "Teen"
     media_mature = abspath(join(temp_dir, "mature.txt"))
     json_mature = abspath(join(temp_dir, "mature.json"))
-    create_text_file(media_mature, "Blood Bleeder")
-    create_json_file(json_mature, {"url":"newgrounds", "rating":"m"})
+    write_text_file(media_mature, "Blood Bleeder")
+    write_json_file(json_mature, {"url":"newgrounds", "rating":"m"})
     meta = generate_info_from_jsons(temp_dir)
     assert meta["age_rating"] == "Mature 17+"
     media_adult = abspath(join(temp_dir, "adult.png"))
     json_adult = abspath(join(temp_dir, "adult.json"))
-    create_text_file(media_adult, "AAAAAAAAAA!")
-    create_json_file(json_adult, {"url":"www.newgrounds.com/thing", "rating":"A"})
+    write_text_file(media_adult, "AAAAAAAAAA!")
+    write_json_file(json_adult, {"url":"www.newgrounds.com/thing", "rating":"A"})
     meta = generate_info_from_jsons(temp_dir)
     assert meta["age_rating"] == "X18+"
     assert exists(json_everyone)
@@ -429,10 +429,10 @@ def test_generate_info_from_jsons():
     sub_json = abspath(join(sub2, "first.json"))
     mkdir(sub1)
     mkdir(sub2)
-    create_text_file(main_media, "Main File")
-    create_json_file(main_json, {"title":"Real Title."})
-    create_text_file(sub_media, "Sub file")
-    create_json_file(sub_json, {"title":"Not this one."})
+    write_text_file(main_media, "Main File")
+    write_json_file(main_json, {"title":"Real Title."})
+    write_text_file(sub_media, "Sub file")
+    write_json_file(sub_json, {"title":"Not this one."})
     assert exists(main_media)
     assert exists(main_json)
     assert exists(sub_media)
@@ -442,7 +442,7 @@ def test_generate_info_from_jsons():
     # Test with no JSON files
     temp_dir = get_temp_dir()
     test_file = abspath(join(temp_dir, "File!.txt"))
-    create_text_file(test_file, "Blah.")
+    write_text_file(test_file, "Blah.")
     assert exists(test_file)
     meta = generate_info_from_jsons(temp_dir)
     assert meta["title"] is None

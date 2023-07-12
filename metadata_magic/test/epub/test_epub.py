@@ -18,7 +18,7 @@ from metadata_magic.main.epub.epub import format_xhtml
 from metadata_magic.main.epub.epub import newline_to_tag
 from metadata_magic.main.epub.epub import txt_to_xhtml
 from metadata_magic.main.rename.rename_tools import sort_alphanum
-from metadata_magic.test.temp_file_tools import create_text_file, read_text_file
+from metadata_magic.main.file_tools.file_tools import write_text_file, read_text_file
 from PIL import Image
 from zipfile import ZipFile
 
@@ -136,7 +136,7 @@ def test_create_image_page():
     assert chapter == body
     # Test with invalid image file
     text_file = abspath(join(temp_dir, "thing.png"))
-    create_text_file(text_file, "Some Text")
+    write_text_file(text_file, "Some Text")
     assert exists(text_file)
     assert create_image_page(text_file) is None
     assert create_image_page("/non/existant/thing.png") is None
@@ -166,7 +166,7 @@ def test_html_to_xhtml():
     temp_dir = get_temp_dir()
     html_file = abspath(join(temp_dir, "thing.html"))
     text = "<!DOCTYPE html><html><body><p>This is text!</p><br><p><b>YAY!</b></p></body></html>"
-    create_text_file(html_file, text)
+    write_text_file(html_file, text)
     assert exists(html_file)
     contents = html_to_xhtml(html_file, indent=False)
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
@@ -180,7 +180,7 @@ def test_html_to_xhtml():
     # Test simple HTML with no body
     html_file = abspath(join(temp_dir, "New.htm"))
     text = "<b>A thing</b> and Thing.<hr>Other!"
-    create_text_file(html_file, text)
+    write_text_file(html_file, text)
     assert exists(html_file)
     contents = html_to_xhtml(html_file, indent=False)
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
@@ -194,7 +194,7 @@ def test_html_to_xhtml():
     # Test adding indents
     html_file = abspath(join(temp_dir, "Final.htm"))
     text = "Some Words..."
-    create_text_file(html_file, text)
+    write_text_file(html_file, text)
     assert exists(html_file)
     contents = html_to_xhtml(html_file, indent=True)
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
@@ -220,7 +220,7 @@ def test_txt_to_xhtml():
     temp_dir = get_temp_dir()
     text_file = abspath(join(temp_dir, "Text.txt"))
     text = "This is a simple sentence!"
-    create_text_file(text_file, text)
+    write_text_file(text_file, text)
     assert exists(text_file)
     chapter = txt_to_xhtml(text_file, indent=False)
     head = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
@@ -233,21 +233,21 @@ def test_txt_to_xhtml():
     assert chapter == body
     # Test multiple paragraphs
     text = "Different paragraphs!\n\nHow cool!"
-    create_text_file(text_file, text)
+    write_text_file(text_file, text)
     chapter = txt_to_xhtml(text_file, False)
     body = f"{head}<body><div class=\"text-container\">"
     body = f"{body}<p>Different paragraphs!</p><p>How cool!</p></div></body></html>"
     assert chapter == body
     # Test single new line character
     text = "More text!\nAnd This & That..."
-    create_text_file(text_file, text)
+    write_text_file(text_file, text)
     chapter = txt_to_xhtml(text_file, False)
     body = f"{head}<body><div class=\"text-container\">"
     body = f"{body}<p>More text!<br />And This &amp; That...</p></div></body></html>"
     assert chapter == body
     # Test new lines and separate paragraphs
     text = "Paragraph\n\nOther\nText!\n\nFinal\nParagraph..."
-    create_text_file(text_file, text)
+    write_text_file(text_file, text)
     chapter = txt_to_xhtml(text_file, False)
     body = f"{head}<body><div class=\"text-container\">"
     body = f"{body}<p>Paragraph</p><p>Other<br />Text!</p>"
@@ -255,14 +255,14 @@ def test_txt_to_xhtml():
     assert chapter == body
     # Test with more than one two new lines
     text = "Thing\n\n\nOther"
-    create_text_file(text_file, text)
+    write_text_file(text_file, text)
     chapter = txt_to_xhtml(text_file, False)
     body = "<body><div class=\"text-container\"><p>Thing<br/><br/><br/>Other</p></div></body>"
     body = f"{head}<body><div class=\"text-container\">"
     body = f"{body}<p>Thing<br /><br /><br />Other</p></div></body></html>"
     assert chapter == body
     text = "Thing\n\n\nOther\n\nParagraph\n\n\n\nNext"
-    create_text_file(text_file, text)
+    write_text_file(text_file, text)
     chapter = txt_to_xhtml(text_file, False)
     body = f"{head}<body><div class=\"text-container\">"
     body = f"{body}<p>Thing<br /><br /><br />Other</p>"
@@ -270,27 +270,27 @@ def test_txt_to_xhtml():
     assert chapter == body
     # Test removing text stand-ins for HTML tags
     text = "{{i}}Title{{/i}}{{br}}{{b}}Thing{{/b}}"
-    create_text_file(text_file, text)
+    write_text_file(text_file, text)
     chapter = txt_to_xhtml(text_file, False)
     body = f"{head}<body><div class=\"text-container\">"
     body = f"{body}<p><i>Title</i><br /><b>Thing</b></p></div></body></html>"
     assert chapter == body
     # Remove dangling paragraph tags
     text = "Text  \n\nThing {{br}} {{br}}"
-    create_text_file(text_file, text)
+    write_text_file(text_file, text)
     chapter = txt_to_xhtml(text_file, False)
     body = f"{head}<body><div class=\"text-container\">"
     body = f"{body}<p>Text</p><p>Thing</p></div></body></html>"
     assert chapter == body
     # Remove dangling italic/bold tags tags
     text = "This is a {{b}}fine{{/b}} sentence."
-    create_text_file(text_file, text)
+    write_text_file(text_file, text)
     chapter = txt_to_xhtml(text_file, False)
     body = f"{head}<body><div class=\"text-container\">"
     body = f"{body}<p>This is a <b>fine</b> sentence.</p></div></body></html>"
     assert chapter == body
     text = "Some {{b}}words {{/b}} , should {{i}}change{{/i}}  ."
-    create_text_file(text_file, text)
+    write_text_file(text_file, text)
     chapter = txt_to_xhtml(text_file, False)
     body = f"{head}<body><div class=\"text-container\">"
     body = f"{body}<p>Some <b>words</b>, should <i>change</i>.</p></div></body></html>"
@@ -298,7 +298,7 @@ def test_txt_to_xhtml():
     # Test with indent
     text = "These are...\n\nwords."
     text_file = abspath(join(temp_dir, "[01] New Thing.txt"))
-    create_text_file(text_file, text)
+    write_text_file(text_file, text)
     chapter = txt_to_xhtml(text_file, True)
     body = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
     body = f"{body}<html xmlns=\"http://www.w3.org/1999/xhtml\">\n"
@@ -667,10 +667,10 @@ def test_create_epub_files():
     chapter_page = abspath(join(content, "[01] Chapter1.xhtml"))
     cover_image = abspath(join(images, "cover.png"))
     internal_image = abspath(join(images, "other.jpeg"))
-    create_text_file(cover_page, "Doesn't")
-    create_text_file(chapter_page, "Really")
-    create_text_file(cover_image, "Matter")
-    create_text_file(internal_image, "To Me")
+    write_text_file(cover_page, "Doesn't")
+    write_text_file(chapter_page, "Really")
+    write_text_file(cover_image, "Matter")
+    write_text_file(internal_image, "To Me")
     assert exists(cover_page)
     assert exists(chapter_page)
     assert exists(cover_image)
@@ -778,9 +778,9 @@ def test_create_epub():
     html_page = abspath(join(temp_dir, "Html.htm"))
     cover_file = abspath(join(temp_dir, "[00] Cover.png"))
     internal_file = abspath(join(temp_dir, "Other.jpeg"))
-    create_text_file(json, "Some thing")
-    create_text_file(html_page, "<p>Some things</p>")
-    create_text_file(text_page, "This is some text!!!")
+    write_text_file(json, "Some thing")
+    write_text_file(html_page, "<p>Some things</p>")
+    write_text_file(text_page, "This is some text!!!")
     cover_image = Image.new("RGB", (100, 200), color=(255,0,0))
     internal_image = Image.new("RGB", (500, 300), color=(0,255,0))
     cover_image.save(cover_file)

@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+from json import dump as dump_json
+from json import load as load_json
+from json import JSONDecodeError
 from html_string_tools.main.html_string_tools import get_extension
 from os import listdir, mkdir, remove
 from os.path import abspath, basename, exists, isdir, join, relpath
@@ -23,6 +26,68 @@ def get_temp_dir(folder_name:str="dvk_meta_magic") -> str:
         rmtree(temp_dir)
     mkdir(temp_dir)
     return temp_dir
+
+def write_text_file(file:str, text:str):
+    """
+    Writes a file containing the given text.
+    Will overwrite existing files
+    
+    :param file: Path of the file to create
+    :type file: str, required
+    :param text: Text to save in the file
+    :type text: str, required
+    """
+    try:
+        full_path = abspath(file)
+        with open(full_path, "w") as out_file:
+            out_file.write(text)
+    except FileNotFoundError: pass
+
+def read_text_file(file:str) -> str:
+    """
+    Reads the content of a given text file.
+    
+    :param file: Path of the file to read
+    :type file: str, required
+    :return: Text contained in the given file
+    :rtype: str
+    """
+    try:
+        full_path = abspath(file)
+        with open (full_path) as in_file:
+            return in_file.read()
+    except (FileNotFoundError, IsADirectoryError, UnicodeDecodeError): return None
+
+def write_json_file(file:str, contents:dict):
+    """
+    Writes a JSON file containing the given dictionary as contents.
+    
+    :param file: Path of the file to create
+    :type file: str, required
+    :param text: Contents to save as JSON
+    :type text: str, required
+    """
+    try:
+        full_path = abspath(file)
+        with open(full_path, "w") as out_file:
+            dump_json(contents, out_file)
+    except FileNotFoundError: pass
+
+def read_json_file(file:str) -> dict:
+    """
+    Returns the contents of a given JSON file as a dictionary.
+    
+    :param file: JSON file to read.
+    :type file: str, required
+    :return: Contents of the JSON file
+    :rtype: dict
+    """
+    try:
+        full_path = abspath(file)
+        with open(full_path) as in_file:
+            return load_json(in_file)
+    except (FileNotFoundError, IsADirectoryError, JSONDecodeError): return {}
+
 
 def create_zip(directory:str, zip_file:str, compress_level:int=9) -> bool:
     """

@@ -6,8 +6,7 @@ from metadata_magic.main.comic_archive.comic_archive import update_cbz_info
 from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
 from metadata_magic.main.meta_reader import get_empty_metadata
 from metadata_magic.main.comic_archive.comic_xml import read_comic_info
-from metadata_magic.main.file_tools.file_tools import get_temp_dir, extract_zip
-from metadata_magic.test.temp_file_tools import create_json_file, create_text_file, read_text_file
+from metadata_magic.main.file_tools.file_tools import get_temp_dir, extract_zip, write_json_file, write_text_file, read_text_file
 from shutil import copy
 from os import listdir, mkdir, pardir, remove
 from os.path import abspath, basename, exists, isdir, join
@@ -20,8 +19,8 @@ def test_create_cbz():
     cbz_directory = get_temp_dir("dvk_cbz_test")
     text_file = abspath(join(cbz_directory, "text.txt"))
     media_file = abspath(join(cbz_directory, "other.txt"))
-    create_text_file(text_file, "TEXT!")
-    create_text_file(media_file, "Yet more text.")
+    write_text_file(text_file, "TEXT!")
+    write_text_file(media_file, "Yet more text.")
     assert exists(text_file)
     assert exists(media_file)
     cbz_file = create_cbz(cbz_directory)
@@ -43,8 +42,8 @@ def test_create_cbz():
     media_file = abspath(join(directory_b, "media.png"))
     mkdir(directory_a)
     mkdir(directory_b)
-    create_text_file(text_file, "Text in A")
-    create_text_file(media_file, "Not actually png")
+    write_text_file(text_file, "Text in A")
+    write_text_file(media_file, "Not actually png")
     assert exists(text_file)
     assert exists(media_file)
     cbz_file = create_cbz(cbz_directory, "Totally Cool!")
@@ -75,7 +74,7 @@ def test_create_cbz():
     # Test creating CBZ while removing remaining files
     remove(cbz_file)
     media_file = abspath(join(cbz_directory, "Another_one.txt"))
-    create_text_file(media_file, "Some more text.")
+    write_text_file(media_file, "Some more text.")
     assert exists(media_file)
     cbz_file = create_cbz(cbz_directory, "Another", metadata=metadata, remove_files=True)
     assert listdir(cbz_directory) == ["Another.cbz"]
@@ -86,8 +85,8 @@ def test_create_cbz():
     cbz_directory = get_temp_dir("dvk_cbz_test")
     text_file = abspath(join(cbz_directory, "new"))
     media_file = abspath(join(cbz_directory, "things.txt"))
-    create_text_file(text_file, "NEWER")
-    create_text_file(media_file, "More things")
+    write_text_file(text_file, "NEWER")
+    write_text_file(media_file, "More things")
     assert exists(text_file)
     assert exists(media_file)
     cbz_file = create_cbz(cbz_directory, "None", metadata=metadata, remove_files=True)
@@ -125,7 +124,7 @@ def test_get_info_from_cbz():
     metadata["title"] = "CBZ Title!"
     metadata["tags"] = "Some,Tags"
     text_file = abspath(join(temp_dir, "text.txt"))
-    create_text_file(text_file, "Text")
+    write_text_file(text_file, "Text")
     assert exists(text_file)
     cbz_file = create_cbz(temp_dir, metadata=metadata)
     assert exists(cbz_file)
@@ -136,7 +135,7 @@ def test_get_info_from_cbz():
     # Test trying to get ComicInfo when not present in .cbz file
     temp_dir = get_temp_dir()
     text_file = abspath(join(temp_dir, "text.txt"))
-    create_text_file(text_file, "Total Text")
+    write_text_file(text_file, "Total Text")
     assert exists(text_file)
     cbz_file = create_cbz(temp_dir)
     assert len(listdir(temp_dir)) == 2
@@ -146,7 +145,7 @@ def test_get_info_from_cbz():
     assert read_meta["artist"] is None
     # Test if file is not cbz
     text_file = abspath(join(temp_dir, "text.txt"))
-    create_text_file(text_file, "Text")
+    write_text_file(text_file, "Text")
     read_meta = get_info_from_cbz(text_file)
     assert read_meta["title"] is None
     assert read_meta["artist"] is None
@@ -161,7 +160,7 @@ def test_update_cbz_info():
     metadata = get_empty_metadata()
     metadata["title"] = "Old title."
     metadata["tags"] = "Some,Tags"
-    create_text_file(text_file, "This is text!")
+    write_text_file(text_file, "This is text!")
     assert exists(text_file)
     cbz_file = create_cbz(temp_dir, metadata=metadata)
     assert exists(cbz_file)
@@ -184,8 +183,8 @@ def test_update_cbz_info():
     temp_dir = get_temp_dir()
     text_file = abspath(join(temp_dir, "text.txt"))
     other_file = abspath(join(temp_dir, "other.txt"))
-    create_text_file(text_file, "This is text!")
-    create_text_file(other_file, "More text!")
+    write_text_file(text_file, "This is text!")
+    write_text_file(other_file, "More text!")
     assert exists(text_file)
     assert exists(other_file)
     cbz_file = create_cbz(temp_dir)
@@ -206,7 +205,7 @@ def test_update_cbz_info():
     # Test trying to update non-cbz file
     temp_dir = get_temp_dir()
     text_file = abspath(join(temp_dir, "text.txt"))
-    create_text_file(text_file, "Some text")
+    write_text_file(text_file, "Some text")
     update_cbz_info(text_file, metadata)
     assert exists(text_file)
     assert read_text_file(text_file) == "Some text"

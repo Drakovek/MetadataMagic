@@ -8,8 +8,8 @@ from metadata_magic.main.comic_archive.comic_archive import create_cbz
 from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.comic_archive.comic_xml import generate_info_from_jsons
 from metadata_magic.main.rename.rename_tools import sort_alphanum
-from metadata_magic.test.temp_file_tools import create_text_file
-from metadata_magic.test.temp_file_tools import read_text_file
+from metadata_magic.main.file_tools.file_tools import write_text_file
+from metadata_magic.main.file_tools.file_tools import read_text_file
 from os import getcwd, listdir, mkdir
 from os.path import abspath, basename, exists, isdir, join, relpath
 from PIL import Image, UnidentifiedImageError
@@ -253,7 +253,7 @@ def create_style_file(file_path:str):
     style = f"{style}}}"
     # Create file
     full_path = abspath(file_path)
-    create_text_file(full_path, style)
+    write_text_file(full_path, style)
 
 def create_nav_file(xhtmls:List[str], file_path:str, title:str, indent:bool=True):
     """
@@ -307,7 +307,7 @@ def create_nav_file(xhtmls:List[str], file_path:str, title:str, indent:bool=True
     xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
     # Write XML
     full_path = abspath(file_path)
-    create_text_file(full_path, xml)
+    write_text_file(full_path, xml)
 
 def create_ncx_file(xhtmls:List[str], file_path:str, title:str, uid:str, indent:bool=True):
     """
@@ -361,7 +361,7 @@ def create_ncx_file(xhtmls:List[str], file_path:str, title:str, uid:str, indent:
     xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
     # Write XML
     full_path = abspath(file_path)
-    create_text_file(full_path, xml)
+    write_text_file(full_path, xml)
 
 def create_manifest(files:List[str]) -> str:
     """
@@ -586,7 +586,7 @@ def create_epub_files(directory:str, metadata:dict):
     xml = xml_to_string(base).decode("UTF-8")
     xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
     package_file = abspath(join(full_directory, "content.opf"))
-    create_text_file(package_file, xml)
+    write_text_file(package_file, xml)
 
 def zip_epub(directory:str, epub_file):
     try:
@@ -644,7 +644,7 @@ def create_epub(directory:str, metadata:dict) -> str:
     xml = xml_to_string(base).decode("UTF-8")
     xml = f"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n{xml}"
     container_file = abspath(join(meta_dir, "container.xml"))
-    create_text_file(container_file, xml)
+    write_text_file(container_file, xml)
     # Get list of all contents of the given directory
     files = listdir(input_directory)
     for i in range(0, len(files)):
@@ -672,19 +672,19 @@ def create_epub(directory:str, metadata:dict) -> str:
             # Create text extension
             filename = filename[:len(filename) - len(extension)] + ".xhtml"
             xml = txt_to_xhtml(file, True)
-            create_text_file(abspath(join(content_folder, filename)), xml)
+            write_text_file(abspath(join(content_folder, filename)), xml)
         if extension == ".html" or extension == ".htm" or extension == ".xhtml":
             # Create text extension
             filename = filename[:len(filename) - len(extension)] + ".xhtml"
             xml = html_to_xhtml(file, True)
-            create_text_file(abspath(join(content_folder, filename)), xml)
+            write_text_file(abspath(join(content_folder, filename)), xml)
         if extension == ".png" or extension == ".jpg" or extension == ".jpeg" or extension == ".svg":
             # Copy image file
             copy(file, abspath(join(image_folder, filename)))
             # Create image page
             filename = filename[:len(filename) - len(extension)] + ".xhtml"
             xml = create_image_page(file)
-            create_text_file(abspath(join(content_folder, filename)), xml)
+            write_text_file(abspath(join(content_folder, filename)), xml)
     # Create the package and nav files
     create_epub_files(epub_folder, metadata)
     # Zip files and copy to epub

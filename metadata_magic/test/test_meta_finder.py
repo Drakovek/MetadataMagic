@@ -2,7 +2,7 @@
 
 from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.meta_finder import get_pairs, separate_files
-from metadata_magic.test.temp_file_tools import create_text_file
+from metadata_magic.main.file_tools.file_tools import write_text_file
 from os import mkdir
 from os.path import abspath, basename, join, exists
 
@@ -17,10 +17,10 @@ def test_separate_files():
     assert jsons == []
     assert media == []
     # Test only in main directory
-    create_text_file(abspath(join(temp_dir, "main.json")), "BLAH")
-    create_text_file(abspath(join(temp_dir, "other.json")), "BLAH")
-    create_text_file(abspath(join(temp_dir, "image.png")), "BLAH")
-    create_text_file(abspath(join(temp_dir, "thing.txt")), "BLAH")
+    write_text_file(abspath(join(temp_dir, "main.json")), "BLAH")
+    write_text_file(abspath(join(temp_dir, "other.json")), "BLAH")
+    write_text_file(abspath(join(temp_dir, "image.png")), "BLAH")
+    write_text_file(abspath(join(temp_dir, "thing.txt")), "BLAH")
     jsons, media = separate_files(temp_dir)
     assert len(jsons) == 2
     assert basename(jsons[0]) == "main.json"
@@ -35,8 +35,8 @@ def test_separate_files():
     mkdir(sub2)
     assert exists(sub1)
     assert exists(sub2)
-    create_text_file(abspath(join(sub1, "sub.json")), "BLAH")
-    create_text_file(abspath(join(sub2, "more.jpeg")), "BLAH")
+    write_text_file(abspath(join(sub1, "sub.json")), "BLAH")
+    write_text_file(abspath(join(sub2, "more.jpeg")), "BLAH")
     jsons, media = separate_files(temp_dir)
     assert len(jsons) == 3
     assert basename(jsons[0]) == "main.json"
@@ -56,16 +56,16 @@ def test_get_pairs():
     assert exists(temp_dir)
     assert get_pairs(temp_dir) == []
     # Test with unpaired files
-    create_text_file(abspath(join(temp_dir, "unlinked.json")), "BLAH")
-    create_text_file(abspath(join(temp_dir, "thing.txt")), "BLAH")
+    write_text_file(abspath(join(temp_dir, "unlinked.json")), "BLAH")
+    write_text_file(abspath(join(temp_dir, "thing.txt")), "BLAH")
     assert get_pairs(temp_dir) == []
     # Test paired JSONs with extensions in filename
     sub = abspath(join(temp_dir, "sub"))
     mkdir(sub)
-    create_text_file(abspath(join(temp_dir, "linked.png.json")), "BLAH")
-    create_text_file(abspath(join(temp_dir, "linked.png")), "BLAH")
-    create_text_file(abspath(join(sub, "other.txt.json")), "BLAH")
-    create_text_file(abspath(join(sub, "other.txt")), "BLAH")
+    write_text_file(abspath(join(temp_dir, "linked.png.json")), "BLAH")
+    write_text_file(abspath(join(temp_dir, "linked.png")), "BLAH")
+    write_text_file(abspath(join(sub, "other.txt.json")), "BLAH")
+    write_text_file(abspath(join(sub, "other.txt")), "BLAH")
     pairs = get_pairs(temp_dir)
     assert len(pairs) == 2
     assert basename(pairs[0]["media"]) == "linked.png"
@@ -73,15 +73,15 @@ def test_get_pairs():
     assert basename(pairs[1]["media"]) == "other.txt"
     assert basename(pairs[1]["json"]) == "other.txt.json"
     # Test JSON with wrong extension in filename
-    create_text_file(abspath(join(sub, "unmatched.zip.json")), "BLAH")
-    create_text_file(abspath(join(sub, "unmatched.cbz")), "BLAH")
+    write_text_file(abspath(join(sub, "unmatched.zip.json")), "BLAH")
+    write_text_file(abspath(join(sub, "unmatched.cbz")), "BLAH")
     pairs = get_pairs(temp_dir)
     assert len(pairs) == 2
     # Test paired JSONs without extensions in filename
-    create_text_file(abspath(join(temp_dir, "media.jpg")), "BLAH")
-    create_text_file(abspath(join(temp_dir, "media.json")), "BLAH")
-    create_text_file(abspath(join(sub, "next thing.ogg")), "BLAH")
-    create_text_file(abspath(join(sub, "next thing.json")), "BLAH")
+    write_text_file(abspath(join(temp_dir, "media.jpg")), "BLAH")
+    write_text_file(abspath(join(temp_dir, "media.json")), "BLAH")
+    write_text_file(abspath(join(sub, "next thing.ogg")), "BLAH")
+    write_text_file(abspath(join(sub, "next thing.json")), "BLAH")
     pairs = get_pairs(temp_dir)
     assert len(pairs) == 4
     assert basename(pairs[0]["media"]) == "linked.png"
@@ -93,7 +93,7 @@ def test_get_pairs():
     assert basename(pairs[3]["media"]) == "other.txt"
     assert basename(pairs[3]["json"]) == "other.txt.json"
     # Test files with same names in different directories
-    create_text_file(abspath(join(sub, "different.json")), "BLAH")
-    create_text_file(abspath(join(temp_dir, "different.gif")), "BLAH")
+    write_text_file(abspath(join(sub, "different.json")), "BLAH")
+    write_text_file(abspath(join(temp_dir, "different.gif")), "BLAH")
     pairs = get_pairs(temp_dir)
     assert len(pairs) == 4

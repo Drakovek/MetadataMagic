@@ -11,7 +11,7 @@ from metadata_magic.main.comic_archive.series_info import get_comic_archives
 from metadata_magic.main.comic_archive.series_info import label_files_with_numbers
 from metadata_magic.main.comic_archive.series_info import list_file_labels
 from metadata_magic.main.comic_archive.series_info import write_series_info
-from metadata_magic.test.temp_file_tools import create_text_file
+from metadata_magic.main.file_tools.file_tools import write_text_file
 
 def test_get_comic_archives():
     """
@@ -19,11 +19,11 @@ def test_get_comic_archives():
     """
     # Test getting comics in single directory
     temp_dir = get_temp_dir()
-    create_text_file(abspath(join(temp_dir, "aaa.cbz")), "Blah")
-    create_text_file(abspath(join(temp_dir, "not-comic.cb7")), "Not")
-    create_text_file(abspath(join(temp_dir, "Book.cbz")), "Really")
-    create_text_file(abspath(join(temp_dir, "Text.cbz")), "Important")
-    create_text_file(abspath(join(temp_dir, "Other.cbz")), "At All")
+    write_text_file(abspath(join(temp_dir, "aaa.cbz")), "Blah")
+    write_text_file(abspath(join(temp_dir, "not-comic.cb7")), "Not")
+    write_text_file(abspath(join(temp_dir, "Book.cbz")), "Really")
+    write_text_file(abspath(join(temp_dir, "Text.cbz")), "Important")
+    write_text_file(abspath(join(temp_dir, "Other.cbz")), "At All")
     mkdir(abspath(join(temp_dir, "sub")))
     assert len(listdir(temp_dir)) == 6
     archives = get_comic_archives(temp_dir)
@@ -38,11 +38,11 @@ def test_get_comic_archives():
     further_sub = abspath(join(sub_dir, "further_sub"))
     mkdir(sub_dir)
     mkdir(further_sub)
-    create_text_file(abspath(join(temp_dir, "thing.cbz")), "blah")
-    create_text_file(abspath(join(temp_dir, "other.cbz")), "thing")
-    create_text_file(abspath(join(sub_dir, "Next.cbz")), "next")
-    create_text_file(abspath(join(further_sub, "Last.cbz")), "last")
-    create_text_file(abspath(join(further_sub, "Another.cbz")), "another")
+    write_text_file(abspath(join(temp_dir, "thing.cbz")), "blah")
+    write_text_file(abspath(join(temp_dir, "other.cbz")), "thing")
+    write_text_file(abspath(join(sub_dir, "Next.cbz")), "next")
+    write_text_file(abspath(join(further_sub, "Last.cbz")), "last")
+    write_text_file(abspath(join(further_sub, "Another.cbz")), "another")
     assert isdir(sub_dir)
     assert isdir(further_sub)
     archives = get_comic_archives(temp_dir, True)
@@ -142,7 +142,7 @@ def test_write_series_info():
     cbz_sub = abspath(join(temp_dir, "cbz_sub"))
     mkdir(cbz_sub)
     text_file = abspath(join(cbz_sub, "text.txt"))
-    create_text_file(text_file, "This is text")
+    write_text_file(text_file, "This is text")
     assert exists(text_file)
     metadata = get_empty_metadata()
     metadata["title"] = "This is CBZ"
@@ -153,7 +153,7 @@ def test_write_series_info():
     next_sub = abspath(join(temp_dir, "other_sub"))
     mkdir(next_sub)
     media_file = abspath(join(next_sub, "thing.png"))
-    create_text_file(media_file, "Still text.")
+    write_text_file(media_file, "Still text.")
     assert exists(media_file)
     metadata = get_empty_metadata()
     metadata["title"] = "This is now also CBZ"

@@ -16,7 +16,7 @@ from re import findall
 from re import sub as resub
 from shutil import copy, move, rmtree
 from zipfile import is_zipfile
-from metadata_magic.test.temp_file_tools import create_text_file
+from metadata_magic.main.file_tools.file_tools import write_text_file
 
 def create_cbz(directory:str, name:str=None, metadata:dict=None, remove_files:bool=False) -> str:
     """
@@ -69,7 +69,7 @@ def create_cbz(directory:str, name:str=None, metadata:dict=None, remove_files:bo
     # Create metadata file, if specified
     meta_file = abspath(join(full_directory, "ComicInfo.xml"))
     if metadata is not None:
-        create_text_file(meta_file, get_comic_xml(metadata))
+        write_text_file(meta_file, get_comic_xml(metadata))
     # Create cbz file
     assert create_zip(full_directory, cbz_file)
     # Remove all old files besides the CBZ, if specified.
@@ -124,7 +124,7 @@ def update_cbz_info(cbz_file:str, metadata:dict):
         extract_zip(cbz_file, temp_dir)
         # Create/Overwrite ComicInfo.xml file
         xml_file = abspath(join(temp_dir, "ComicInfo.xml"))
-        create_text_file(xml_file, get_comic_xml(metadata))
+        write_text_file(xml_file, get_comic_xml(metadata))
         # Pack files into archive
         new_cbz = create_cbz(temp_dir)
         # Replace the old cbz file

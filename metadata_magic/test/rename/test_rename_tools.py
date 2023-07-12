@@ -10,9 +10,9 @@ from metadata_magic.main.rename.rename_tools import compare_alphanum
 from metadata_magic.main.rename.rename_tools import sort_alphanum
 from metadata_magic.main.rename.rename_tools import create_filename
 from metadata_magic.main.rename.rename_tools import rename_file
-from metadata_magic.test.temp_file_tools import create_json_file
-from metadata_magic.test.temp_file_tools import create_text_file
-from metadata_magic.test.temp_file_tools import read_text_file
+from metadata_magic.main.file_tools.file_tools import write_json_file
+from metadata_magic.main.file_tools.file_tools import write_text_file
+from metadata_magic.main.file_tools.file_tools import read_text_file
 
 def test_get_section():
     """
@@ -138,7 +138,7 @@ def test_get_available_filename():
     assert get_available_filename("b.png", ".dat", temp_dir) == "dat.png"
     # Test getting filename if desired filename already exists
     text_file = abspath(join(temp_dir, "name.txt"))
-    create_text_file(text_file, "some text")
+    write_text_file(text_file, "some text")
     assert exists(text_file)
     assert get_available_filename("a.txt", "name", temp_dir) == "name-2.txt"
     # Test if filename exists with a different extension
@@ -146,8 +146,8 @@ def test_get_available_filename():
     # Test if filename alternate filename is also taken
     text_file_2 = abspath(join(temp_dir, "name-2.txt"))
     text_file_3 = abspath(join(temp_dir, "name-3.txt"))
-    create_text_file(text_file_2, "more")
-    create_text_file(text_file_3, "text")
+    write_text_file(text_file_2, "more")
+    write_text_file(text_file_3, "text")
     assert exists(text_file_2)
     assert exists(text_file_3)
     assert get_available_filename("a.txt", "name", temp_dir) == "name-4.txt"
@@ -159,7 +159,7 @@ def test_rename_file():
     # Create test file
     temp_dir = get_temp_dir()
     file = abspath(join(temp_dir, "file.txt"))
-    create_text_file(file, "TEST")
+    write_text_file(file, "TEST")
     assert exists(file)
     # Test renaming file
     new_file = rename_file(file, "Name?")
@@ -175,7 +175,7 @@ def test_rename_file():
     assert file == new_file
     # Test renaming file to name of existing file
     file = abspath(join(temp_dir, "totally_new.txt"))
-    create_text_file(file, "NEW!")
+    write_text_file(file, "NEW!")
     assert exists(file)
     new_file = rename_file(file, "Name")
     assert exists(new_file)
@@ -183,7 +183,7 @@ def test_rename_file():
     assert basename(new_file) == "Name-2.txt"
     # Test renaming same filename but different extension
     file = abspath(join(temp_dir, "Weeee!.png"))
-    create_text_file(file, "Not Actually PNG.")
+    write_text_file(file, "Not Actually PNG.")
     assert exists(file)
     new_file = rename_file(file, ":Name:")
     assert exists(new_file)
@@ -191,7 +191,7 @@ def test_rename_file():
     assert basename(new_file) == "Name.png"
     # Test renaming a third time
     file = abspath(join(temp_dir, "next.txt"))
-    create_text_file(file, "Next")
+    write_text_file(file, "Next")
     assert exists(file)
     new_file = rename_file(file, ":Name:")
     assert exists(new_file)

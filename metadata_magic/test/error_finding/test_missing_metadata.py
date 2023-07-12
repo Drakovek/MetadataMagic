@@ -2,7 +2,7 @@
 
 from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.error_finding.missing_metadata import find_missing_metadata
-from metadata_magic.test.temp_file_tools import create_text_file
+from metadata_magic.main.file_tools.file_tools import write_text_file
 from os import mkdir, pardir
 from os.path import abspath, basename, join, exists
 
@@ -17,14 +17,14 @@ def test_find_missing_metadata():
     # Test with no unlinked files
     sub = abspath(join(temp_dir, "sub"))
     mkdir(sub)
-    create_text_file(abspath(join(temp_dir, "main.json")), "BLAH")
-    create_text_file(abspath(join(temp_dir, "main.png")), "BLAH")
-    create_text_file(abspath(join(sub, "unlinked.json")), "BLAH")
+    write_text_file(abspath(join(temp_dir, "main.json")), "BLAH")
+    write_text_file(abspath(join(temp_dir, "main.png")), "BLAH")
+    write_text_file(abspath(join(sub, "unlinked.json")), "BLAH")
     assert find_missing_metadata(temp_dir) == []
     # Test with unlinked files
-    create_text_file(abspath(join(temp_dir, "unlinked.txt")), "BLAH")
-    create_text_file(abspath(join(temp_dir, "thing.jpg")), "BLAH")
-    create_text_file(abspath(join(sub, "next.cbz")), "BLAH")
+    write_text_file(abspath(join(temp_dir, "unlinked.txt")), "BLAH")
+    write_text_file(abspath(join(temp_dir, "thing.jpg")), "BLAH")
+    write_text_file(abspath(join(sub, "next.cbz")), "BLAH")
     missing_metadata = find_missing_metadata(temp_dir)
     assert len(missing_metadata) == 3
     assert basename(missing_metadata[0]) == "next.cbz"

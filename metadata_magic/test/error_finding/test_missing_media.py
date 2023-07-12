@@ -2,7 +2,7 @@
 
 from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.error_finding.missing_media import find_missing_media
-from metadata_magic.test.temp_file_tools import create_text_file
+from metadata_magic.main.file_tools.file_tools import write_text_file
 from os import mkdir, pardir
 from os.path import abspath, basename, join, exists
 
@@ -17,14 +17,14 @@ def test_find_missing_media():
     # Test with no unlinked files
     sub = abspath(join(temp_dir, "sub"))
     mkdir(sub)
-    create_text_file(abspath(join(temp_dir, "main.json")), "BLAH")
-    create_text_file(abspath(join(temp_dir, "main.png")), "BLAH")
-    create_text_file(abspath(join(sub, "unlinked.txt")), "BLAH")
+    write_text_file(abspath(join(temp_dir, "main.json")), "BLAH")
+    write_text_file(abspath(join(temp_dir, "main.png")), "BLAH")
+    write_text_file(abspath(join(sub, "unlinked.txt")), "BLAH")
     assert find_missing_media(temp_dir) == []
     # Test with unlinked files
-    create_text_file(abspath(join(temp_dir, "unlinked.json")), "BLAH")
-    create_text_file(abspath(join(temp_dir, "thing.json")), "BLAH")
-    create_text_file(abspath(join(sub, "next.json")), "BLAH")
+    write_text_file(abspath(join(temp_dir, "unlinked.json")), "BLAH")
+    write_text_file(abspath(join(temp_dir, "thing.json")), "BLAH")
+    write_text_file(abspath(join(sub, "next.json")), "BLAH")
     missing_media = find_missing_media(temp_dir)
     assert len(missing_media) == 3
     assert basename(missing_media[0]) == "next.json"

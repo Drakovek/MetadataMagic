@@ -2,7 +2,7 @@
 
 from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.rename.sort_rename import sort_rename
-from metadata_magic.test.temp_file_tools import create_text_file
+from metadata_magic.main.file_tools.file_tools import write_text_file
 from os import listdir, mkdir
 from os.path import abspath, exists, isdir, join
 
@@ -15,9 +15,9 @@ def test_sort_rename():
     unlinked1 = abspath(join(temp_dir, "Unlinked 01.txt"))
     unlinked2 = abspath(join(temp_dir, "Unlinked 10.png"))
     unlinked3 = abspath(join(temp_dir, "Unlinked 120.jpg"))
-    create_text_file(unlinked1, "TEXT")
-    create_text_file(unlinked2, "TEXT")
-    create_text_file(unlinked3, "TEXT")
+    write_text_file(unlinked1, "TEXT")
+    write_text_file(unlinked2, "TEXT")
+    write_text_file(unlinked3, "TEXT")
     assert exists(unlinked1)
     assert exists(unlinked2)
     assert exists(unlinked3)
@@ -32,9 +32,9 @@ def test_sort_rename():
     json1 = abspath(join(temp_dir, "Renamed 1.json"))
     json2 = abspath(join(temp_dir, "Renamed 2.png.json"))
     json3 = abspath(join(temp_dir, "Renamed 3.json"))
-    create_text_file(json1, "JSON")
-    create_text_file(json2, "JSON")
-    create_text_file(json3, "JSON")
+    write_text_file(json1, "JSON")
+    write_text_file(json2, "JSON")
+    write_text_file(json3, "JSON")
     assert exists(json1)
     assert exists(json2)
     assert exists(json3)
@@ -51,8 +51,8 @@ def test_sort_rename():
     # Create more unlinked media
     unlinked1 = abspath(join(temp_dir, "Paired! 2.5.json"))
     unlinked2 = abspath(join(temp_dir, "Unlinked.zip"))
-    create_text_file(unlinked1, "TEST")
-    create_text_file(unlinked2, "TEST")
+    write_text_file(unlinked1, "TEST")
+    write_text_file(unlinked2, "TEST")
     assert exists(unlinked1)
     assert exists(unlinked2)
     # Test sorting combination of json pairs and standalone media
@@ -132,8 +132,8 @@ def test_sort_rename():
     # Test with pairs in subdirectories
     part1 = abspath(join(directory2, "pair.json"))
     part2 = abspath(join(directory2, "pair.jpg"))
-    create_text_file(part1, "Name")
-    create_text_file(part2, "Name")
+    write_text_file(part1, "Name")
+    write_text_file(part2, "Name")
     assert exists(part1)
     assert exists(part2)
     sort_rename(temp_dir, "Middle")
@@ -155,9 +155,9 @@ def test_sort_rename():
     xml_file = abspath(join(temp_dir, "ComicInfo.xml"))
     other_file = abspath(join(temp_dir, "blah.txt"))
     last_file = abspath(join(temp_dir, "final.png"))
-    create_text_file(xml_file, "Not")
-    create_text_file(other_file, "Actually")
-    create_text_file(last_file, "Important")
+    write_text_file(xml_file, "Not")
+    write_text_file(other_file, "Actually")
+    write_text_file(last_file, "Important")
     assert exists(xml_file)
     assert exists(other_file)
     assert exists(last_file)

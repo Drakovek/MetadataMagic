@@ -8,8 +8,8 @@ from metadata_magic.main.comic_archive.comic_archive import create_cbz
 from metadata_magic.main.rename.meta_rename import get_filename_from_metadata
 from metadata_magic.main.rename.meta_rename import rename_cbz_files
 from metadata_magic.main.rename.meta_rename import rename_json_pairs
-from metadata_magic.test.temp_file_tools import create_json_file
-from metadata_magic.test.temp_file_tools import create_text_file
+from metadata_magic.main.file_tools.file_tools import write_json_file
+from metadata_magic.main.file_tools.file_tools import write_text_file
 from shutil import copy
 
 def test_rename_cbz_files():
@@ -24,8 +24,8 @@ def test_rename_cbz_files():
     mkdir(sub_dir_2)
     text_file_1 = abspath(join(sub_dir_1, "file1.txt"))
     text_file_2 = abspath(join(sub_dir_2, "file2.txt"))
-    create_text_file(text_file_1, "Some Text.")
-    create_text_file(text_file_2, "Some Text.")
+    write_text_file(text_file_1, "Some Text.")
+    write_text_file(text_file_2, "Some Text.")
     assert exists(text_file_1)
     assert exists(text_file_2)
     metadata1 = get_empty_metadata()
@@ -70,16 +70,16 @@ def test_rename_json_pairs():
     # Write test media files
     temp_dir = get_temp_dir()
     image_file = abspath(join(temp_dir, "image.png"))
-    create_text_file(image_file, "Test")
+    write_text_file(image_file, "Test")
     text_file = abspath(join(temp_dir, "text.txt"))
-    create_text_file(text_file, "Test")
+    write_text_file(text_file, "Test")
     assert exists(image_file)
     assert exists(text_file)
     # Write test JSONS
     image_json = abspath(join(temp_dir, "image.json"))
-    create_json_file(image_json, {"title":"Picture!", "artist":"Person", "index":"abc", "date":"2020-01-01"})
+    write_json_file(image_json, {"title":"Picture!", "artist":"Person", "index":"abc", "date":"2020-01-01"})
     text_json = abspath(join(temp_dir, "text.json"))
-    create_json_file(text_json, {"title":"Totally Text", "artist":"Other", "id":"1234", "date":"2019-10-31"})
+    write_json_file(text_json, {"title":"Totally Text", "artist":"Other", "id":"1234", "date":"2019-10-31"})
     assert exists(image_json)
     assert exists(text_json)
     # Test renaming files
@@ -117,8 +117,8 @@ def test_rename_json_pairs():
     # Test renaming files with no title field
     new_file = abspath(join(temp_dir, "final.txt"))
     new_json = abspath(join(temp_dir, "final.txt.json"))
-    create_text_file(new_file, "Test")
-    create_json_file(new_json, {"thing":"other"})
+    write_text_file(new_file, "Test")
+    write_json_file(new_json, {"thing":"other"})
     assert exists(new_file)
     assert exists(new_json)
     rename_json_pairs(temp_dir)
@@ -132,7 +132,7 @@ def test_rename_json_pairs():
     assert files[5] == "final.txt"
     # Test renaming files with identical names
     new_json = abspath(join(temp_dir, "Totally Text.json"))
-    create_json_file(new_json, {"title":"final"})
+    write_json_file(new_json, {"title":"final"})
     rename_json_pairs(temp_dir)
     files = sorted(listdir(temp_dir))
     assert len(files) == 6
@@ -150,7 +150,7 @@ def test_get_filename_from_metadata():
     # Test getting filename from JSON
     temp_dir = get_temp_dir()
     json_file = abspath(join(temp_dir, "json.json"))
-    create_json_file(json_file, {"title":"This is a title!"})
+    write_json_file(json_file, {"title":"This is a title!"})
     assert exists(json_file)
     assert get_filename_from_metadata(json_file) == "This is a title!"
     # Test getting filename from CBZ
@@ -161,28 +161,28 @@ def test_get_filename_from_metadata():
     assert get_filename_from_metadata(cbz_file) == "CBZ Time"
     # Test getting filename with no metadata
     text_file = abspath(join(temp_dir, "Nope!.txt"))
-    create_text_file(text_file, "Some Text!")
+    write_text_file(text_file, "Some Text!")
     assert exists(text_file)
     assert get_filename_from_metadata(text_file) == "Nope!"
     # Test adding a date
-    create_json_file(json_file, {"title":"Thing", "date":"2020-03-01"})
+    write_json_file(json_file, {"title":"Thing", "date":"2020-03-01"})
     assert get_filename_from_metadata(json_file, add_date=True) == "[2020-03-01] Thing"
     metadata["date"] = "2017-08-05"
     remove(cbz_file)
     cbz_file = create_cbz(temp_dir, metadata=metadata)
     assert get_filename_from_metadata(cbz_file, add_date=True) == "[2017-08-05] CBZ Time"
     # Test adding an artist/writer
-    create_json_file(json_file, {"title":"Other", "artist":"Person"})
+    write_json_file(json_file, {"title":"Other", "artist":"Person"})
     assert get_filename_from_metadata(json_file, add_artist=True) == "[Person] Other"
     metadata["writer"] = "Writer"
     remove(cbz_file)
     cbz_file = create_cbz(temp_dir, metadata=metadata)
     assert get_filename_from_metadata(cbz_file, add_artist=True) == "[Writer] CBZ Time"
     # Test adding an ID
-    create_json_file(json_file, {"title":"Identifier", "id":"ID12345"})
+    write_json_file(json_file, {"title":"Identifier", "id":"ID12345"})
     assert get_filename_from_metadata(json_file, add_id=True) == "[ID12345] Identifier"
     # Test adding multiple fields
-    create_json_file(json_file, {"title":"Title", "date":"2012-12-21", "id":"ID36", "artist":"Guy"})
+    write_json_file(json_file, {"title":"Title", "date":"2012-12-21", "id":"ID36", "artist":"Guy"})
     title = get_filename_from_metadata(json_file, add_id=True, add_date=True)
     assert title == "[2012-12-21_ID36] Title"
     title = get_filename_from_metadata(cbz_file, add_artist=True, add_date=True)
@@ -192,21 +192,21 @@ def test_get_filename_from_metadata():
     title = get_filename_from_metadata(json_file, add_artist=True, add_date=True, add_id=True)
     assert title == "[Guy_2012-12-21_ID36] Title"
     # Test if date is invalid
-    create_json_file(json_file, {"title":"New", "id":"Thing"})
+    write_json_file(json_file, {"title":"New", "id":"Thing"})
     assert get_filename_from_metadata(json_file, add_date=True) == "New"
     assert get_filename_from_metadata(json_file, add_date=True, add_id=True) == "[Thing] New"
     # Test if artist is invalid
-    create_json_file(json_file, {"title":"No Artist", "id":"Thing"})
+    write_json_file(json_file, {"title":"No Artist", "id":"Thing"})
     assert get_filename_from_metadata(json_file, add_artist=True) == "No Artist"
     assert get_filename_from_metadata(json_file, add_artist=True, add_id=True) == "[Thing] No Artist"
     # Test if ID is invalid
-    create_json_file(json_file, {"title":"No ID", "artist":"Lad"})
+    write_json_file(json_file, {"title":"No ID", "artist":"Lad"})
     assert get_filename_from_metadata(json_file, add_id=True) == "No ID"
     assert get_filename_from_metadata(json_file, add_artist=True, add_id=True) == "[Lad] No ID"
     # Test if title is invalid
-    create_json_file(json_file, {"blah":"blah"})
+    write_json_file(json_file, {"blah":"blah"})
     assert get_filename_from_metadata(json_file) == "json"
     new_json = abspath(join(temp_dir, "New JSON.txt.json"))
-    create_json_file(new_json, {"no":"title"})
+    write_json_file(new_json, {"no":"title"})
     assert exists(new_json)
     assert get_filename_from_metadata(new_json) == "New JSON"

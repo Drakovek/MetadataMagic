@@ -2,7 +2,7 @@
 
 from metadata_magic.main.file_tools.file_tools import get_temp_dir
 from metadata_magic.main.file_tools.file_tools import create_zip, extract_zip, extract_file_from_zip
-from metadata_magic.test.temp_file_tools import create_text_file, read_text_file
+from metadata_magic.main.file_tools.file_tools import write_text_file, read_text_file, write_json_file, read_json_file
 from metadata_magic.main.rename.rename_tools import sort_alphanum
 from os import mkdir, listdir, remove
 from os.path import abspath, basename, exists, isdir, join
@@ -21,8 +21,8 @@ def test_get_temp_dir():
     sub_dir = abspath(join(temp_dir, "sub"))
     other_file = abspath(join(sub_dir, "other.txt"))
     mkdir(sub_dir)
-    create_text_file(text_file, "Test text.")
-    create_text_file(other_file, "Other!")
+    write_text_file(text_file, "Test text.")
+    write_text_file(other_file, "Other!")
     assert exists(text_file)
     assert exists(other_file)
     assert exists(sub_dir)
@@ -34,6 +34,59 @@ def test_get_temp_dir():
     assert not exists(sub_dir)
     assert not isdir(sub_dir)
 
+def test_read_write_text_file():
+    """
+    Tests the write_text_file and read_text_file functions.
+    """
+    # Test writing a text file
+    temp_dir = get_temp_dir()
+    text_file = abspath(join(temp_dir, "text.txt"))
+    assert not exists(text_file)
+    write_text_file(text_file, "This is some text!")
+    assert exists(text_file)
+    assert read_text_file(text_file) == "This is some text!"
+    # Test overwriting a text file
+    write_text_file(text_file, "Different text now.\nYay!")
+    assert read_text_file(text_file) == "Different text now.\nYay!"
+    # Test reading a non-text file
+    sub_dir = abspath(join(temp_dir, "directory"))
+    mkdir(sub_dir)
+    assert exists(sub_dir)
+    assert read_text_file(sub_dir) is None
+    # Test writing to invalid location
+    sub_dir = abspath(join(temp_dir, "non-existant"))
+    text_file = abspath(join(sub_dir, "new.txt"))
+    write_text_file(text_file, "Some stuff")
+    assert sorted(listdir(temp_dir)) == ["directory", "text.txt"]
+
+def test_read_write_json_file():
+    """
+    Tests the write_json_file and read_json_file functions.
+    """
+    # Test writing a JSON file
+    temp_dir = get_temp_dir()
+    json_file = abspath(join(temp_dir, "test.json"))
+    assert not exists(json_file)
+    write_json_file(json_file, {"key":"pair", "Thing":"Other"})
+    assert exists(json_file)
+    assert read_json_file(json_file) == {"key":"pair", "Thing":"Other"}
+    # Test overwriting a JSON file
+    write_json_file(json_file, {"all":"new"})
+    assert read_json_file(json_file) == {"all":"new"}
+    # Test reading a non-JSON file
+    sub_dir = abspath(join(temp_dir, "directory"))
+    mkdir(sub_dir)
+    assert exists(sub_dir)
+    assert read_json_file(sub_dir) == {}
+    text_file = abspath(join(temp_dir, "text.txt"))
+    write_text_file(text_file, "Not a JSON")
+    assert read_json_file(text_file) == {}
+    # Test writing to invalid location
+    sub_dir = abspath(join(temp_dir, "non-existant"))
+    text_file = abspath(join(sub_dir, "new.json"))
+    write_json_file(text_file, {"new":"key"})
+    assert sorted(listdir(temp_dir)) == ["directory", "test.json", "text.txt"]
+
 def test_create_zip():
     """
     Tests the create_zip function.
@@ -42,8 +95,8 @@ def test_create_zip():
     temp_dir = get_temp_dir()
     media_file = abspath(join(temp_dir, "media.jpg")) 
     text_file = abspath(join(temp_dir, "text.txt"))
-    create_text_file(media_file, "This is not a photo.")
-    create_text_file(text_file, "TEXT!")
+    write_text_file(media_file, "This is not a photo.")
+    write_text_file(text_file, "TEXT!")
     assert exists(media_file)
     assert exists(text_file)
     zip_file = abspath(join(temp_dir, "file.zip"))
@@ -65,9 +118,9 @@ def test_create_zip():
     media_file = abspath(join(temp_dir, "main.txt"))
     sub_file = abspath(join(sub_dir, "subtext.txt"))
     deep_file = abspath(join(deep_dir, "deep.png"))
-    create_text_file(media_file, "This is text.")
-    create_text_file(sub_file, "Deeper text")
-    create_text_file(deep_file, "Deepest yet.")
+    write_text_file(media_file, "This is text.")
+    write_text_file(sub_file, "Deeper text")
+    write_text_file(deep_file, "Deepest yet.")
     assert exists(media_file)
     assert exists(sub_file)
     assert exists(deep_file)
@@ -93,7 +146,7 @@ def test_extract_zip():
     zip_dir = get_temp_dir("dvk_zip_test")
     text_file = abspath(join(zip_dir, "text.txt"))
     zip_file = abspath(join(zip_dir, "Name!.zip"))
-    create_text_file(text_file, "This is text!")
+    write_text_file(text_file, "This is text!")
     assert exists(text_file)
     assert create_zip(zip_dir, zip_file)
     assert exists(zip_file)
@@ -108,13 +161,13 @@ def test_extract_zip():
     zip_dir = get_temp_dir("dvk_zip_test")
     text_file = abspath(join(zip_dir, "thing.txt"))
     zip_file = abspath(join(zip_dir, "duplicate.zip"))
-    create_text_file(text_file, "This is a file")
+    write_text_file(text_file, "This is a file")
     assert exists(text_file)
     assert create_zip(zip_dir, zip_file)
     assert exists(zip_file)
     extract_dir = get_temp_dir("dvk_extract_test")
     duplicate_file = abspath(join(extract_dir, "duplicate"))
-    create_text_file(duplicate_file, "test")
+    write_text_file(duplicate_file, "test")
     assert sorted(listdir(extract_dir)) == ["duplicate"]
     assert extract_zip(zip_file, extract_dir, create_folder=True)
     assert sorted(listdir(extract_dir)) == ["duplicate", "duplicate-2"]
@@ -126,9 +179,9 @@ def test_extract_zip():
     media_file = abspath(join(zip_dir, "media.png"))
     delete_file = abspath(join(zip_dir, "meta.xml"))
     zip_file = abspath(join(zip_dir, "New.zip"))
-    create_text_file(text_file, "some text")
-    create_text_file(media_file, "Not an image")
-    create_text_file(delete_file, "To be deleted")
+    write_text_file(text_file, "some text")
+    write_text_file(media_file, "Not an image")
+    write_text_file(delete_file, "To be deleted")
     assert exists(text_file)
     assert exists(media_file)
     assert exists(delete_file)
@@ -143,7 +196,7 @@ def test_extract_zip():
     text_file = abspath(join(sub_zip_dir, "deep.txt"))
     zip_file = abspath(join(zip_dir, "compressed.cbz"))
     mkdir(sub_zip_dir)
-    create_text_file(text_file, "In a folder.")
+    write_text_file(text_file, "In a folder.")
     assert exists(text_file)
     assert create_zip(zip_dir, zip_file)
     assert exists(zip_file)
@@ -153,7 +206,7 @@ def test_extract_zip():
     # Test that removing internal folder does not work with multiple files
     remove(zip_file)
     media_file = abspath(join(zip_dir, "media.jpg"))
-    create_text_file(media_file, "media")
+    write_text_file(media_file, "media")
     assert exists(media_file)
     assert create_zip(zip_dir, zip_file)
     assert exists(zip_file)
@@ -183,8 +236,8 @@ def test_extract_zip():
     media_file = abspath(join(sub_zip_dir, "deep.png"))
     zip_file = abspath(join(zip_dir, "Another One!.cbz"))
     mkdir(sub_zip_dir)
-    create_text_file(text_file, "this is text")
-    create_text_file(media_file, "media")
+    write_text_file(text_file, "this is text")
+    write_text_file(media_file, "media")
     assert exists(text_file)
     assert exists(media_file)
     assert create_zip(zip_dir, zip_file)
@@ -193,7 +246,7 @@ def test_extract_zip():
     sub_dir = abspath(join(extract_dir, "Internal"))
     duplicate_file = abspath(join(extract_dir, "text.txt"))
     mkdir(sub_dir)
-    create_text_file(duplicate_file, "Different Text")
+    write_text_file(duplicate_file, "Different Text")
     assert exists(sub_dir)
     assert exists(duplicate_file)
     assert extract_zip(zip_file, extract_dir)
@@ -214,9 +267,9 @@ def test_extract_file_from_zip():
     media_file = abspath(join(zip_dir, "media.png"))
     sub_file = abspath(join(sub_dir, "deep.jpg"))
     mkdir(sub_dir)
-    create_text_file(text_file, "This is text!")
-    create_text_file(media_file, "More text!")
-    create_text_file(sub_file, "too deep")
+    write_text_file(text_file, "This is text!")
+    write_text_file(media_file, "More text!")
+    write_text_file(sub_file, "too deep")
     assert exists(text_file)
     assert exists(media_file)
     assert exists(sub_file)

@@ -13,7 +13,7 @@ from metadata_magic.main.meta_reader import get_value_from_keylist
 from metadata_magic.main.meta_reader import get_age_rating
 from metadata_magic.main.meta_reader import load_metadata
 from metadata_magic.main.meta_reader import get_empty_metadata
-from metadata_magic.test.temp_file_tools import create_json_file
+from metadata_magic.main.file_tools.file_tools import write_json_file
 from os.path import abspath, exists, join
 
 def test_get_empty_metadata():
@@ -65,7 +65,7 @@ def test_load_metadata():
     # Create JSON to load
     temp_dir = get_temp_dir()
     test_json = abspath(join(temp_dir, "empty.json"))
-    create_json_file(test_json, {"title":"test"})
+    write_json_file(test_json, {"title":"test"})
     assert exists(test_json)
     # Attempt to load the JSON file
     meta = load_metadata(test_json)
@@ -97,7 +97,7 @@ def test_get_title():
     # Create JSON to load
     temp_dir = get_temp_dir()
     test_json = abspath(join(temp_dir, "title.json"))
-    create_json_file(test_json, {"thing":"other", "title":"Loaded!"})
+    write_json_file(test_json, {"thing":"other", "title":"Loaded!"})
     assert exists(test_json)
     # Test getting title when read directly from JSON
     meta = load_metadata(test_json)
@@ -137,7 +137,7 @@ def test_get_artist():
     # Create JSON to load
     temp_dir = get_temp_dir()
     test_json = abspath(join(temp_dir, "artists.json"))
-    create_json_file(test_json, {"thing":"other", "uploader":"Name!!!"})
+    write_json_file(test_json, {"thing":"other", "uploader":"Name!!!"})
     assert exists(test_json)
     # Test getting artist when read directly from JSON
     meta = load_metadata(test_json)
@@ -175,7 +175,7 @@ def test_get_date():
     # Create JSON to load
     temp_dir = get_temp_dir()
     test_json = abspath(join(temp_dir, "date.json"))
-    create_json_file(test_json, {"thing":"other", "date":"20230513"})
+    write_json_file(test_json, {"thing":"other", "date":"20230513"})
     assert exists(test_json)
     # Test getting date when read directly from JSON
     meta = load_metadata(test_json)
@@ -201,7 +201,7 @@ def test_get_description():
     # Create JSON to load
     temp_dir = get_temp_dir()
     test_json = abspath(join(temp_dir, "description.json"))
-    create_json_file(test_json, {"thing":"other", "description":"New<br><br>Description!"})
+    write_json_file(test_json, {"thing":"other", "description":"New<br><br>Description!"})
     assert exists(test_json)
     # Test getting decscription when read directly from JSON
     meta = load_metadata(test_json)
@@ -256,7 +256,7 @@ def test_get_id():
     # Create JSON to load
     temp_dir = get_temp_dir()
     test_json = abspath(join(temp_dir, "id.json"))
-    create_json_file(test_json, {"thing":"other", "id":"Blah"})
+    write_json_file(test_json, {"thing":"other", "id":"Blah"})
     assert exists(test_json)
     # Test getting ID when read directly from JSON
     meta = load_metadata(test_json)
@@ -315,7 +315,7 @@ def test_get_publisher():
     # Create JSON to load
     temp_dir = get_temp_dir()
     test_json = abspath(join(temp_dir, "publisher.json"))
-    create_json_file(test_json, {"thing":"other", "url":"www.deviantart.com/art/blah"})
+    write_json_file(test_json, {"thing":"other", "url":"www.deviantart.com/art/blah"})
     assert exists(test_json)
     # Test getting publisher when read directly from JSON
     meta = load_metadata(test_json)
@@ -352,7 +352,7 @@ def test_get_url():
     temp_dir = get_temp_dir()
     dictionary = {"url":"www.furaffinity.net/thing/", "id":"ID-ABC"}
     test_json = abspath(join(temp_dir, "url.json"))
-    create_json_file(test_json, dictionary)
+    write_json_file(test_json, dictionary)
     assert exists(test_json)
     # Test getting URL when read directly from JSON
     meta = load_metadata(test_json)
@@ -392,7 +392,7 @@ def test_get_tags():
     temp_dir = get_temp_dir()
     dictionary = {"tags":["These", "are", "some", "tags"]}
     test_json = abspath(join(temp_dir, "tags.json"))
-    create_json_file(test_json, dictionary)
+    write_json_file(test_json, dictionary)
     assert exists(test_json)
     # Test getting tags when read directly from JSON
     meta = load_metadata(test_json)
@@ -484,7 +484,7 @@ def test_get_age_rating():
     temp_dir = get_temp_dir()
     dictionary = {"url":"www.furaffinity.net/thing/", "rating":"Mature"}
     test_json = abspath(join(temp_dir, "url.json"))
-    create_json_file(test_json, dictionary)
+    write_json_file(test_json, dictionary)
     assert exists(test_json)
     # Test getting age rating when read directly from JSON
     meta = load_metadata(test_json)

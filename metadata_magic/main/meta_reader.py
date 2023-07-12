@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from json import load as load_json
+from metadata_magic.main.file_tools.file_tools import read_json_file
 from os.path import abspath
 from re import findall
 from typing import List
@@ -315,14 +315,9 @@ def load_metadata(json_file:str) -> dict:
     :rtype: dict
     """
     # Load JSON into dictionary
-    path = abspath(json_file)
-    try:
-        with open(path) as in_file:
-            json = load_json(in_file)
-    except FileNotFoundError:
-        json = dict()
+    json = read_json_file(json_file)
     # Set the path of the JSON in the metadata
-    meta_dict = {"json_path":path}
+    meta_dict = {"json_path":abspath(json_file)}
     # Add internal metadata in standardized forms
     meta_dict["id"] = get_id(json)
     meta_dict["title"] = get_title(json)
