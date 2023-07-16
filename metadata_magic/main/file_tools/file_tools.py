@@ -5,6 +5,7 @@ from json import load as load_json
 from json import JSONDecodeError
 from html_string_tools.main.html_string_tools import get_extension
 from metadata_magic.main.rename.rename_tools import get_available_filename
+from metadata_magic.main.rename.rename_tools import sort_alphanum
 from os import listdir, mkdir, remove
 from os.path import abspath, basename, exists, isdir, join, relpath
 from shutil import copy, copytree, rmtree
@@ -88,6 +89,43 @@ def read_json_file(file:str) -> dict:
             return load_json(in_file)
     except (FileNotFoundError, IsADirectoryError, JSONDecodeError): return {}
 
+def find_files_of_type(directory:str, extension:str, include_subdirectories:bool=True, inverted:bool=False) -> List[str]:
+    """
+    Returns a list of files in a given directory that match a given file extension.
+    
+    :param directory: Directory in which to search for files
+    :type directory: str, required
+    :param extension: File extension to search for
+    :type extension: str, required
+    :param include_subdirectories: Whether to also search subdirectories for files, defaults to True
+    :type include_subdirectories: bool, optional
+    :param inverted: If true, searches for files WITHOUT the given extension, defaults to False
+    :type inverted: bool, optional
+    :return: List of files that match the extension, giving the full file path
+    :rtype: list[str]
+    """
+    files = []
+    directories = [abspath(directory)]
+    # Run through all directories
+    while len(directories) > 0:
+        # Get list of all files in the current directory
+        current_files = sort_alphanum(listdir(directories[0]))
+        for filename in current_files:
+            # Find file properties
+            full_file = abspath(join(directories[0], filename))
+            has_extension = get_extension(full_file) == extension
+            # Add directory to the list
+            if isdir(full_file):
+                if include_subdirectories:
+                    directories.append(full_file)
+                continue
+            # Add if the extension matches properly
+            if (has_extension and not inverted) or (not has_extension and inverted):
+                files.append(full_file)
+        # Delete directory entry
+        del directories[0]
+    # Return found files
+    return files
 
 def create_zip(directory:str, zip_file:str, compress_level:int=9) -> bool:
     """

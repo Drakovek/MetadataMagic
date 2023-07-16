@@ -5,6 +5,7 @@ from metadata_magic.main.meta_finder import get_pairs
 from metadata_magic.main.meta_reader import load_metadata as get_info_from_json
 from metadata_magic.main.comic_archive.comic_archive import get_info_from_cbz
 from metadata_magic.main.rename.rename_tools import rename_file
+from metadata_magic.main.file_tools.file_tools import find_files_of_type
 from json.decoder import JSONDecodeError
 from html_string_tools.main.html_string_tools import get_extension
 from argparse import ArgumentParser
@@ -30,21 +31,7 @@ def rename_cbz_files(path:str,
     """
     # Get list of CBZ files
     print("Renaming CBZ files:")
-    cbz_files = []
-    directories = [abspath(path)]
-    while len(directories) > 0:
-        # Get list of files in the path
-        cur_path = directories[0]
-        files = listdir(cur_path)
-        # Run through files in directory
-        for file in files:
-            cur_file = abspath(join(cur_path, file))
-            if isdir(cur_file):
-                directories.append(cur_file)
-            elif get_extension(cur_file) == ".cbz":
-                cbz_files.append(cur_file)
-        # Delete directory from list
-        del directories[0]
+    cbz_files = find_files_of_type(abspath(path), ".cbz")
     # Rename all CBZ files
     for cbz_file in tqdm(cbz_files):
         filename = get_filename_from_metadata(

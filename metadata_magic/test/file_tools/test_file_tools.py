@@ -8,6 +8,7 @@ from metadata_magic.main.file_tools.file_tools import read_json_file
 from metadata_magic.main.file_tools.file_tools import write_json_file
 from metadata_magic.main.file_tools.file_tools import read_text_file
 from metadata_magic.main.file_tools.file_tools import write_text_file
+from metadata_magic.main.file_tools.file_tools import find_files_of_type
 from os import listdir, mkdir, remove
 from os.path import abspath, basename, exists, isdir, join
 
@@ -90,6 +91,60 @@ def test_read_write_json_file():
     text_file = abspath(join(sub_dir, "new.json"))
     write_json_file(text_file, {"new":"key"})
     assert sorted(listdir(temp_dir)) == ["directory", "test.json", "text.txt"]
+
+def test_find_files_of_type():
+    """
+    Tests the find_files_of_type function.
+    """
+    # Test finding all files of a given extension
+    temp_dir = get_temp_dir()
+    temp_file = abspath(join(temp_dir, "text.txt"))
+    write_text_file(temp_file, "Not")
+    temp_file = abspath(join(temp_dir, "new.txt"))
+    write_text_file(temp_file, "Important")
+    temp_file = abspath(join(temp_dir, "other.png"))
+    write_text_file(temp_file, "At")
+    temp_file = abspath(join(temp_dir, "blah.thing"))
+    write_text_file(temp_file, "All")
+    assert sorted(listdir(temp_dir)) == ["blah.thing", "new.txt", "other.png", "text.txt"]
+    files = find_files_of_type(temp_dir, ".txt")
+    assert len(files) == 2
+    assert basename(files[0]) == "new.txt"
+    assert basename(files[1]) == "text.txt"
+    assert exists(files[0])
+    assert exists(files[1])
+    assert find_files_of_type(temp_dir, ".thing") == [temp_file]
+    assert find_files_of_type(temp_dir, ".nope") == []
+    # Test finding files inside subdirectories
+    sub_directory = abspath(join(temp_dir, "sub"))
+    deep_directory = abspath(join(temp_dir, "deep.txt"))
+    mkdir(sub_directory)
+    mkdir(deep_directory)
+    temp_file = abspath(join(sub_directory, "sub.txt"))
+    write_text_file(temp_file, "Still")
+    temp_file = abspath(join(deep_directory, "deep.png"))
+    write_text_file(temp_file, "Nothing")
+    files = find_files_of_type(temp_dir, ".txt")
+    assert len(files) == 3
+    assert basename(files[0]) == "new.txt"
+    assert basename(files[1]) == "text.txt"
+    assert basename(files[2]) == "sub.txt"
+    files = find_files_of_type(temp_dir, ".png", include_subdirectories=True)
+    assert len(files) == 2
+    assert basename(files[0]) == "other.png"
+    assert basename(files[1]) == "deep.png"
+    assert files[1] == temp_file
+    # Test finding files, not including subdirectories
+    files = find_files_of_type(temp_dir, ".txt", include_subdirectories=False)
+    assert len(files) == 2
+    assert basename(files[0]) == "new.txt"
+    assert basename(files[1]) == "text.txt"
+    # Test finding files with inverted extension
+    files = find_files_of_type(temp_dir, ".txt", inverted=True)
+    assert len(files) == 3
+    assert basename(files[0]) == "blah.thing"
+    assert basename(files[1]) == "other.png"
+    assert basename(files[2]) == "deep.png"
 
 def test_create_zip():
     """
