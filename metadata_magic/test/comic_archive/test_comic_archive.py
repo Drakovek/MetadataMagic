@@ -174,6 +174,9 @@ def test_get_info_from_cbz():
     assert read_meta["artist"] == "New Person"
     assert read_meta["description"] == "Some words."
     assert read_meta["publisher"] is None
+    # Test getting metadata if instructed to not search subdirectories
+    assert get_info_from_cbz(cbz_file, False) == get_empty_metadata()
+    
 
 def test_update_cbz_info():
     """

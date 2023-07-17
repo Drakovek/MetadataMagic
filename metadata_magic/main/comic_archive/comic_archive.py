@@ -91,12 +91,14 @@ def create_cbz(directory:str, name:str=None, metadata:dict=None, remove_files:bo
     # Return CBZ file
     return cbz_file
 
-def get_info_from_cbz(cbz_file:str) -> dict:
+def get_info_from_cbz(cbz_file:str, check_subdirectories:bool=True) -> dict:
     """
     Extracts ComicInfo.xml from a given .cbz file and returns the metadata as a dict.
     
     :param cbz_file: Path to a .cbz file
     :type cbz_file: str, required
+    :param check_subdirectories: Whether to check subdirectories for metadata file, defaults to True
+    :type check_subdirectories: bool, optional
     :return: Dictionary containing metadata from the .cbz file
     :rtype: dict
     """
@@ -105,7 +107,7 @@ def get_info_from_cbz(cbz_file:str) -> dict:
     extract_dir = get_temp_dir("dvk_meta_extract")
     assert exists(extract_dir)
     # Extract ComicInfo.xml from given file
-    xml_file = extract_file_from_zip(cbz_file, extract_dir, "ComicInfo.xml", True)
+    xml_file = extract_file_from_zip(cbz_file, extract_dir, "ComicInfo.xml", check_subdirectories)
     if xml_file is None or not exists(xml_file):
         return get_empty_metadata()
     # Read XML file
