@@ -4,8 +4,10 @@ from metadata_magic.main.meta_reader import get_empty_metadata
 from metadata_magic.main.comic_archive.comic_archive import create_cbz
 from metadata_magic.main.comic_archive.comic_archive import update_cbz_info
 from metadata_magic.main.comic_archive.comic_archive import get_info_from_cbz
+from metadata_magic.main.comic_archive.comic_xml import get_comic_xml
 from metadata_magic.main.comic_archive.comic_xml import read_comic_info
 from metadata_magic.main.file_tools.file_tools import get_temp_dir
+from metadata_magic.main.file_tools.file_tools import create_zip
 from metadata_magic.main.file_tools.file_tools import extract_zip
 from metadata_magic.main.file_tools.file_tools import read_text_file
 from metadata_magic.main.file_tools.file_tools import write_text_file
@@ -150,6 +152,28 @@ def test_get_info_from_cbz():
     read_meta = get_info_from_cbz(text_file)
     assert read_meta["title"] is None
     assert read_meta["artist"] is None
+    # Test if ComicInfo.xml is not in the home directory
+    temp_dir = get_temp_dir()
+    sub_dir = abspath(join(temp_dir, "Internal"))
+    text_file = abspath(join(sub_dir, "Thing.txt"))
+    metadata_file = abspath(join(sub_dir, "ComicInfo.xml"))
+    metadata = get_empty_metadata()
+    metadata["title"] = "Internal!"
+    metadata["artist"] = "New Person"
+    metadata["description"] = "Some words."
+    mkdir(sub_dir)
+    write_text_file(text_file, "Text")
+    write_text_file(metadata_file, get_comic_xml(metadata))
+    assert exists(text_file)
+    assert exists(metadata_file)
+    cbz_file = abspath(join(temp_dir, "manual.cbz"))
+    assert create_zip(temp_dir, cbz_file)
+    assert exists(cbz_file)
+    read_meta = get_info_from_cbz(cbz_file)
+    assert read_meta["title"] == "Internal!"
+    assert read_meta["artist"] == "New Person"
+    assert read_meta["description"] == "Some words."
+    assert read_meta["publisher"] is None
 
 def test_update_cbz_info():
     """
@@ -210,3 +234,33 @@ def test_update_cbz_info():
     update_cbz_info(text_file, metadata)
     assert exists(text_file)
     assert read_text_file(text_file) == "Some text"
+    # Test updating cbz with ComicInfo.xml mixed in with media files
+    temp_dir = get_temp_dir()
+    sub_dir = abspath(join(temp_dir, "Internal"))
+    text_file = abspath(join(sub_dir, "Thing.txt"))
+    media_file = abspath(join(temp_dir, "Other.png"))
+    metadata_file = abspath(join(sub_dir, "ComicInfo.xml"))
+    mkdir(sub_dir)
+    write_text_file(text_file, "Text")
+    write_text_file(media_file, "This is media")
+    write_text_file(metadata_file, get_comic_xml(metadata))
+    assert exists(text_file)
+    assert exists(media_file)
+    assert exists(metadata_file)
+    cbz_file = abspath(join(temp_dir, "manual.cbz"))
+    assert create_zip(temp_dir, cbz_file)
+    assert exists(cbz_file)
+    metadata = get_empty_metadata()
+    metadata["title"] = "Updated!"
+    metadata["artist"] = "New"
+    update_cbz_info(cbz_file, metadata)
+    read_meta = get_info_from_cbz(cbz_file)
+    assert read_meta["title"] == "Updated!"
+    assert read_meta["artist"] == "New"
+    assert read_meta["description"] is None
+    extract_dir = abspath(join(temp_dir, "extracted"))
+    mkdir(extract_dir)
+    assert extract_zip(cbz_file, extract_dir)
+    assert sorted(listdir(extract_dir)) == ["ComicInfo.xml", "Internal", "Other.png"]
+    sub_dir = abspath(join(extract_dir, "Internal"))
+    assert listdir(sub_dir) == ["Thing.txt"]

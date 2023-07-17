@@ -220,7 +220,7 @@ def extract_zip(zip_file:str, extract_directory:str, create_folder:bool=False,
             copy(current_file, new_file)
     return True
 
-def extract_file_from_zip(zip_file:str, extract_directory:str, extract_file:str) -> str:
+def extract_file_from_zip(zip_file:str, extract_directory:str, extract_file:str, check_subdirectories:bool=False) -> str:
     """
     Attempts to extract a single file from a ZIP archive given a filename.
     
@@ -230,6 +230,8 @@ def extract_file_from_zip(zip_file:str, extract_directory:str, extract_file:str)
     :type extract_directory: str, required
     :param extract_file: Filename of the file to be extracted
     :type extract_file: str, required
+    :param check_subdirectories: Whether to check subdirectories for the given file as well, defaults to False
+    :type check_subdirectories: bool, optional
     :return: Path of the extracted file, None if file couldn't be extracted
     :rtype: str
     """
@@ -238,8 +240,15 @@ def extract_file_from_zip(zip_file:str, extract_directory:str, extract_file:str)
     # Extract into temporary directory
     try:
         with ZipFile(zip_file, mode="r") as zfile:
-            zfile.extract(extract_file, path=temp_dir)
-            extracted = abspath(join(temp_dir, extract_file))
+            # Get the correct file to extract
+            internal_file = None
+            info_list = zfile.infolist()
+            for info in info_list:
+                if info.filename == extract_file or (check_subdirectories and basename(info.filename) == extract_file):
+                    internal_file = info.filename
+            # Attempt extracting the file
+            zfile.extract(internal_file, path=temp_dir)
+            extracted = abspath(join(temp_dir, internal_file))
             new_file = abspath(join(extract_directory, extract_file))
             # Update file if it already exists
             if exists(new_file):

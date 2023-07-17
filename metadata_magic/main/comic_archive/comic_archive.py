@@ -10,6 +10,7 @@ from metadata_magic.main.rename.rename_tools import create_filename
 from metadata_magic.main.rename.rename_tools import get_available_filename
 from metadata_magic.main.rename.rename_tools import sort_alphanum
 from metadata_magic.main.file_tools.file_tools import get_temp_dir
+from metadata_magic.main.file_tools.file_tools import find_files_of_type
 from metadata_magic.main.file_tools.file_tools import write_text_file
 from metadata_magic.main.file_tools.file_tools import create_zip
 from metadata_magic.main.file_tools.file_tools import extract_zip
@@ -104,7 +105,7 @@ def get_info_from_cbz(cbz_file:str) -> dict:
     extract_dir = get_temp_dir("dvk_meta_extract")
     assert exists(extract_dir)
     # Extract ComicInfo.xml from given file
-    xml_file = extract_file_from_zip(cbz_file, extract_dir, "ComicInfo.xml")
+    xml_file = extract_file_from_zip(cbz_file, extract_dir, "ComicInfo.xml", True)
     if xml_file is None or not exists(xml_file):
         return get_empty_metadata()
     # Read XML file
@@ -119,19 +120,20 @@ def update_cbz_info(cbz_file:str, metadata:dict):
     :param metadata: Metadata to use for the new ComicInfo.xml file
     :type metadata: dict
     """
-    # Check if given file is a valid cbz file
-    file = abspath(cbz_file)
     # Extract cbz into temp file
+    full_cbz_file = abspath(cbz_file)
     temp_dir = get_temp_dir("dvk_comic_info")
-    if extract_zip(cbz_file, temp_dir):
-        # Create/Overwrite ComicInfo.xml file
-        xml_file = abspath(join(temp_dir, "ComicInfo.xml"))
-        write_text_file(xml_file, get_comic_xml(metadata))
-        # Pack files into archive
-        new_cbz = create_cbz(temp_dir)
+    if extract_zip(full_cbz_file, temp_dir):
+        # Delete existing ComicInfo.xml files
+        xml_files = find_files_of_type(temp_dir, ".xml")
+        for xml_file in xml_files:
+            if basename(xml_file) == "ComicInfo.xml":
+                remove(xml_file)
+        # Pack files into archive using new metadata
+        new_cbz = create_cbz(temp_dir, metadata=metadata)
         # Replace the old cbz file
-        remove(file)
-        copy(new_cbz, file)
+        remove(full_cbz_file)
+        copy(new_cbz, full_cbz_file)
         remove(new_cbz)
     
 def create_comic_archive(path:str,

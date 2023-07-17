@@ -9,7 +9,7 @@ from metadata_magic.main.file_tools.file_tools import write_json_file
 from metadata_magic.main.file_tools.file_tools import read_text_file
 from metadata_magic.main.file_tools.file_tools import write_text_file
 from metadata_magic.main.file_tools.file_tools import find_files_of_type
-from os import listdir, mkdir, remove
+from os import listdir, mkdir, pardir, remove
 from os.path import abspath, basename, exists, isdir, join
 
 def test_get_temp_dir():
@@ -351,3 +351,9 @@ def test_extract_file_from_zip():
     extracted = extract_file_from_zip(zip_file, extract_dir, "text.txt")
     assert exists(extracted)
     assert basename(extracted) == "text-2.txt"
+    # Test extracting file from a subdirectory
+    extracted = extract_file_from_zip(zip_file, extract_dir, "deep.jpg", check_subdirectories=True)
+    assert exists(extracted)
+    assert basename(extracted) == "deep.jpg"
+    assert abspath(join(extracted, pardir)) == extract_dir
+    assert read_text_file(extracted) == "too deep"
