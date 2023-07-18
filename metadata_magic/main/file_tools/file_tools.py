@@ -157,9 +157,10 @@ def create_zip(directory:str, zip_file:str, compress_level:int=9) -> bool:
         return False
     # Write contents of directory to zip file
     for file in files:
-        relative = relpath(file, full_directory)
-        with ZipFile(zip_file, "a", compression=ZIP_DEFLATED, compresslevel=compress_level) as out_file:
-            out_file.write(file, relative)
+        if not basename(file).startswith("."):
+            relative = relpath(file, full_directory)
+            with ZipFile(zip_file, "a", compression=ZIP_DEFLATED, compresslevel=compress_level) as out_file:
+                out_file.write(file, relative)
     # Return if the zip file was successfully created
     return exists(zip_file)
 
