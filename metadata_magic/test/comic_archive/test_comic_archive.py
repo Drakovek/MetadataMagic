@@ -92,8 +92,8 @@ def test_create_cbz():
     write_text_file(media_file, "More things")
     assert exists(text_file)
     assert exists(media_file)
-    cbz_file = create_cbz(cbz_directory, "None", metadata=metadata, remove_files=True)
-    assert listdir(cbz_directory) == ["None.cbz"]
+    cbz_file = create_cbz(cbz_directory, "new", metadata=metadata, remove_files=True)
+    assert listdir(cbz_directory) == ["new.cbz"]
     extract_directory = get_temp_dir("dvk_extract_test")
     assert extract_zip(cbz_file, extract_directory)
     assert sorted(listdir(extract_directory)) == ["ComicInfo.xml", "new-2"]
@@ -102,8 +102,8 @@ def test_create_cbz():
     # Test that CBZ is only updated with new metadata if CBZ already exists
     metadata["title"] = "New!"
     metadata["tags"] = "Some, More, Stuff"
-    cbz_file = create_cbz(cbz_directory, "None", metadata=metadata)
-    assert listdir(cbz_directory) == ["None.cbz"]
+    cbz_file = create_cbz(cbz_directory, "new", metadata=metadata)
+    assert listdir(cbz_directory) == ["new.cbz"]
     extract_directory = get_temp_dir("dvk_extract_test")
     assert extract_zip(cbz_file, extract_directory)
     assert sorted(listdir(extract_directory)) == ["ComicInfo.xml", "new-2"]
@@ -186,7 +186,7 @@ def test_update_cbz_info():
     temp_dir = get_temp_dir()
     text_file = abspath(join(temp_dir, "other.txt"))
     metadata = get_empty_metadata()
-    metadata["title"] = "Old title."
+    metadata["title"] = "Old Title."
     metadata["tags"] = "Some,Tags"
     write_text_file(text_file, "This is text!")
     assert exists(text_file)
@@ -205,8 +205,8 @@ def test_update_cbz_info():
     extract_dir = abspath(join(temp_dir, "ext"))
     mkdir(extract_dir)
     assert extract_zip(cbz_file, extract_dir)
-    assert sorted(listdir(extract_dir)) == ["ComicInfo.xml", "other"]
-    assert listdir(abspath(join(extract_dir, "other"))) == ["other.txt"]
+    assert sorted(listdir(extract_dir)) == ["ComicInfo.xml", "Old Title"]
+    assert listdir(abspath(join(extract_dir, "Old Title"))) == ["other.txt"]
     # Test updating cbz that had no comic info in the first place
     temp_dir = get_temp_dir()
     text_file = abspath(join(temp_dir, "text.txt"))
@@ -267,3 +267,23 @@ def test_update_cbz_info():
     assert sorted(listdir(extract_dir)) == ["ComicInfo.xml", "Internal", "Other.png"]
     sub_dir = abspath(join(extract_dir, "Internal"))
     assert listdir(sub_dir) == ["Thing.txt"]
+    # Test that updating adds the correctly named internal folder
+    temp_dir = get_temp_dir()
+    text_file = abspath(join(temp_dir, "text.txt"))
+    write_text_file(text_file, "text")
+    assert exists(text_file)
+    cbz_file = abspath(join(temp_dir, "internal.cbz"))
+    assert create_zip(temp_dir, cbz_file)
+    assert exists(cbz_file)
+    metadata["title"] = "Should Reflect Inside."
+    update_cbz_info(cbz_file, metadata)
+    read_meta = get_info_from_cbz(cbz_file)
+    assert read_meta["title"] == "Should Reflect Inside."
+    assert read_meta["artist"] == "New"
+    assert read_meta["description"] is None
+    extract_dir = abspath(join(temp_dir, "extracted"))
+    mkdir(extract_dir)
+    assert extract_zip(cbz_file, extract_dir)
+    assert sorted(listdir(extract_dir)) == ["ComicInfo.xml", "Should Reflect Inside"]
+    sub_dir = abspath(join(extract_dir, "Should Reflect Inside"))
+    assert listdir(sub_dir) == ["text.txt"]

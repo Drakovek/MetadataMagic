@@ -44,7 +44,7 @@ def create_cbz(directory:str, name:str=None, metadata:dict=None, remove_files:bo
     # Create CBZ filename
     filename = basename(full_directory) + ".cbz"
     if name is not None:
-        filename = f"{name}.cbz"
+        filename = create_filename(name) + ".cbz"
     cbz_file = abspath(join(full_directory, filename))
     # Update CBZ if it already exists
     if exists(cbz_file):
@@ -61,7 +61,13 @@ def create_cbz(directory:str, name:str=None, metadata:dict=None, remove_files:bo
     # Move files if required
     if move_files:
         # Create new folder to contain files
-        folder_name = files[0][:len(files[0]) - len(get_extension(files[0]))]
+        folder_name = name
+        if folder_name is None:
+            try:
+                folder_name = metadata["title"]
+                assert folder_name is not None
+            except (AssertionError, KeyError, TypeError):
+                folder_name = files[0][:len(files[0]) - len(get_extension(files[0]))]
         folder_name = get_available_filename("AAAAAAAAAA", create_filename(folder_name), full_directory)
         new_folder = abspath(join(full_directory, folder_name))
         mkdir(new_folder)
@@ -132,7 +138,7 @@ def update_cbz_info(cbz_file:str, metadata:dict):
             if basename(xml_file) == "ComicInfo.xml":
                 remove(xml_file)
         # Pack files into archive using new metadata
-        new_cbz = create_cbz(temp_dir, metadata=metadata)
+        new_cbz = create_cbz(temp_dir, name=metadata["title"], metadata=metadata)
         # Replace the old cbz file
         remove(full_cbz_file)
         copy(new_cbz, full_cbz_file)

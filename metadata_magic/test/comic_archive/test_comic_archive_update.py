@@ -35,7 +35,7 @@ def test_mass_update_cbzs():
     assert exists(cbz_file_1)
     assert exists(cbz_file_2)
     assert exists(cbz_file_3)
-    assert sorted(listdir(temp_dir)) == ["Name.cbz", "new.cbz", "other.cbz", "text"]
+    assert sorted(listdir(temp_dir)) == ["Name", "Name.cbz", "new.cbz", "other.cbz"]
     # Test updating publisher
     metadata = get_empty_metadata()
     metadata["publisher"] = "New Publisher"
@@ -47,7 +47,7 @@ def test_mass_update_cbzs():
     assert read_meta["cover_artist"] == "Cover"
     assert read_meta["publisher"] == "New Publisher"
     assert read_meta["age_rating"] == "Unknown"
-    assert sorted(listdir(temp_dir)) == ["Name.cbz", "new.cbz", "other.cbz", "text"]
+    assert sorted(listdir(temp_dir)) == ["Name", "Name.cbz", "new.cbz", "other.cbz"]
     # Test updating artists
     metadata = get_empty_metadata()
     metadata["artist"] = "New Guy"
@@ -62,7 +62,7 @@ def test_mass_update_cbzs():
     assert read_meta["publisher"] == "New Publisher"
     assert read_meta["age_rating"] == "Unknown"
     assert read_meta["score"] == "3"
-    assert sorted(listdir(temp_dir)) == ["Name.cbz", "new.cbz", "other.cbz", "text"]
+    assert sorted(listdir(temp_dir)) == ["Name", "Name.cbz", "new.cbz", "other.cbz"]
     # Test updating age rating
     metadata = get_empty_metadata()
     metadata["age_rating"] = "Everyone"
@@ -75,7 +75,7 @@ def test_mass_update_cbzs():
     assert read_meta["publisher"] == "New Publisher"
     assert read_meta["age_rating"] == "Everyone"
     assert read_meta["score"] == "3"
-    assert sorted(listdir(temp_dir)) == ["Name.cbz", "new.cbz", "other.cbz", "text"]
+    assert sorted(listdir(temp_dir)) == ["Name", "Name.cbz", "new.cbz", "other.cbz"]
     # Test updating content rating
     metadata = get_empty_metadata()
     metadata["age_rating"] = "Everyone"
@@ -88,7 +88,7 @@ def test_mass_update_cbzs():
     assert read_meta["publisher"] == "New Publisher"
     assert read_meta["age_rating"] == "Everyone"
     assert read_meta["score"] == "3"
-    assert sorted(listdir(temp_dir)) == ["Name.cbz", "new.cbz", "other.cbz", "text"]
+    assert sorted(listdir(temp_dir)) == ["Name", "Name.cbz", "new.cbz", "other.cbz"]
     # Test updating score
     metadata = get_empty_metadata()
     metadata["score"] = 5
@@ -101,7 +101,7 @@ def test_mass_update_cbzs():
     assert read_meta["publisher"] == "New Publisher"
     assert read_meta["age_rating"] == "Everyone"
     assert read_meta["score"] == "5"
-    assert sorted(listdir(temp_dir)) == ["Name.cbz", "new.cbz", "other.cbz", "text"]
+    assert sorted(listdir(temp_dir)) == ["Name", "Name.cbz", "new.cbz", "other.cbz"]
     # Test updating multiple fields
     metadata = get_empty_metadata()
     metadata["title"] = "Blah"
@@ -118,4 +118,4 @@ def test_mass_update_cbzs():
     assert read_meta["publisher"] == "Blah Inc."
     assert read_meta["age_rating"] == "Everyone"
     assert read_meta["score"] == "5"
-    assert sorted(listdir(temp_dir)) == ["Name.cbz", "new.cbz", "other.cbz", "text"]
+    assert sorted(listdir(temp_dir)) == ["Name", "Name.cbz", "new.cbz", "other.cbz"]
