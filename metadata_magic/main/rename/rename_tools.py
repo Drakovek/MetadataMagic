@@ -133,6 +133,8 @@ def create_filename(string:str) -> str:
     new_text = new_text.replace("Ñ", "N")
     new_text = new_text.replace("Ý", "Y")
     new_text = new_text.replace("ñ", "n")
+    # Replace -> Arrow with "to"
+    new_text = re_sub("(?<=\\s)-+>(?=\\s)", "to", new_text)
     # Replace all invalid characters
     new_text = re_sub("<|>|\"|\\/|\\\\|\\||\\?|\\*|\\.+$", "-", new_text)
     # Remove whitespace and hyphens at begining and end of text

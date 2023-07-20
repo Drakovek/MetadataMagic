@@ -73,9 +73,10 @@ def create_cbz(directory:str, name:str=None, metadata:dict=None, remove_files:bo
         mkdir(new_folder)
         # Move existing files to the new folder
         for file in files:
-            current_file = abspath(join(full_directory, file))
-            new_file = abspath(join(new_folder, file))
-            move(current_file, new_file)
+            if not file == "ComicInfo.xml":
+                current_file = abspath(join(full_directory, file))
+                new_file = abspath(join(new_folder, file))
+                move(current_file, new_file)
     # Create metadata file, if specified
     meta_file = abspath(join(full_directory, "ComicInfo.xml"))
     if metadata is not None:
@@ -186,8 +187,11 @@ def create_comic_archive(path:str,
         # Get metadata from the .cbz file
         filename = files[0][:len(files[0])-4]
         metadata = get_info_from_cbz(abspath(join(full_path, files[0])))
+    elif exists(abspath(join(full_path, "ComicInfo.xml"))):
+        # Get metadata from ComicInfo
+        metadata = read_comic_info(abspath(join(full_path, "ComicInfo.xml")))
     else:
-        # Get metadate from any existing JSON files
+        # Get metadata from any existing JSON files
         metadata = generate_info_from_jsons(full_path)
     # Remove metadata fields the user wishes to replace
     if rp_description:

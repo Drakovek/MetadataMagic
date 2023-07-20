@@ -107,6 +107,8 @@ def test_create_filename():
     assert create_filename("Spaced .  .   .") == "Spaced …"
     assert create_filename("  This is the end >.<  ") == "This is the end"
     assert create_filename(" No, THIS is the end. -.-.. ") == "No, THIS is the end"
+    assert create_filename("A -> B") == "A to B"
+    assert create_filename("Thing ----> Other") == "Thing to Other"
     # Test removing hanging hyphens.
     assert create_filename("Blah!- Thing") == "Blah! Thing"
     assert create_filename("Other23- Item") == "Other23 Item"

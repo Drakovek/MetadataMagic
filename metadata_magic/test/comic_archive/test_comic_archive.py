@@ -113,6 +113,26 @@ def test_create_cbz():
     assert read_meta["title"] == "New!"
     assert read_meta["tags"] == "Some,More,Stuff"
     assert read_meta["artist"] == "Person"
+    # Test extra ComicInfo.xml file is not created
+    cbz_directory = get_temp_dir("dvk_cbz_test")
+    text_file = abspath(join(cbz_directory, "text.txt"))
+    metadata_file = abspath(join(cbz_directory, "ComicInfo.xml"))
+    write_text_file(text_file, "This is text.")
+    write_text_file(metadata_file, "metadata")
+    assert exists(text_file)
+    assert exists(metadata_file)
+    metadata = get_empty_metadata()
+    metadata["title"] = "New Metadata"
+    cbz_file = create_cbz(cbz_directory, "Meta", metadata=metadata)
+    assert exists(cbz_file)
+    extract_directory = get_temp_dir("dvk_extract_test")
+    assert extract_zip(cbz_file, extract_directory)
+    assert sorted(listdir(extract_directory)) == ["ComicInfo.xml", "Meta"]
+    sub_dir = abspath(join(extract_directory, "Meta"))
+    assert sorted(listdir(sub_dir)) == ["text.txt"]    
+    read_meta = get_info_from_cbz(cbz_file)
+    assert read_meta["title"] == "New Metadata"
+    assert read_meta["artist"] is None
     # Test creating a CBZ with no files
     cbz_directory = get_temp_dir("dvk_cbz_test")
     assert create_cbz(cbz_directory) is None

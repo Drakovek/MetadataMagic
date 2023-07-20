@@ -6,7 +6,8 @@ from metadata_magic.main.rename.rename_tools import sort_alphanum
 from html_string_tools.main.html_string_tools import get_extension
 from math import floor
 from argparse import ArgumentParser
-from os import getcwd, listdir
+from os import getcwd, listdir, system
+from os import name as os_name
 from os.path import abspath, basename, exists, isdir, join
 from python_print_tools.main.python_print_tools import color_print
 from typing import List
@@ -198,7 +199,7 @@ def main():
     parser.add_argument(
             "-s",
             "--single",
-            help="Use user summary instead of summary in metadata.",
+            help="Set comic series as being one of one",
             action="store_true")
     args = parser.parse_args()
     # Check that directory is valid
