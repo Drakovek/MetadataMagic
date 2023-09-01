@@ -50,7 +50,7 @@ def get_value_from_keylist(dictionary:dict, keylist:List[List[str]], type_obj):
             # Return result if not None
             if result is not None and isinstance(result, type_obj):
                 return result
-        except KeyError:
+        except (KeyError, TypeError):
             # Check next key in list if key is invalid
             continue
     return None
@@ -107,7 +107,7 @@ def get_artist(json:dict) -> str:
     :rtype: str
     """
     keylist = [["artist"], ["uploader"], ["user"], ["username"], ["artists"], ["author", "username"],
-               ["creator", "full_name"], ["user", "name"], ["info", "artists"], ["owner"]]
+               ["creator", "full_name"], ["user", "name"], ["info", "artists"], ["owner"], ["author"]]
     # Try getting artist from string value
     value = get_value_from_keylist(json, keylist, str)
     # Try getting artist from list
