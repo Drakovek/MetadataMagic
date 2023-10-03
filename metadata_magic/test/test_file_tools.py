@@ -182,7 +182,7 @@ def test_create_zip():
     assert not exists(zip_file)
     assert mm_file_tools.create_zip(temp_dir, zip_file)
     assert exists(zip_file)
-    extracted = abspath(join(temp_dir, extracted))
+    extracted = abspath(join(temp_dir, "extracted"))
     os.mkdir(extracted)
     assert mm_file_tools.extract_zip(zip_file, extracted)
     assert sorted(os.listdir(extracted)) == ["main.txt", "sub"]
@@ -191,6 +191,21 @@ def test_create_zip():
     extracted = abspath(join(extracted, "deep"))
     assert sorted(os.listdir(extracted)) == ["deep.png"]
     assert mm_file_tools.read_text_file(abspath(join(extracted, "deep.png"))) == "Deepest yet."
+    # Test Creating Mimetype
+    temp_dir = mm_file_tools.get_temp_dir()
+    media_file = abspath(join(temp_dir, "main.txt"))
+    mm_file_tools.write_text_file(media_file, "This is text.")
+    assert exists(media_file)
+    zip_file = abspath(join(temp_dir, "mime.zip"))
+    assert not exists(zip_file)
+    assert mm_file_tools.create_zip(temp_dir, zip_file, 8, "filetype")
+    assert exists(zip_file)
+    extracted = abspath(join(temp_dir, "extracted"))
+    os.mkdir(extracted)
+    assert mm_file_tools.extract_zip(zip_file, extracted)
+    assert sorted(os.listdir(extracted)) == ["main.txt", "mimetype"]
+    assert mm_file_tools.read_text_file(abspath(join(extracted, "main.txt"))) == "This is text."
+    assert mm_file_tools.read_text_file(abspath(join(extracted, "mimetype"))) == "filetype"
 
 def test_extract_zip():
     """

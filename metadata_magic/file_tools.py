@@ -125,7 +125,7 @@ def find_files_of_type(directory:str, extension:str, include_subdirectories:bool
     # Return found files
     return files
 
-def create_zip(directory:str, zip_path:str, compress_level:int=9) -> bool:
+def create_zip(directory:str, zip_path:str, compress_level:int=9, mimetype:str=None) -> bool:
     """
     Creates a zip file with all the files and subdirectories within a given directory.
     
@@ -136,6 +136,8 @@ def create_zip(directory:str, zip_path:str, compress_level:int=9) -> bool:
     :param compress_level: Level of compression from min 0 to max 9, defaults to 9
     :type compress_level: int, optional
     :return: Whether a zip file was successfully created
+    :param mimetype: Mimetype for the file to be added without compression for zip-based formats, defaults to None
+    :type mimetype: str
     :rtype: bool
     """
     # Get list of files in the directory
@@ -150,7 +152,9 @@ def create_zip(directory:str, zip_path:str, compress_level:int=9) -> bool:
             for i in range(0, len(sub_files)):
                 files.append(abspath(join(file, sub_files[i])))
     # Create empty zip file
-    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=compress_level) as out_file: pass
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=compress_level) as out_file:
+        if mimetype is not None:
+            out_file.writestr("mimetype", mimetype, compress_type=zipfile.ZIP_STORED)
     if not exists(zip_path):
         return False
     # Write contents of directory to zip file
