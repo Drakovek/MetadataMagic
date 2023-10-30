@@ -217,6 +217,50 @@ def test_get_default_chapters():
     assert chapters[0]["title"] == "Title!"
     assert basename(chapters[0]["file"]) == "sub.txt"
 
+def test_get_chapters_string():
+    """
+    Tests the get_chapters_string.
+    """
+    # Test get the default chapter information.
+    temp_dir = mm_file_tools.get_temp_dir()
+    sub_dir = abspath(join(temp_dir, "sub"))
+    os.mkdir(sub_dir)
+    mm_file_tools.write_text_file(abspath(join(sub_dir, "sub.txt")), "TEXT")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "TEXT")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "2.txt")), "TEXT")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "3.txt")), "TEXT")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "4.thing")), "TEXT")
+    chapters = mm_epub.get_default_chapters(temp_dir)
+    # Test getting string from default chapter info
+    chapters_string = mm_epub.get_chapters_string(chapters)
+    compare = "ENTRY     TITLE    FILE "
+    compare = f"{compare}\n------------------------"
+    compare = f"{compare}\n001       1        1.txt"
+    compare = f"{compare}\n002       2        2.txt"
+    compare = f"{compare}\n003       3        3.txt"
+    assert chapters_string == compare
+    # Test getting string with modified titles
+    chapters[0]["title"] = "Cover Image"
+    chapters[1]["title"] = "Chapter 01"
+    chapters[2]["title"] = "Epilogue"
+    chapters_string = mm_epub.get_chapters_string(chapters)
+    compare = "ENTRY     TITLE          FILE "
+    compare = f"{compare}\n------------------------------"
+    compare = f"{compare}\n001       Cover Image    1.txt"
+    compare = f"{compare}\n002       Chapter 01     2.txt"
+    compare = f"{compare}\n003       Epilogue       3.txt"
+    assert chapters_string == compare
+    # Test getting string with some non-included chapters
+    chapters[1]["include"] = False
+    chapters[2]["include"] = False
+    chapters_string = mm_epub.get_chapters_string(chapters)
+    compare = "ENTRY     TITLE          FILE "
+    compare = f"{compare}\n------------------------------"
+    compare = f"{compare}\n001       Cover Image    1.txt"
+    compare = f"{compare}\n002*      Chapter 01     2.txt"
+    compare = f"{compare}\n003*      Epilogue       3.txt"
+    assert chapters_string == compare
+
 def test_create_content_files():
     """
     Tests the create_content_files function.

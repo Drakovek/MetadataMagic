@@ -86,7 +86,7 @@ def test_create_cbz():
     assert exists(text_file)
     assert exists(media_file)
     cbz_file = mm_comic_archive.create_cbz(cbz_directory, "new", metadata=metadata, remove_files=True)
-    assert os.listdir(cbz_directory) == ["new.cbz"]
+    assert sorted(os.listdir(cbz_directory)) == ["new.cbz"]
     extract_directory = mm_file_tools.get_temp_dir("dvk_extract_test")
     assert mm_file_tools.extract_zip(cbz_file, extract_directory)
     assert sorted(os.listdir(extract_directory)) == ["ComicInfo.xml", "new-2"]
@@ -96,7 +96,7 @@ def test_create_cbz():
     metadata["title"] = "New!"
     metadata["tags"] = "Some, More, Stuff"
     cbz_file = mm_comic_archive.create_cbz(cbz_directory, "new", metadata=metadata)
-    assert os.listdir(cbz_directory) == ["new", "new-2.cbz"]
+    assert sorted(os.listdir(cbz_directory)) == ["new", "new-2.cbz"]
     extract_directory = mm_file_tools.get_temp_dir("dvk_extract_test")
     assert mm_file_tools.extract_zip(cbz_file, extract_directory)
     assert sorted(os.listdir(extract_directory)) == ["ComicInfo.xml", "new"]

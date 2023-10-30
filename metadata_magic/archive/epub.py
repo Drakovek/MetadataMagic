@@ -2,6 +2,7 @@ import os
 import re
 import shutil
 import html_string_tools
+import python_print_tools.printer
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.comic_xml as mm_comic_xml
 import metadata_magic.rename.rename_tools as mm_rename_tools
@@ -114,7 +115,7 @@ def get_default_chapters(directory:str, title:str=None) -> List[dict]:
     :type directory: str, required
     :param title: Title of the whole ebook used if there is only one chapter, defaults to None
     :type title: str, optional
-    :return: List if info for each chapter
+    :return: List of info for each chapter
     :rtype: List[dict]
     """
     # Find all text files in the given directory
@@ -133,6 +134,92 @@ def get_default_chapters(directory:str, title:str=None) -> List[dict]:
     if title is not None and len(chapters) == 1:
         chapters[0]["title"] = title
     # Return the default chapters
+    return chapters
+
+def get_chapters_string(chapters:List[dict]) -> str:
+    """
+    Returns a human-readable string block representing the given list of chapters.
+    
+    :param chapters: Chapter files and info, as returned by get_default_chapters
+    :type chapters: List[dict], required
+    :return: Human-readable string representation of the given chapter data
+    :rtype: str
+    """
+    # Get the length of the block of characters for each field
+    file_length = 4
+    title_length = 5
+    entry_length = 10
+    for chapter in chapters:
+        temp_file_length = len(basename(chapter["file"]))
+        if temp_file_length > file_length:
+            file_length = temp_file_length
+        if len(chapter["title"]) > title_length:
+            title_length = len(chapter["title"])
+    title_length += 4
+    # Set the chapters string header
+    total_length = entry_length + title_length + file_length
+    chapters_string = "-" * total_length
+    chapters_string = f"{{:<{file_length}}}\n{chapters_string}".format("FILE")
+    chapters_string = f"{{:<{title_length}}}{chapters_string}".format("TITLE")
+    chapters_string = f"{{:<{entry_length}}}{chapters_string}".format("ENTRY")
+    # Get a string for each chapter entry
+    for i in range(0, len(chapters)):
+        # Get the entry value
+        entry_string = str(i+1).zfill(3)
+        if not chapters[i]["include"]:
+            entry_string = f"{entry_string}*"
+        chapter_string = f"{{:<{entry_length}}}".format(entry_string)
+        # Get the title value
+        chapter_string = f"{chapter_string}{{:<{title_length}}}".format(chapters[i]["title"])
+        # Get the file value
+        chapter_string = f"{chapter_string}{{:<{file_length}}}".format(basename(chapters[i]["file"]))
+        # Add to the overall chapters string
+        chapters_string = f"{chapters_string}\n{chapter_string}"
+    # Return the chapters string
+    return chapters_string
+
+def get_chapters_from_user(directory:str, title:str=None) -> List[dict]:
+    """
+    Returns a list of chapter information for use when converting files into an EPUB file.
+    Initial chapter info is gatherd from the get_default_chapters function, then the user is prompted to modify fields.
+    The user can choose to modify chapter titles and whether to include the chapter in the table of contents.
+    
+    :param directory: Directory of files to use for chapters in an EPUB file
+    :type directory: str, required
+    :param title: Title of the whole ebook used if there is only one chapter, defaults to None
+    :type title: str, optional
+    :return: List of info for each chapter
+    :rtype: List[dict]
+    """
+    chapters = get_default_chapters(directory, title)
+    while True:
+        # Clear the console
+        python_print_tools.printer.clear_console()
+        # Print the chapters
+        print(get_chapters_string(chapters))
+        # Print extra instructions
+        print("\n* - Not Included in Table of Contents\n")
+        print("OPTIONS:")
+        print("T - Edit Chapter Title")
+        print("C - Toggle Inclusion in Contents")
+        print("W - Commit Changes\n")
+        # Get the user response
+        response = input("Command: ").lower()
+        if response == "w":
+            break
+        if response == "t" or response == "c":
+            try:
+                # Get the entry number
+                entry_num = int(input("Entry Number: ")) - 1
+                if response == "c":
+                    # Set the include value
+                    chapters[entry_num]["include"] = not chapters[entry_num]["include"]
+                if response == "t":
+                    # Set the title value
+                    title = input("Title: ")
+                    chapters[entry_num]["title"] = title
+            except (IndexError, ValueError): pass
+    # Return the chapters
     return chapters
 
 def create_content_files(chapters:List[dict], output_directory:str) -> List[dict]:

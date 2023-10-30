@@ -133,7 +133,7 @@ def get_string_from_user(value_type:str, default_value:str=None) -> str:
     # Set the prompt
     prompt = value_type
     if default_value is not None:
-        prompt = f"{prompt} (Defalut is \"{default_value}\")"
+        prompt = f"{prompt} (Default is \"{default_value}\")"
     # Get value from the user
     value = str(input(f"{prompt}: "))
     value = re.sub(r"^\s+|\s+$", "", value)
@@ -340,5 +340,5 @@ def main():
             if archive_type == "cbz":
                 mm_comic_archive.create_cbz(path, metadata["title"], metadata)
             if archive_type == "epub":
-                chapters = mm_epub.get_default_chapters(path, metadata["title"])
+                chapters = mm_epub.get_chapters_from_user(path, metadata["title"])
                 mm_epub.create_epub(chapters, metadata, path)
