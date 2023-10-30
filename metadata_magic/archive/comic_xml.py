@@ -2,8 +2,8 @@
 
 import re
 import html_string_tools
-import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.meta_reader as mm_meta_reader
+import metadata_magic.archive.archive as mm_archive
 from os.path import abspath
 from xml.etree import ElementTree
 
@@ -128,7 +128,7 @@ def read_comic_info(xml_file:str) -> dict:
     """
     # Set up xml
     file = abspath(xml_file)
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     try:
         tree = ElementTree.parse(file)
         base = tree.getroot()
@@ -170,68 +170,4 @@ def read_comic_info(xml_file:str) -> dict:
             day = f"0{day}"
         metadata["date"] = f"{year}-{month}-{day}"
     # Return the gathered metadata
-    return metadata
-
-def generate_info_from_jsons(path:str) -> dict:
-    """
-    Extracts the data to be put into a ComicInfo file from a JSON file in a given directory.
-    Extracts data from the first JSON file found in directory when alphanumerically sorted.
-    Searches sub-directories as well.
-    
-    :param path: Directory in which to search for JSON files
-    :type path: str, required
-    :return: Dictionary containing the metadata info
-    :rtype: dict
-    """
-    # Get all the JSON pairs
-    pairs = mm_meta_finder.get_pairs(path)
-    # Read all JSON metadata
-    json_metas = []
-    for pair in pairs:
-        json_metas.append(mm_meta_reader.load_metadata(pair["json"]))
-    # Get first instance of JSON metadata
-    try:
-        main_meta = json_metas[0]
-    except IndexError: return mm_meta_reader.get_empty_metadata()
-    # Get most metadata from first JSON
-    metadata = mm_meta_reader.get_empty_metadata()
-    metadata["title"] = main_meta["title"]
-    metadata["date"] = main_meta["date"]
-    metadata["writer"] = main_meta["writer"]
-    metadata["artist"] = main_meta["artist"]
-    metadata["cover_artist"] = main_meta["artist"]
-    metadata["publisher"] = main_meta["publisher"]
-    metadata["url"] = main_meta["url"]
-    # Get description metadata
-    description = main_meta["description"]
-    if description is not None:
-        description = html_string_tools.html.replace_entities(description)
-        description = re.sub("<a [^<>]*>|<\\/a[^<>]*>|<b>|<i>|</b>|</i>", "", description)
-        description = re.sub("<[^<>]*>", " ", description)
-        description = re.sub("\\s+", " ", description)
-        description = html_string_tools.regex.remove_whitespace(description)
-    metadata["description"] = description
-    # Get tag metadata
-    tags = main_meta["tags"]
-    if tags is not None and tags is not []:
-        tag_string = tags[0]
-        for i in range(1, len(tags)):
-            tag_string = f"{tag_string},{tags[i]}"
-        metadata["tags"] = tag_string
-    # Get highest age rating in list of JSON metadata
-    highest_age = "Unknown"
-    for json_meta in json_metas:
-        if json_meta["age_rating"] == "X18+":
-            highest_age = "X18+"
-            continue
-        elif json_meta["age_rating"] == "Mature 17+" and not highest_age == "X18+":
-            highest_age = "Mature 17+"
-            continue
-        elif json_meta["age_rating"] == "Teen" and (highest_age == "Everyone" or highest_age == "Unknown"):
-            highest_age = "Teen"
-            continue
-        elif json_meta["age_rating"] == "Everyone" and highest_age == "Unknown":
-            highest_age = "Everyone"
-    metadata["age_rating"] = highest_age
-    # Return metadata
     return metadata

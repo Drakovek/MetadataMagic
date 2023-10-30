@@ -3,7 +3,7 @@
 import os
 import shutil
 import metadata_magic.file_tools as mm_file_tools
-import metadata_magic.meta_reader as mm_meta_reader
+import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.comic_archive as mm_comic_archive
 import metadata_magic.archive.extract_all as mm_extract_all
 from os.path import abspath, exists, join
@@ -18,7 +18,7 @@ def test_extract_all():
     text_file = abspath(join(cbz_builder, "text.txt"))
     mm_file_tools.write_text_file(text_file, "This is text.")
     assert exists(text_file)
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "Some Title"
     cbz_file = mm_comic_archive.create_cbz(cbz_builder, "One", metadata=metadata)
     assert exists(cbz_file)

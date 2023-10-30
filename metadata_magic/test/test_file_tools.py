@@ -55,6 +55,12 @@ def test_read_write_text_file():
     text_file = abspath(join(sub_dir, "new.txt"))
     mm_file_tools.write_text_file(text_file, "Some stuff")
     assert sorted(os.listdir(temp_dir)) == ["directory", "text.txt"]
+    # Test reading a non-unicode formatted text file
+    iso_file = abspath(join(temp_dir, "iso.txt"))
+    with open(iso_file, "w", encoding="ISO-8859-15") as out_file:
+        out_file.write("--This is not ständard ünicode--")
+    assert exists(iso_file)
+    assert mm_file_tools.read_text_file(iso_file) == "--This is not ständard ünicode--"
 
 def test_read_write_json_file():
     """
@@ -138,6 +144,34 @@ def test_find_files_of_type():
     assert basename(files[1]) == "other.png"
     assert basename(files[2]) == "deep.png"
 
+def test_directory_contains():
+    """
+    Tests the directory_contains function.
+    """
+    # Test with single directory
+    temp_dir = mm_file_tools.get_temp_dir()
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "text.txt")), "AAA")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "image.PNG")), "AAA")
+    assert mm_file_tools.directory_contains(temp_dir, [".txt"])
+    assert mm_file_tools.directory_contains(temp_dir, [".png"])
+    assert mm_file_tools.directory_contains(temp_dir, [".blah", ".txt"])
+    assert not mm_file_tools.directory_contains(temp_dir, [".jpg"])
+    assert not mm_file_tools.directory_contains(temp_dir, [".pdf", ".mp4"])
+    # Test with subdirectories
+    sub_dir = abspath(join(temp_dir, "sub"))
+    deep_dir = abspath(join(sub_dir, "deep"))
+    os.mkdir(sub_dir)
+    os.mkdir(deep_dir)
+    mm_file_tools.write_text_file(abspath(join(sub_dir, "doc.pdf")), "AAA")
+    mm_file_tools.write_text_file(abspath(join(sub_dir, "video.mkv")), "AAA")
+    assert mm_file_tools.directory_contains(temp_dir, [".txt"], True)
+    assert mm_file_tools.directory_contains(temp_dir, [".png"], True)
+    assert mm_file_tools.directory_contains(temp_dir, [".pdf"], True)
+    assert mm_file_tools.directory_contains(temp_dir, [".mkv"], True)
+    assert mm_file_tools.directory_contains(temp_dir, [".mkv", ".pdf"], True)
+    assert not mm_file_tools.directory_contains(temp_dir, [".mkv", ".pdf"], False)
+    assert mm_file_tools.directory_contains(temp_dir, [".txt"], False)
+
 def test_create_zip():
     """
     Tests the create_zip function.
@@ -172,12 +206,15 @@ def test_create_zip():
     media_file = abspath(join(temp_dir, "main.txt"))
     sub_file = abspath(join(sub_dir, "subtext.txt"))
     deep_file = abspath(join(deep_dir, "deep.png"))
+    deep_dot = abspath(join(deep_dir, ".dontinclude"))
     mm_file_tools.write_text_file(media_file, "This is text.")
     mm_file_tools.write_text_file(sub_file, "Deeper text")
     mm_file_tools.write_text_file(deep_file, "Deepest yet.")
+    mm_file_tools.write_text_file(deep_dot, "NO")
     assert exists(media_file)
     assert exists(sub_file)
     assert exists(deep_file)
+    assert exists(deep_dot)
     zip_file = abspath(join(temp_dir, "new.zip"))
     assert not exists(zip_file)
     assert mm_file_tools.create_zip(temp_dir, zip_file)

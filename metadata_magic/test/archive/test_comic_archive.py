@@ -2,7 +2,7 @@
 
 import os
 import metadata_magic.file_tools as mm_file_tools
-import metadata_magic.meta_reader as mm_meta_reader
+import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.comic_xml as mm_comic_xml
 import metadata_magic.archive.comic_archive as mm_comic_archive
 from os.path import abspath, basename, exists, join
@@ -56,7 +56,7 @@ def test_create_cbz():
     assert os.listdir(directory_b) == ["media.png"]
     # Test creating CBZ with metadata
     os.remove(cbz_file)
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "What Fun!"
     metadata["artist"] = "Person"
     cbz_file = mm_comic_archive.create_cbz(cbz_directory, "New", metadata=metadata)
@@ -92,16 +92,16 @@ def test_create_cbz():
     assert sorted(os.listdir(extract_directory)) == ["ComicInfo.xml", "new-2"]
     sub_directory = abspath(join(extract_directory, "new-2"))
     assert sorted(os.listdir(sub_directory)) == ["new", "things.txt"]
-    # Test that CBZ is only updated with new metadata if CBZ already exists
+    # Test if an existing CBZ file with the given name already exists
     metadata["title"] = "New!"
     metadata["tags"] = "Some, More, Stuff"
     cbz_file = mm_comic_archive.create_cbz(cbz_directory, "new", metadata=metadata)
-    assert os.listdir(cbz_directory) == ["new.cbz"]
+    assert os.listdir(cbz_directory) == ["new", "new-2.cbz"]
     extract_directory = mm_file_tools.get_temp_dir("dvk_extract_test")
     assert mm_file_tools.extract_zip(cbz_file, extract_directory)
-    assert sorted(os.listdir(extract_directory)) == ["ComicInfo.xml", "new-2"]
-    sub_directory = abspath(join(extract_directory, "new-2"))
-    assert sorted(os.listdir(sub_directory)) == ["new", "things.txt"]
+    assert sorted(os.listdir(extract_directory)) == ["ComicInfo.xml", "new"]
+    sub_directory = abspath(join(extract_directory, "new"))
+    assert sorted(os.listdir(sub_directory)) == ["new.cbz"]
     read_meta = mm_comic_xml.read_comic_info(abspath(join(extract_directory, "ComicInfo.xml")))
     assert read_meta["title"] == "New!"
     assert read_meta["tags"] == "Some,More,Stuff"
@@ -114,7 +114,7 @@ def test_create_cbz():
     mm_file_tools.write_text_file(metadata_file, "metadata")
     assert exists(text_file)
     assert exists(metadata_file)
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "New Metadata"
     cbz_file = mm_comic_archive.create_cbz(cbz_directory, "Meta", metadata=metadata)
     assert exists(cbz_file)
@@ -129,6 +129,25 @@ def test_create_cbz():
     # Test creating a CBZ with no files
     cbz_directory = mm_file_tools.get_temp_dir("dvk_cbz_test")
     assert mm_comic_archive.create_cbz(cbz_directory) is None
+    # Test that dotfiles are not included
+    cbz_directory = mm_file_tools.get_temp_dir("dvk_cbz_test")
+    text_file = abspath(join(cbz_directory, "text.txt"))
+    dot_file = abspath(join(cbz_directory, ".other"))
+    mm_file_tools.write_text_file(text_file, "TEXT!")
+    mm_file_tools.write_text_file(dot_file, "Don't Include")
+    assert exists(text_file)
+    assert exists(dot_file)
+    cbz_file = mm_comic_archive.create_cbz(cbz_directory, "dot")
+    assert basename(cbz_file) == "dot.cbz"
+    assert exists(cbz_file)
+    assert sorted(os.listdir(cbz_directory)) == ["dot", "dot.cbz"]
+    sub_directory = abspath(join(cbz_directory, "dot"))
+    assert sorted(os.listdir(sub_directory)) == [".other", "text.txt"]
+    extract_directory = mm_file_tools.get_temp_dir("dvk_extract_test")
+    assert mm_file_tools.extract_zip(cbz_file, extract_directory)
+    assert sorted(os.listdir(extract_directory)) == ["dot"]
+    sub_directory = abspath(join(extract_directory, "dot"))
+    assert sorted(os.listdir(sub_directory)) == ["text.txt"]
 
 def test_get_info_from_cbz():
     """
@@ -136,7 +155,7 @@ def test_get_info_from_cbz():
     """
     # Create test cbz file.
     temp_dir = mm_file_tools.get_temp_dir()
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "CBZ Title!"
     metadata["tags"] = "Some,Tags"
     text_file = abspath(join(temp_dir, "text.txt"))
@@ -170,7 +189,7 @@ def test_get_info_from_cbz():
     sub_dir = abspath(join(temp_dir, "Internal"))
     text_file = abspath(join(sub_dir, "Thing.txt"))
     metadata_file = abspath(join(sub_dir, "ComicInfo.xml"))
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "Internal!"
     metadata["artist"] = "New Person"
     metadata["description"] = "Some words."
@@ -188,9 +207,8 @@ def test_get_info_from_cbz():
     assert read_meta["description"] == "Some words."
     assert read_meta["publisher"] is None
     # Test getting metadata if instructed to not search subdirectories
-    assert mm_comic_archive.get_info_from_cbz(cbz_file, False) == mm_meta_reader.get_empty_metadata()
+    assert mm_comic_archive.get_info_from_cbz(cbz_file, False) == mm_archive.get_empty_metadata()
     
-
 def test_update_cbz_info():
     """
     Tests the update_cbz_info function.
@@ -198,7 +216,7 @@ def test_update_cbz_info():
     # Create a test cbz file
     temp_dir = mm_file_tools.get_temp_dir()
     text_file = abspath(join(temp_dir, "other.txt"))
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "Old Title."
     metadata["tags"] = "Some,Tags"
     mm_file_tools.write_text_file(text_file, "This is text!")
@@ -266,7 +284,7 @@ def test_update_cbz_info():
     cbz_file = abspath(join(temp_dir, "manual.cbz"))
     assert mm_file_tools.create_zip(temp_dir, cbz_file)
     assert exists(cbz_file)
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "Updated!"
     metadata["artist"] = "New"
     mm_comic_archive.update_cbz_info(cbz_file, metadata)

@@ -5,7 +5,7 @@ import tqdm
 import argparse
 import python_print_tools.printer
 import metadata_magic.file_tools as mm_file_tools
-import metadata_magic.meta_reader as mm_meta_reader
+import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.comic_archive as mm_comic_archive
 from typing import List
 from os.path import abspath, exists, join
@@ -21,7 +21,7 @@ def find_missing_comic_info(path:str) -> List[str]:
     :rtype: list[str]
     """
     # Find all the .cbz files in the given path
-    empty_metadata = mm_meta_reader.get_empty_metadata()
+    empty_metadata = mm_archive.get_empty_metadata()
     empty_metadata["age_rating"] = "Unknown"
     cbz_files = mm_file_tools.find_files_of_type(abspath(path), ".cbz")
     # Check the metadata of each CBZ file
@@ -29,7 +29,7 @@ def find_missing_comic_info(path:str) -> List[str]:
     for cbz_file in tqdm.tqdm(cbz_files):
         # Check if metadata is empty
         metadata = mm_comic_archive.get_info_from_cbz(cbz_file, False)
-        if metadata == mm_meta_reader.get_empty_metadata() or metadata == empty_metadata:
+        if metadata == mm_archive.get_empty_metadata() or metadata == empty_metadata:
             missing.append(cbz_file)
     # Return .cbz files with missing comic info
     return missing

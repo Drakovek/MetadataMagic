@@ -3,7 +3,7 @@
 import os
 import shutil
 import metadata_magic.file_tools as mm_file_tools
-import metadata_magic.meta_reader as mm_meta_reader
+import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.comic_archive as mm_comic_archive
 import metadata_magic.archive.comic_archive_update as mm_comic_archive_update
 from os.path import abspath, exists, join
@@ -17,7 +17,7 @@ def test_mass_update_cbzs():
     text_file = abspath(join(temp_dir, "text.txt"))
     mm_file_tools.write_text_file(text_file, "This is text.")
     assert exists(text_file)
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "This is a title!"
     metadata["artist"] = "Person"
     metadata["writer"] = "New"
@@ -35,7 +35,7 @@ def test_mass_update_cbzs():
     assert exists(cbz_file_3)
     assert sorted(os.listdir(temp_dir)) == ["Name", "Name.cbz", "new.cbz", "other.cbz"]
     # Test updating publisher
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["publisher"] = "New Publisher"
     mm_comic_archive_update.mass_update_cbzs(temp_dir, metadata)
     read_meta = mm_comic_archive.get_info_from_cbz(cbz_file_1)
@@ -47,7 +47,7 @@ def test_mass_update_cbzs():
     assert read_meta["age_rating"] == "Unknown"
     assert sorted(os.listdir(temp_dir)) == ["Name", "Name.cbz", "new.cbz", "other.cbz"]
     # Test updating artists
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["artist"] = "New Guy"
     metadata["writer"] = "Writer Lad"
     metadata["cover_artist"] = "Other"
@@ -62,7 +62,7 @@ def test_mass_update_cbzs():
     assert read_meta["score"] == "3"
     assert sorted(os.listdir(temp_dir)) == ["Name", "Name.cbz", "new.cbz", "other.cbz"]
     # Test updating age rating
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["age_rating"] = "Everyone"
     mm_comic_archive_update.mass_update_cbzs(temp_dir, metadata)
     read_meta = mm_comic_archive.get_info_from_cbz(cbz_file_3)
@@ -75,7 +75,7 @@ def test_mass_update_cbzs():
     assert read_meta["score"] == "3"
     assert sorted(os.listdir(temp_dir)) == ["Name", "Name.cbz", "new.cbz", "other.cbz"]
     # Test updating content rating
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["age_rating"] = "Everyone"
     mm_comic_archive_update.mass_update_cbzs(temp_dir, metadata)
     read_meta = mm_comic_archive.get_info_from_cbz(cbz_file_3)
@@ -88,7 +88,7 @@ def test_mass_update_cbzs():
     assert read_meta["score"] == "3"
     assert sorted(os.listdir(temp_dir)) == ["Name", "Name.cbz", "new.cbz", "other.cbz"]
     # Test updating score
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["score"] = 5
     mm_comic_archive_update.mass_update_cbzs(temp_dir, metadata)
     read_meta = mm_comic_archive.get_info_from_cbz(cbz_file_2)
@@ -101,7 +101,7 @@ def test_mass_update_cbzs():
     assert read_meta["score"] == "5"
     assert sorted(os.listdir(temp_dir)) == ["Name", "Name.cbz", "new.cbz", "other.cbz"]
     # Test updating multiple fields
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "Blah"
     metadata["artist"] = "Madam Anonymous"
     metadata["writer"] = None

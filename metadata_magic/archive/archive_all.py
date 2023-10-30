@@ -8,6 +8,7 @@ import html_string_tools
 import python_print_tools.printer
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
+import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.comic_xml as mm_comic_xml
 import metadata_magic.archive.comic_archive as mm_comic_archive
 import metadata_magic.rename.rename_tools as mm_rename_tools
@@ -38,7 +39,7 @@ def archive_all(directory:str):
         shutil.copy(pair["json"], abspath(join(temp_dir, basename(pair["json"]))))
         shutil.copy(pair["media"], abspath(join(temp_dir, basename(pair["media"]))))
         # Get metadata from the JSON
-        metadata = mm_comic_xml.generate_info_from_jsons(temp_dir)
+        metadata = mm_archive.get_info_from_jsons(temp_dir)
         # Create cbz file
         cbz_file = mm_comic_archive.create_cbz(temp_dir, metadata=metadata)
         assert exists(cbz_file)

@@ -1,9 +1,7 @@
 import os
 import re
 import shutil
-import argparse
 import html_string_tools
-import python_print_tools.printer
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.comic_xml as mm_comic_xml
 import metadata_magic.rename.rename_tools as mm_rename_tools
@@ -40,11 +38,19 @@ def format_xhtml(html:str, title:str) -> str:
     formatted_html = re.sub(r"\s*</p>\s*", "</p>", formatted_html)
     formatted_html = re.sub(r"\s*<div>\s*", "<div>", formatted_html)
     formatted_html = re.sub(r"\s*</div>\s*", "</div>", formatted_html)
+    formatted_html = re.sub(r"\s*<p></p>\s*|\s*<p\s*/>\s*", "", formatted_html)
+    formatted_html = re.sub(r"\s*<div></div>\s*|\s*<div\s*/>\s*", "", formatted_html)
     if not formatted_html.startswith("<") and not formatted_html.endswith(">"):
         formatted_html = f"<p>{formatted_html}</p>"
     # Add text to the body
-    body = ElementTree.fromstring(f"<body>{formatted_html}</body>")
-    base.append(body)
+    try:
+        formatted_html = f"<body>{formatted_html}</body>"
+        body = ElementTree.fromstring(formatted_html)
+        base.append(body)
+    except ElementTree.ParseError as parse_error:
+        character = ord(formatted_html[parse_error.position[0]])
+        print(f"XML Parse Error: Character {character}")
+        return None
     # Set indents to make the XML more readable
     ElementTree.indent(base, space="    ")
     # Get xml as string
@@ -65,16 +71,21 @@ def txt_to_xhtml(txt_file:str, title:str) -> str:
     # Read text from the given txt file
     text = mm_file_tools.read_text_file(txt_file)
     # Remove unnessecary whitespace
-    text.replace("\r", "\n")
+    text.replace("\r\n", "\n")
+    text.replace("\n\r", "\n")
+    text.replace("\r", "")
     text = re.sub(r"\n{2,}", "\n\n", text)
+    text = re.sub(r"^\s+|\s+$", "", text)
     # Split into paragraphs
     html = ""
     paragraphs = text.split("\n\n")
     for paragraph in paragraphs:
-        html = f"{html}<p>{paragraph}</p>"
-    # Add escape characters
-    html = html.replace("\n", "<br/>")
-    html = html_string_tools.html.replace_reserved_in_html(html)
+        # Add escape characters
+        formatted = paragraph.replace("\n", "{{{{br}}}}")
+        formatted = html_string_tools.html.replace_reserved_characters(formatted)
+        formatted = formatted.replace("{{{{br}}}}", "<br />")
+        html = f"{html}<p>{formatted}</p>"
+    html.replace("\r", "")
     # Return with XHTML formatting
     return format_xhtml(html, title)
 
@@ -394,6 +405,11 @@ def get_metadata_xml(metadata:dict) -> str:
     if metadata["publisher"] is not None:
         publisher_tag = ElementTree.SubElement(base, "dc:publisher")
         publisher_tag.text = metadata["publisher"]
+    # Set the metadata age rating
+    if metadata["age_rating"] is not None:
+        age_rating_tag = ElementTree.SubElement(base, "meta")
+        age_rating_tag.attrib = {"property":"dcterms:audience"}
+        age_rating_tag.text = metadata["age_rating"]
     # Set the metadata series
     if metadata["series"] is not None:
         series_title = ElementTree.SubElement(base, "meta")
@@ -449,7 +465,7 @@ def get_manifest_xml(chapters:List[dict]) -> str:
         chapter_item.attrib = attributes
     # Add the style file
     style_item = ElementTree.SubElement(base, "item")
-    style_item.attrib = {"href":"style/epubstyle", "id":"epubstyle", "media-type":"text/css"}
+    style_item.attrib = {"href":"style/epubstyle.css", "id":"epubstyle", "media-type":"text/css"}
     # Add the nav and ncx files
     nav_item = ElementTree.SubElement(base, "item")
     nav_item.attrib = {"href":"nav.xhtml", "id":"nav", "media-type":"application/xhtml+xml", "properties":"nav"}
@@ -474,10 +490,10 @@ def create_content_opf(chapters:List[dict], metadata:dict, output_directory:str)
     # Create the XML base
     base = ElementTree.Element("package")
     package_attributes = dict()
-    package_attributes["xmlns:dc"] = "http://purl.org/dc/elements/1.1/"
     package_attributes["xmlns"] = "http://www.idpf.org/2007/opf"
-    package_attributes["unique-identifier"] = "uid"
+    package_attributes["unique-identifier"] = "id"
     package_attributes["version"] = "3.0"
+    package_attributes["prefix"] = "http://www.idpf.org/vocab/rendition/#"
     base.attrib = package_attributes
     # Create the metadata tags
     metadata_attributes = dict()
@@ -552,173 +568,3 @@ def create_epub(chapters:List[dict], metadata:dict, directory:str) -> str:
     # Create the epub file
     assert mm_file_tools.create_zip(build_directory, epub_file, 8, "application/epub+zip")
     return epub_file
-
-def user_create_epub(path:str,
-                rp_description:bool=False,
-                rp_date:bool=False,
-                rp_artists:bool=False,
-                rp_publisher:bool=False,
-                rp_url:bool=False,
-                rp_tags:bool=False,
-                rp_score:bool=False):
-    """
-    Creates an epub file using the files in a directory and metadata from the user.
-    
-    :param path: Directory with files to archive
-    :type path: str, required
-    :param rp_description: Whether to replace the description from gathered metadata, defaults to False
-    :type rp_description: bool, optional
-    :param rp_date: Whether to replace the date from gathered metadata, defaults to False
-    :type rp_date: bool, optional
-    :param rp_artists: Whether to replace the artists/writers from gathered metadata, defaults to False
-    :type rp_artists: bool, optional
-    :param rp_publisher: Whether to replace the publisher from gathered metadata, defaults to False
-    :type rp_publiser: bool, optional
-    :param rp_url: Whether to replace the URL from gathered metadata, defaults to False
-    :type rp_url: bool, optional
-    :param rp_tags: Whether to replace the tags from gathered metadata, defaults to False
-    :type rp_tags: bool, optional
-    :param rp_score: Whether to replace the score from gathered metadata, defaults to False
-    :type rp_score: bool, optional
-    """
-    # Get default metadata
-    full_path = abspath(path)
-    try:
-        metadata = mm_comic_xml.generate_info_from_jsons(full_path)
-    except FileNotFoundError: metadata = mm_meta_reader.get_empty_metadata()
-    # Remove metadata fields the user wishes to replace
-    if rp_description:
-        metadata["description"] = None
-    if rp_date:
-        metadata["date"] = None
-    if rp_artists:
-        metadata["artist"] = None
-        metadata["writer"] = None
-        metadata["cover_artist"] = None
-    if rp_publisher:
-        metadata["publisher"] = None
-    if rp_url:
-        metadata["url"] = None
-    if rp_tags:
-        metadata["tags"] = None
-    # Get the title
-    title = metadata["title"]
-    if title is None:
-        metadata["title"] = str(input("Title: "))
-    else:
-        title = str(input(f"Title (Default is \"{title}\"): "))
-        if not title == "":
-            metadata["title"] = title
-    # Get the description
-    if metadata["description"] is None:
-        description = str(input("Description: "))
-        if not description == "":
-            metadata["description"] = description
-    # Get the date
-    if metadata["date"] is None:
-        date = ""
-        regex = "(19[7-9][0-9]|2[0-1][0-9]{2})\\-(0[1-9]|1[0-2])\\-(0[1-9]|[1-2][0-9]|3[0-1])"
-        while len(re.findall(regex, date)) == 0:
-            date = str(input("Date (YYYY-MM-DD): "))
-        metadata["date"] = date
-    # Get the Writer
-    if metadata["writer"] is None:
-        writer = str(input(f"Writer: "))
-        if not writer == "":
-            metadata["writer"] = writer
-    # Get the Illustrator
-    artist = metadata["artist"]
-    if artist is None:
-        artist = str(input("Illustrator: "))
-        if not artist == "":
-            metadata["artist"] = artist
-    # Get the Cover Artist
-    if metadata["cover_artist"] is None:
-        cover = str(input(f"Cover Artist: "))
-        if not cover == "":
-            metadata["cover_artist"] = cover
-    # Get the Publisher
-    if metadata["publisher"] is None:
-        publisher = str(input("Publisher: "))
-        if not publisher == "":
-            metadata["publisher"] = publisher
-    # Get the URL
-    if metadata["url"] is None:
-        url = str(input("URL: "))
-        if not url == "":
-            metadata["url"] = url
-    # Get tags
-    if metadata["tags"] is None:
-        url = str(input("Tags: "))
-        if not url == "":
-            metadata["tags"] = re.sub(r"\s*,\s*", ",", url)
-    # Get score
-    if rp_score:
-        score = str(input("Score (Range 0-5): "))
-        if not score == "":
-            metadata["score"] = score
-    # Create/Update .epub
-    create_epub(get_default_chapters(full_path, metadata["title"]), metadata, full_path)
-
-def main():
-    """
-    Sets up the parser for creating an epub file.
-    """
-    # Set up argument parser
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-            "path",
-            help="Path to directory for creating epub.",
-            nargs="?",
-            type=str,
-            default=str(os.getcwd()))
-    parser.add_argument(
-            "-s",
-            "--summary",
-            help="Use user summary instead of summary in metadata.",
-            action="store_true")
-    parser.add_argument(
-            "-d",
-            "--date",
-            help="Use user date instead of date in metadata.",
-            action="store_true")
-    parser.add_argument(
-            "-a",
-            "--artists",
-            help="Use user artists instead of artists in metadata.",
-            action="store_true")
-    parser.add_argument(
-            "-p",
-            "--publisher",
-            help="Use user publisher instead of publisher in metadata.",
-            action="store_true")
-    parser.add_argument(
-            "-u",
-            "--url",
-            help="Use user URL instead of URL in metadata.",
-            action="store_true")
-    parser.add_argument(
-            "-t",
-            "--tags",
-            help="Use user tags instead of tags in metadata.",
-            action="store_true")
-    parser.add_argument(
-            "-g",
-            "--grade",
-            help="Use user grade/score instead of score in metadata.",
-            action="store_true")
-    args = parser.parse_args()
-    # Check that directory is valid
-    path = abspath(args.path)
-    if not exists(path):
-        python_print_tools.printer.color_print("Invalid path.", "red")
-    else:
-        # Create the epub
-        user_create_epub(path,
-                rp_description=args.summary,
-                rp_date=args.date,
-                rp_artists=args.artists,
-                rp_publisher=args.publisher,
-                rp_url=args.url,
-                rp_tags=args.tags,
-                rp_score=args.grade)

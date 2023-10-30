@@ -2,6 +2,7 @@
 
 import os
 import json
+import chardet
 import shutil
 import zipfile
 import tempfile
@@ -38,7 +39,7 @@ def write_text_file(file:str, text:str):
     """
     try:
         full_path = abspath(file)
-        with open(full_path, "w") as out_file:
+        with open(full_path, "w", encoding="UTF-8") as out_file:
             out_file.write(text)
     except FileNotFoundError: pass
 
@@ -52,10 +53,12 @@ def read_text_file(file:str) -> str:
     :rtype: str
     """
     try:
-        full_path = abspath(file)
-        with open (full_path) as in_file:
-            return in_file.read()
-    except (FileNotFoundError, IsADirectoryError, UnicodeDecodeError): return None
+        with open(abspath(file), "rb") as in_file:
+            data = in_file.read()
+            encoding = chardet.detect(data)["encoding"]
+            text = data.decode(encoding)
+            return text
+    except: return None
 
 def write_json_file(file:str, contents:dict):
     """
@@ -66,11 +69,8 @@ def write_json_file(file:str, contents:dict):
     :param text: Contents to save as JSON
     :type text: str, required
     """
-    try:
-        full_path = abspath(file)
-        with open(full_path, "w") as out_file:
-            json.dump(contents, out_file)
-    except FileNotFoundError: pass
+    json_text = json.dumps(contents, indent="   ", separators=(", ", ": "))
+    write_text_file(file, json_text)
 
 def read_json_file(file:str) -> dict:
     """
@@ -82,10 +82,10 @@ def read_json_file(file:str) -> dict:
     :rtype: dict
     """
     try:
-        full_path = abspath(file)
-        with open(full_path) as in_file:
-            return json.load(in_file)
-    except (FileNotFoundError, IsADirectoryError, json.decoder.JSONDecodeError): return {}
+        json_text = read_text_file(file)
+        json_dict = json.loads(json_text)
+        return json_dict
+    except(TypeError, json.JSONDecodeError): return {}
 
 def find_files_of_type(directory:str, extension:str, include_subdirectories:bool=True, inverted:bool=False) -> List[str]:
     """
@@ -111,7 +111,7 @@ def find_files_of_type(directory:str, extension:str, include_subdirectories:bool
         for filename in current_files:
             # Find file properties
             full_file = abspath(join(directories[0], filename))
-            has_extension = html_string_tools.html.get_extension(full_file) == extension
+            has_extension = html_string_tools.html.get_extension(full_file).lower() == extension
             # Add directory to the list
             if isdir(full_file):
                 if include_subdirectories:
@@ -124,6 +124,41 @@ def find_files_of_type(directory:str, extension:str, include_subdirectories:bool
         del directories[0]
     # Return found files
     return files
+
+def directory_contains(directory:str, extensions:List[str], include_subdirectories:bool=True) -> bool:
+    """
+    Returns whether a given directory contains a file with any of the given extensions.
+
+    :param directory: Directory in which to search for files
+    :type directory: str, required
+    :param extensions: List of extensions to search for
+    :type extensions: List[str], required
+    :param include_subdirectories: Whether to search subdirectories, defaults to True
+    :type include_subdirectories: bool, optional
+    :return: Whether any files of the given extensions exist in the given directory
+    :rtype: bool
+    """
+    directories = [abspath(directory)]
+    # Run through all directories
+    while len(directories) > 0:
+        # Get list of all files in the current directory
+        current_files = os.listdir(directories[0])
+        for filename in current_files:
+            # Get the full file
+            full_file = abspath(join(directories[0], filename))
+            # Check if the file is a directory
+            if isdir(full_file):
+                if include_subdirectories:
+                    directories.append(full_file)
+                continue
+            # Check if the extension matches
+            extension = html_string_tools.html.get_extension(full_file).lower()
+            if extension in extensions:
+                return True
+        # Delete the current directory from the list
+        del directories[0]
+    # Return false if no files of the type specified were found
+    return False
 
 def create_zip(directory:str, zip_path:str, compress_level:int=9, mimetype:str=None) -> bool:
     """

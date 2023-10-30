@@ -1,7 +1,7 @@
 import os
 import metadata_magic.archive.epub as mm_epub
 import metadata_magic.file_tools as mm_file_tools
-import metadata_magic.meta_reader as mm_meta_reader
+import metadata_magic.archive.archive as mm_archive
 from os.path import abspath, basename, exists, join
 
 def test_format_xhtml():
@@ -466,7 +466,7 @@ def test_get_metadata_xml():
     Tests the get_metadata_xml function.
     """
     # Test title metadata
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "This's a title!\\'"
     xml = mm_epub.get_metadata_xml(metadata)
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
@@ -668,9 +668,24 @@ def test_get_metadata_xml():
     compare = f"{compare}\n    <dc:subject>stuff</dc:subject>"
     compare = f"{compare}\n</metadata>"
     assert xml == compare
-    # Test metadata score
+    # Test metadata age rating
     metadata["tags"] = None
+    metadata["age_rating"] = "Everyone"
+    xml = mm_epub.get_metadata_xml(metadata)
+    compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
+    compare = f"{compare}\n    <dc:language>en</dc:language>"
+    compare = f"{compare}\n    <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
+    compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
+    compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
+    compare = f"{compare}\n    <dc:title>Title.</dc:title>"
+    compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
+    compare = f"{compare}\n    <dc:publisher>Company</dc:publisher>"
+    compare = f"{compare}\n    <meta property=\"dcterms:audience\">Everyone</meta>"
+    compare = f"{compare}\n</metadata>"
+    assert xml == compare
+    # Test metadata score
     metadata["score"] = "0"
+    metadata["age_rating"] = None
     xml = mm_epub.get_metadata_xml(metadata)
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
@@ -765,7 +780,7 @@ def test_get_manifest_xml():
     compare = f"{compare}<manifest>"
     compare = f"{compare}\n    <item href=\"content/1.xhtml\" id=\"item0\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n    <item href=\"content/2.xhtml\" id=\"item1\" media-type=\"application/xhtml+xml\" />"
-    compare = f"{compare}\n    <item href=\"style/epubstyle\" id=\"epubstyle\" media-type=\"text/css\" />"
+    compare = f"{compare}\n    <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
     compare = f"{compare}\n    <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
     compare = f"{compare}\n    <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"
     compare = f"{compare}\n</manifest>"
@@ -784,7 +799,7 @@ def test_create_content_opf():
     chapters = mm_epub.get_default_chapters(temp_dir)
     chapters = mm_epub.create_content_files(chapters, output_dir)
     # Test creating the opf file
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "Thing!"
     mm_epub.create_content_opf(chapters, metadata, output_dir)
     assert sorted(os.listdir(output_dir)) == ["content", "content.opf"]
@@ -792,8 +807,8 @@ def test_create_content_opf():
     opf_contents = mm_file_tools.read_text_file(opf_file)
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
     compare = f"{compare}\n<package xmlns:dc=\"http://purl.org/dc/elements/1.1/\" "
-    compare = f"{compare}xmlns:dc=\"http://purl.org/dc/elements/1.1/\" "
-    compare = f"{compare}xmlns=\"http://www.idpf.org/2007/opf\" unique-identifier=\"uid\" version=\"3.0\">"
+    compare = f"{compare}xmlns=\"http://www.idpf.org/2007/opf\" unique-identifier=\"id\" "
+    compare = f"{compare}version=\"3.0\" prefix=\"http://www.idpf.org/vocab/rendition/#\">"
     compare = f"{compare}\n    <metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n        <dc:language>en</dc:language>"
     compare = f"{compare}\n        <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
@@ -805,7 +820,7 @@ def test_create_content_opf():
     compare = f"{compare}\n        <item href=\"content/1.xhtml\" id=\"item0\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n        <item href=\"content/2.xhtml\" id=\"item1\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n        <item href=\"content/3.xhtml\" id=\"item2\" media-type=\"application/xhtml+xml\" />"
-    compare = f"{compare}\n        <item href=\"style/epubstyle\" id=\"epubstyle\" media-type=\"text/css\" />"
+    compare = f"{compare}\n        <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
     compare = f"{compare}\n        <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
     compare = f"{compare}\n        <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"
     compare = f"{compare}\n    </manifest>"
@@ -828,7 +843,7 @@ def test_create_epub():
     mm_file_tools.write_text_file(abspath(join(temp_dir, "3.pdf")), "Stuff")
     chapters = mm_epub.get_default_chapters(temp_dir)
     # Create the epub file
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "Name"
     epub_file = mm_epub.create_epub(chapters, metadata, temp_dir)
     assert exists(epub_file)
@@ -869,8 +884,8 @@ def test_create_epub():
     compare = ""
     compare = f"{compare}<?xml version=\"1.0\" encoding=\"utf-8\"?>"
     compare = f"{compare}\n<package xmlns:dc=\"http://purl.org/dc/elements/1.1/\" "
-    compare = f"{compare}xmlns:dc=\"http://purl.org/dc/elements/1.1/\" "
-    compare = f"{compare}xmlns=\"http://www.idpf.org/2007/opf\" unique-identifier=\"uid\" version=\"3.0\">"
+    compare = f"{compare}xmlns=\"http://www.idpf.org/2007/opf\" unique-identifier=\"id\" "
+    compare = f"{compare}version=\"3.0\" prefix=\"http://www.idpf.org/vocab/rendition/#\">"
     compare = f"{compare}\n    <metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n        <dc:language>en</dc:language>"
     compare = f"{compare}\n        <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
@@ -881,7 +896,7 @@ def test_create_epub():
     compare = f"{compare}\n    <manifest>"
     compare = f"{compare}\n        <item href=\"content/1.xhtml\" id=\"item0\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n        <item href=\"content/2.xhtml\" id=\"item1\" media-type=\"application/xhtml+xml\" />"
-    compare = f"{compare}\n        <item href=\"style/epubstyle\" id=\"epubstyle\" media-type=\"text/css\" />"
+    compare = f"{compare}\n        <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
     compare = f"{compare}\n        <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
     compare = f"{compare}\n        <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"
     compare = f"{compare}\n    </manifest>"

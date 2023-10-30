@@ -2,7 +2,7 @@
 
 import os
 import metadata_magic.file_tools as mm_file_tools
-import metadata_magic.meta_reader as mm_meta_reader
+import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.series_info as mm_series_info
 import metadata_magic.archive.comic_archive as mm_comic_archive
 from os.path import abspath, exists, join
@@ -93,7 +93,7 @@ def test_write_series_info():
     text_file = abspath(join(cbz_sub, "text.txt"))
     mm_file_tools.write_text_file(text_file, "This is text")
     assert exists(text_file)
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "This is CBZ"
     metadata["description"] = "Some words."
     cbz_file = mm_comic_archive.create_cbz(cbz_sub, metadata=metadata)
@@ -104,7 +104,7 @@ def test_write_series_info():
     media_file = abspath(join(next_sub, "thing.png"))
     mm_file_tools.write_text_file(media_file, "Still text.")
     assert exists(media_file)
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "This is now also CBZ"
     metadata["description"] = "Other words."
     next_file = mm_comic_archive.create_cbz(next_sub, metadata=metadata)

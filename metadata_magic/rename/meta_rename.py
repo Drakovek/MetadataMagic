@@ -58,10 +58,9 @@ def get_filename_from_metadata(file:str,
     :rtype: str
     """
     full_file = abspath(file)
-    try:
-        # Load JSON metadata if applicable
-        metadata = mm_meta_reader.load_metadata(full_file)
-    except (json.decoder.JSONDecodeError, UnicodeDecodeError):
+    # Load JSON metadata if applicable
+    metadata = mm_meta_reader.load_metadata(full_file)
+    if metadata["title"] is None:
         # Load CBZ metadata if applicable
         metadata = mm_comic_archive.get_info_from_cbz(full_file)
     # Return filename if metadata could not be found

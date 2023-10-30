@@ -3,7 +3,7 @@
 import os
 import shutil
 import metadata_magic.file_tools as mm_file_tools
-import metadata_magic.meta_reader as mm_meta_reader
+import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.comic_xml as mm_comic_xml
 import metadata_magic.archive.comic_archive as mm_comic_archive
 import metadata_magic.error.missing_fields as mm_missing_fields
@@ -23,11 +23,11 @@ def test_find_missing_comic_info():
     assert exists(cbz_file)
     shutil.copy(cbz_file, abspath(join(temp_dir, basename(cbz_file))))
     os.remove(cbz_file)
-    cbz_file = mm_comic_archive.create_cbz(cbz_build_dir, "empty-meta", metadata=mm_meta_reader.get_empty_metadata())
+    cbz_file = mm_comic_archive.create_cbz(cbz_build_dir, "empty-meta", metadata=mm_archive.get_empty_metadata())
     assert exists(cbz_file)
     shutil.copy(cbz_file, abspath(join(temp_dir, basename(cbz_file))))
     os.remove(cbz_file)
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "Bare Minimum"
     cbz_file = mm_comic_archive.create_cbz(cbz_build_dir, "some-meta", metadata=metadata)
     assert exists(cbz_file)
@@ -64,7 +64,7 @@ def test_find_missing_fields():
     text_file = abspath(join(cbz_build_dir, "text.txt"))
     mm_file_tools.write_text_file(text_file, "This is text!!!")
     assert exists(text_file)
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["series"] = "The Series"
     metadata["description"] = "Description"
     metadata["tags"] = "More Stuff"
@@ -74,7 +74,7 @@ def test_find_missing_fields():
     shutil.copy(cbz_file, abspath(join(temp_dir, basename(cbz_file))))
     os.remove(cbz_file)
     # Create CBZ test file B
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "Comic Book B"
     metadata["description"] = "Something"
     metadata["date"] = "2054-03-29"
@@ -86,7 +86,7 @@ def test_find_missing_fields():
     shutil.copy(cbz_file, abspath(join(temp_dir, basename(cbz_file))))
     os.remove(cbz_file)
     # Create CBZ test file C
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["date"] = "2040-12-03"
     metadata["artist"] = "Person"
     metadata["publisher"] = "New Thing LLC"
@@ -97,7 +97,7 @@ def test_find_missing_fields():
     shutil.copy(cbz_file, abspath(join(temp_dir, basename(cbz_file))))
     os.remove(cbz_file)
     # Create CBZ test file D
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "Comic Book D"
     metadata["series"] = "The Series"
     metadata["writer"] = "Different Person"

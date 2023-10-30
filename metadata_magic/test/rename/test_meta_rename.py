@@ -3,8 +3,8 @@
 import os
 import shutil
 import metadata_magic.file_tools as mm_file_tools
-import metadata_magic.meta_reader as mm_meta_reader
 import metadata_magic.rename.meta_rename as mm_meta_rename
+import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.comic_archive as mm_comic_archive
 from os.path import abspath, exists, join
 
@@ -24,8 +24,8 @@ def test_rename_cbz_files():
     mm_file_tools.write_text_file(text_file_2, "Some Text.")
     assert exists(text_file_1)
     assert exists(text_file_2)
-    metadata1 = mm_meta_reader.get_empty_metadata()
-    metadata2 = mm_meta_reader.get_empty_metadata()
+    metadata1 = mm_archive.get_empty_metadata()
+    metadata2 = mm_archive.get_empty_metadata()
     metadata1["title"] = "Some Name"
     metadata1["artist"] = "Person"
     metadata1["date"] = "2020-05-30"
@@ -49,7 +49,7 @@ def test_rename_cbz_files():
     assert sorted(os.listdir(sub_dir_1)) == ["[2020-05-30] Some Name.cbz"]
     assert sorted(os.listdir(sub_dir_2)) == ["[2018-11-15] Thing.cbz"]
     # Test renaming with no title
-    new_metadata = mm_meta_reader.get_empty_metadata()
+    new_metadata = mm_archive.get_empty_metadata()
     new_cbz = mm_comic_archive.create_cbz(temp_dir, metadata=new_metadata)
     mm_meta_rename.rename_cbz_files(temp_dir)
     assert sorted(os.listdir(temp_dir)) == ["dvk_meta_cbz.cbz", "sub1", "sub2"]
@@ -150,7 +150,7 @@ def test_get_filename_from_metadata():
     assert exists(json_file)
     assert mm_meta_rename.get_filename_from_metadata(json_file) == "This is a title!"
     # Test getting filename from CBZ
-    metadata = mm_meta_reader.get_empty_metadata()
+    metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "CBZ Time"
     cbz_file = mm_comic_archive.create_cbz(temp_dir, metadata=metadata)
     assert exists(cbz_file)

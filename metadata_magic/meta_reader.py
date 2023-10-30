@@ -5,27 +5,6 @@ from os.path import abspath
 from typing import List
 from . import file_tools as mm_file_tools
 
-def get_empty_metadata() -> dict:
-    """
-    Returns a dictionary with keys for multiple metadata fields, populated as None.
-    """
-    meta_dict = dict()
-    meta_dict["title"] = None
-    meta_dict["series"] = None
-    meta_dict["series_number"] = None
-    meta_dict["series_total"] = None
-    meta_dict["description"] = None
-    meta_dict["date"] = None
-    meta_dict["writer"] = None
-    meta_dict["artist"] = None
-    meta_dict["cover_artist"] = None
-    meta_dict["publisher"] = None
-    meta_dict["tags"] = None
-    meta_dict["url"] = None
-    meta_dict["age_rating"] = None
-    meta_dict["score"] = None
-    return meta_dict
-
 def get_value_from_keylist(dictionary:dict, keylist:List[List[str]], type_obj):
     """
     Returns the value for the first valid given key in a dictionary.
