@@ -89,10 +89,10 @@ def get_info_from_jsons(path:str) -> dict:
     description = main_meta["description"]
     if description is not None:
         description = html_string_tools.html.replace_entities(description)
-        description = re.sub("<a [^<>]*>|<\\/a[^<>]*>|<b>|<i>|</b>|</i>", "", description)
+        description = re.sub(r"<a [^<>]*>|<\/a[^<>]*>|<b>|<i>|<\/b>|<\/i>", "", description)
         description = re.sub("<[^<>]*>", " ", description)
-        description = re.sub("\\s+", " ", description)
-        description = html_string_tools.regex.remove_whitespace(description)
+        description = re.sub(r"\s+", " ", description)
+        description = description.strip()
     metadata["description"] = description
     # Get tag metadata
     tags = main_meta["tags"]
@@ -135,8 +135,7 @@ def get_string_from_user(value_type:str, default_value:str=None) -> str:
     if default_value is not None:
         prompt = f"{prompt} (Default is \"{default_value}\")"
     # Get value from the user
-    value = str(input(f"{prompt}: "))
-    value = re.sub(r"^\s+|\s+$", "", value)
+    value = str(input(f"{prompt}: ")).strip()
     # Return user value if the value is valid
     if not value == "":
         return value

@@ -34,7 +34,7 @@ def format_xhtml(html:str, title:str) -> str:
     link = ElementTree.SubElement(head, "link")
     link.attrib = {"rel":"stylesheet", "href":"../style/epubstyle.css", "type":"text/css"}
     # Format the given HTML text
-    formatted_html = re.sub(r"^\s+|\s+$|\n", "", html)
+    formatted_html = html.replace("\n", "").strip()
     formatted_html = re.sub(r"\s*<p>\s*", "<p>", formatted_html)
     formatted_html = re.sub(r"\s*</p>\s*", "</p>", formatted_html)
     formatted_html = re.sub(r"\s*<div>\s*", "<div>", formatted_html)
@@ -75,8 +75,7 @@ def txt_to_xhtml(txt_file:str, title:str) -> str:
     text.replace("\r\n", "\n")
     text.replace("\n\r", "\n")
     text.replace("\r", "")
-    text = re.sub(r"\n{2,}", "\n\n", text)
-    text = re.sub(r"^\s+|\s+$", "", text)
+    text = re.sub(r"\n{2,}", "\n\n", text).strip()
     # Split into paragraphs
     html = ""
     paragraphs = text.split("\n\n")
@@ -100,8 +99,7 @@ def get_title_from_file(file:str) -> str:
     :rtype: str
     """
     title = basename(file)
-    title = re.sub(r"\.[^\.]{1,6}$", "", title)
-    title = re.sub(r"^\s+|\s+$", "", title)
+    title = re.sub(r"\.[^\.]{1,6}$", "", title).strip()
     title = re.sub(r"^\[[^\]]+\]\s*|^\([^\)]+\)\s*", "", title)
     return title
 

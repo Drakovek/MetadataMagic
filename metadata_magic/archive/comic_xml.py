@@ -147,8 +147,8 @@ def read_comic_info(xml_file:str) -> dict:
     metadata["score"] = base.findtext("CommunityRating")
     # Get the tags, removing score tags if necessary
     try:
-        metadata["tags"] = re.sub("\\s*,+\\s*", ",", base.findtext("Tags"))
-        metadata["tags"] = re.sub("^\\s+|\\s+$|★{1,5},|,★{1,5}$", "", metadata["tags"])
+        metadata["tags"] = re.sub(r"\s*,+\s*", ",", base.findtext("Tags"))
+        metadata["tags"] = re.sub(r"^\s+|\s+$|★{1,5},|,★{1,5}$", "", metadata["tags"])
         metadata["tags"] = re.sub("^★{1,5}$", "", metadata["tags"])
         if metadata["tags"] == "":
             metadata["tags"] = None
