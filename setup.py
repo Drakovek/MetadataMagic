@@ -6,13 +6,13 @@ import setuptools
 
 console_scripts = [
     "mm-archive = metadata_magic.archive.archive:main",
+    "mm-update = metadata_magic.archive.update:main",
     "meta-missing-media = metadata_magic.error.missing_media:main",
     "meta-missing-metadata = metadata_magic.error.missing_metadata:main",
     "meta-missing-fields = metadata_magic.error.missing_fields:main",
     "meta-rename = metadata_magic.rename.meta_rename:main",
     "sort-rename = metadata_magic.rename.sort_rename:main",    
     "archive-series = metadata_magic.archive.series_info:main",
-    "update-comic-archives = metadata_magic.archive.comic_archive_update:main",
     "archive-all-comics = metadata_magic.archive.archive_all:main",
     "extract-all-comics = metadata_magic.archive.extract_all:main"]
 
@@ -21,7 +21,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="Metadata-Magic",
-    version="0.7.8",
+    version="0.7.9",
     author="Drakovek",
     author_email="DrakovekMail@gmail.com",
     description="Utility for managing metadata.",

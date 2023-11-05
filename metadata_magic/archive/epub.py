@@ -1,9 +1,11 @@
 import os
 import re
+import math
 import shutil
 import html_string_tools
 import python_print_tools.printer
 import metadata_magic.file_tools as mm_file_tools
+import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.comic_xml as mm_comic_xml
 import metadata_magic.rename.rename_tools as mm_rename_tools
 from xml.etree import ElementTree
@@ -653,3 +655,145 @@ def create_epub(chapters:List[dict], metadata:dict, directory:str) -> str:
     # Create the epub file
     assert mm_file_tools.create_zip(build_directory, epub_file, 8, "application/epub+zip")
     return epub_file
+
+def get_info_from_epub(epub_file:str) -> dict:
+    """
+    Extracts content.opf from a given .epub file and returns the metadata as a dict.
+    
+    :param epub_file: Path to a .epub file
+    :type epub_file: str, required
+    :return: Dictionary containing metadata from the .epub file
+    :rtype: dict
+    """
+    # Create temporary directory
+    file = abspath(epub_file)
+    extract_dir = mm_file_tools.get_temp_dir("dvk_meta_extract")
+    assert exists(extract_dir)
+    # Extract content.opf from given file
+    xml_file = abspath(mm_file_tools.extract_file_from_zip(epub_file, extract_dir, "content.opf", True))
+    if xml_file is None or not exists(xml_file):
+        return mm_archive.get_empty_metadata()
+    # Read XML file
+    try:
+        # Get main namespace
+        tree = ElementTree.parse(xml_file)
+        base = tree.getroot()
+        ns = {"0": re.findall("(?<=^{)[^}]+(?=}[^{}]+$)", str(base.tag))[0]}
+        ElementTree.register_namespace("0", ns["0"])    
+        meta_xml = base.find("0:metadata", ns)
+    except (IndexError, ElementTree.ParseError): return mm_archive.get_empty_metadata()
+    # Get DC namespace
+    ns["dc"] = ""
+    for tag in base.iter():
+        try:
+            ns["dc"] = re.findall(r"(?<=^{)[^}]*\/dc\/[^}]*(?=}[^{}]+$)", str(tag.tag))[0]
+            break
+        except IndexError:pass
+    metadata = mm_archive.get_empty_metadata()
+    # Extract title from the XML
+    metadata["title"] = meta_xml.findtext("dc:title", namespaces=ns)
+    # Extract date from the XML
+    metadata["date"] = meta_xml.findtext("dc:date", namespaces=ns)[:10]
+    if metadata["date"] == "0000-00-00":
+        metadata["date"] = None
+    # Extract the description from the XML
+    metadata["description"] = meta_xml.findtext("dc:description", namespaces=ns)
+    # Extract the publisher from the XML
+    metadata["publisher"] = meta_xml.findtext("dc:publisher", namespaces=ns)
+    # Get the URL from the xml
+    identifier = meta_xml.findtext("dc:identifier", namespaces=ns)
+    if len(re.findall(r"^https?:\/\/|^www\.", identifier)) > 0:
+        metadata["url"] = identifier
+    # Extract the score from the xml
+    try:
+        score = float(meta_xml.find(f".//{{{ns['0']}}}meta[@property='calibre:rating']").text)
+        score = int(math.floor(score/2))
+        metadata["score"] = str(score)
+    except (AttributeError, ValueError): metadata["score"] = None
+    # Get all writers and artists
+    writers = []
+    artists = []
+    cover_artists = []
+    meta_tags = meta_xml.findall("0:meta", namespaces=ns)
+    for creator in meta_xml.findall("dc:creator", namespaces=ns):
+        for meta_tag in meta_tags:
+            try:
+                if meta_tag.attrib["refines"] == creator.attrib["id"]:
+                    if meta_tag.text == "aut":
+                        writers.append(creator.text)
+                    elif meta_tag.text == "ill":
+                        artists.append(creator.text)
+                    elif meta_tag.text == "cov":
+                        cover_artists.append(creator.text)
+                    break
+            except KeyError: pass
+    # Set creator metadata
+    if len(writers) > 0:
+        metadata["writer"] = ",".join(writers)
+    if len(artists) > 0:
+        metadata["artist"] = ",".join(artists)
+    if len(cover_artists) > 0:
+        metadata["cover_artist"] = ",".join(cover_artists)
+    # Get the age rating
+    try:
+        metadata["age_rating"] = meta_xml.find(f".//{{{ns['0']}}}meta[@property='dcterms:audience']").text
+    except AttributeError: metadata["age_rating"] = None
+    # Get series name and position
+    try:
+        metadata["series"] = meta_xml.find(f".//{{{ns['0']}}}meta[@property='belongs-to-collection'][@id='series-title']").text
+        metadata["series_number"] = meta_xml.find(f".//{{{ns['0']}}}meta[@property='group-position'][@refines='series-title']").text
+    except AttributeError:
+        metadata["series"] = None
+        metadata["series_number"] = None
+    # Extract tags from the XML
+    tags = []
+    tag_elements = meta_xml.findall("dc:subject", namespaces=ns)
+    for tag_element in tag_elements:
+        tags.append(tag_element.text)
+    if len(tags) > 0:
+        metadata["tags"] = ",".join(tags)
+    # Return the extracted metadata
+    return metadata
+
+def update_epub_info(epub_file:str, metadata:dict):
+    """
+    Replaces the content.opf file in a given .epub file to reflect the given metadata.
+    
+    :param epub_file: Path of the .epub file to update
+    :type epub_file: str, required
+    :param metadata: Metadata to use for the new content.opf file
+    :type metadata: dict
+    """
+    
+    # Extract epub into temp file
+    full_epub_file = abspath(epub_file)
+    temp_dir = mm_file_tools.get_temp_dir("dvk_epub_info")
+    if mm_file_tools.extract_zip(full_epub_file, temp_dir):
+        # Get the opf content file
+        opf_file = mm_file_tools.find_files_of_type(temp_dir, ".opf")[0]
+        opf_text = mm_file_tools.read_text_file(opf_file)
+        # Get the tab value
+        tab = re.findall(".+(?=<metadata)", opf_text)[0]
+        # Replace the metadata XML
+        metadata_xml = get_metadata_xml(metadata)
+        opf_text = re.sub(r"\s*<metadata[\S\s]+<\/metadata>\s*", metadata_xml, opf_text)
+        # Create element from the read xml
+        base = ElementTree.fromstring(opf_text)
+        ns = {"0": re.findall("(?<=^{)[^}]+(?=}[^{}]+$)", str(base.tag))[0]}
+        ElementTree.register_namespace("", ns["0"])
+        ElementTree.indent(base, space="    ")
+        # Write the opf
+        xml = ElementTree.tostring(base).decode("UTF-8")
+        xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
+        mm_file_tools.write_text_file(opf_file, xml)
+        # Remove the mimetype
+        mimetype = abspath(join(temp_dir, "mimetype"))
+        if exists(mimetype):
+            os.remove(mimetype)
+        # Repack the epub file
+        new_epub_file = abspath(join(temp_dir, "AAAA.epub"))
+        assert mm_file_tools.create_zip(temp_dir, new_epub_file, 8, "application/epub+zip")
+        # Replace the old epub file
+        os.remove(full_epub_file)
+        shutil.copy(new_epub_file, full_epub_file)
+        os.remove(new_epub_file)

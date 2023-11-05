@@ -423,6 +423,9 @@ def test_create_nav_file():
     assert nav_contents == compare
 
 def test_create_ncx_file():
+    """
+    Tests the create_ncx_file function.
+    """
     # Create content files to list in the contents
     temp_dir = mm_file_tools.get_temp_dir()
     output_dir = mm_file_tools.get_temp_dir("dvk-epub-output")
@@ -950,3 +953,213 @@ def test_create_epub():
     compare = f"{compare}\n    </spine>"
     compare = f"{compare}\n</package>"
     assert content == compare
+
+def test_get_info_from_epub():
+    """
+    Tests the get_info_from_epub function.
+    """
+    # Create content files
+    temp_dir = mm_file_tools.get_temp_dir()
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "Here's some text!")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "2.txt")), "And")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "3.pdf")), "Stuff")
+    chapters = mm_epub.get_default_chapters(temp_dir)
+    metadata = mm_archive.get_empty_metadata()
+    # Test Getting the title
+    metadata["title"] = "This is a title!\\'"
+    epub_file = mm_epub.create_epub(chapters, metadata, temp_dir)
+    assert exists(epub_file)
+    read_meta = mm_epub.get_info_from_epub(epub_file)
+    assert read_meta["title"] == "This is a title!\\'"
+    assert read_meta["url"] is None
+    assert read_meta["description"] is None
+    # Test getting the URL
+    os.remove(epub_file)
+    metadata["title"] = "New Title"
+    metadata["url"] = "https://www.notrealsite"
+    epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
+    assert exists(epub_file)
+    read_meta = mm_epub.get_info_from_epub(epub_file)
+    assert read_meta["title"] == "New Title"
+    assert read_meta["url"] == "https://www.notrealsite"
+    assert read_meta["date"] is None
+    assert read_meta["description"] is None
+    # Test getting the date
+    os.remove(epub_file)
+    metadata["url"] = "http://www.alsofake"
+    metadata["date"] = "2012-12-21"
+    epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
+    assert exists(epub_file)
+    read_meta = mm_epub.get_info_from_epub(epub_file)
+    assert read_meta["title"] == "New Title"
+    assert read_meta["url"] == "http://www.alsofake"
+    assert read_meta["date"] == "2012-12-21"
+    assert read_meta["description"] is None
+    # Test getting the description
+    os.remove(epub_file)
+    metadata["url"] = "www.alsofake"
+    metadata["date"] = "2012-12-21"
+    metadata["description"] = "This & That."
+    epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
+    assert exists(epub_file)
+    read_meta = mm_epub.get_info_from_epub(epub_file)
+    assert read_meta["title"] == "New Title"
+    assert read_meta["url"] == "www.alsofake"
+    assert read_meta["date"] == "2012-12-21"
+    assert read_meta["description"] == "This & That."
+    assert read_meta["writer"] is None
+    assert read_meta["artist"] is None
+    assert read_meta["cover_artist"] is None
+    # Test getting writers and artists
+    os.remove(epub_file)
+    metadata["artist"] = "Some,Artist,Folks"
+    metadata["writer"] = "The,Author"
+    metadata["cover_artist"] = "Last,People"
+    epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
+    assert exists(epub_file)
+    read_meta = mm_epub.get_info_from_epub(epub_file)
+    assert read_meta["title"] == "New Title"
+    assert read_meta["url"] == "www.alsofake"
+    assert read_meta["date"] == "2012-12-21"
+    assert read_meta["description"] == "This & That."
+    assert read_meta["writer"] == "The,Author"
+    assert read_meta["artist"] == "Some,Artist,Folks"
+    assert read_meta["cover_artist"] == "Last,People"
+    assert read_meta["publisher"] is None
+    # Test getting the publisher
+    os.remove(epub_file)
+    metadata["publisher"] = "Book People"
+    epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
+    assert exists(epub_file)
+    read_meta = mm_epub.get_info_from_epub(epub_file)
+    assert read_meta["title"] == "New Title"
+    assert read_meta["url"] == "www.alsofake"
+    assert read_meta["date"] == "2012-12-21"
+    assert read_meta["description"] == "This & That."
+    assert read_meta["publisher"] == "Book People"
+    assert read_meta["series"] is None
+    assert read_meta["series_number"] is None
+    assert read_meta["series_total"] is None
+    # Test getting series metadata
+    os.remove(epub_file)
+    metadata["series"] = "The EPUB Chronicles."
+    metadata["series_number"] = "3.5"
+    epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
+    assert exists(epub_file)
+    read_meta = mm_epub.get_info_from_epub(epub_file)
+    assert read_meta["title"] == "New Title"
+    assert read_meta["url"] == "www.alsofake"
+    assert read_meta["date"] == "2012-12-21"
+    assert read_meta["description"] == "This & That."
+    assert read_meta["publisher"] == "Book People"
+    assert read_meta["series"] == "The EPUB Chronicles."
+    assert read_meta["series_number"] == "3.5"
+    assert read_meta["series_total"] is None
+    assert read_meta["tags"] is None
+    # Test getting the tags
+    os.remove(epub_file)
+    metadata["tags"] = "Some,Tags,&,Stuff"
+    epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
+    assert exists(epub_file)
+    read_meta = mm_epub.get_info_from_epub(epub_file)
+    assert read_meta["title"] == "New Title"
+    assert read_meta["tags"] == "Some,Tags,&,Stuff"
+    assert read_meta["age_rating"] is None
+    # Test getting the age rating
+    os.remove(epub_file)
+    metadata["age_rating"] = "Teen"
+    epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
+    assert exists(epub_file)
+    read_meta = mm_epub.get_info_from_epub(epub_file)
+    assert read_meta["title"] == "New Title"
+    assert read_meta["tags"] == "Some,Tags,&,Stuff"
+    assert read_meta["age_rating"] == "Teen"
+    assert read_meta["score"] is None
+    # Test getting the score
+    os.remove(epub_file)
+    metadata["score"] = "3"
+    epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
+    assert exists(epub_file)
+    read_meta = mm_epub.get_info_from_epub(epub_file)
+    assert read_meta["title"] == "New Title"
+    assert read_meta["tags"] == "Some,Tags,&,Stuff"
+    assert read_meta["age_rating"] == "Teen"
+    assert read_meta["score"] == "3"
+    metadata["score"] = "1"
+    epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
+    assert exists(epub_file)
+    read_meta = mm_epub.get_info_from_epub(epub_file)
+    assert read_meta["title"] == "New Title"
+    assert read_meta["tags"] == "Some,Tags,&,Stuff"
+    assert read_meta["age_rating"] == "Teen"
+    assert read_meta["score"] == "1"
+    metadata["score"] = "5"
+    epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
+    assert exists(epub_file)
+    read_meta = mm_epub.get_info_from_epub(epub_file)
+    assert read_meta["title"] == "New Title"
+    assert read_meta["tags"] == "Some,Tags,&,Stuff"
+    assert read_meta["age_rating"] == "Teen"
+    assert read_meta["score"] == "5"
+    metadata["score"] = "0"
+    epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
+    assert exists(epub_file)
+    read_meta = mm_epub.get_info_from_epub(epub_file)
+    assert read_meta["title"] == "New Title"
+    assert read_meta["tags"] == "Some,Tags,&,Stuff"
+    assert read_meta["age_rating"] == "Teen"
+    assert read_meta["score"] == "0"
+    # Test getting score that is invalid
+    metadata["score"] = "6"
+    epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
+    assert exists(epub_file)
+    read_meta = mm_epub.get_info_from_epub(epub_file)
+    assert read_meta["title"] == "New Title"
+    assert read_meta["tags"] == "Some,Tags,&,Stuff"
+    assert read_meta["age_rating"] == "Teen"
+    assert read_meta["score"] is None
+
+def test_update_epub_info():
+    """
+    Tests the update_epub_info function.
+    """
+    # Create content files
+    temp_dir = mm_file_tools.get_temp_dir()
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "Here's some text!")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "2.txt")), "More Text!")
+    chapters = mm_epub.get_default_chapters(temp_dir)
+    # Create the epub file
+    metadata = mm_archive.get_empty_metadata()
+    metadata["title"] = "Name"
+    epub_file = mm_epub.create_epub(chapters, metadata, temp_dir)
+    assert exists(epub_file)
+    assert basename(epub_file) == "Name.epub"
+    # Get the epub info
+    read_meta = mm_epub.get_info_from_epub(epub_file)
+    assert read_meta["title"] == "Name"
+    assert read_meta["artist"] is None
+    assert read_meta["description"] is None
+    # Update the epub info
+    metadata["title"] = "New Name!"
+    metadata["writer"] = "Person"
+    metadata["artist"] = "Another"
+    metadata["description"] = "Some text!!"
+    mm_epub.update_epub_info(epub_file, metadata)
+    read_meta = mm_epub.get_info_from_epub(epub_file)
+    assert read_meta["title"] == "New Name!"
+    assert read_meta["writer"] == "Person"
+    assert read_meta["artist"] == "Another"
+    assert read_meta["description"] == "Some text!!"
+    # Extract the epub file to see contents
+    extracted = abspath(join(temp_dir, "extracted"))
+    os.mkdir(extracted)
+    assert mm_file_tools.extract_zip(epub_file, extracted)
+    assert sorted(os.listdir(extracted)) == ["EPUB", "META-INF", "mimetype"]
+    # Check that contents are still correct
+    assert mm_file_tools.read_text_file(abspath(join(extracted, "mimetype"))) == "application/epub+zip"
+    epub_directory = abspath(join(extracted, "EPUB"))
+    contents = ["content", "content.opf", "nav.xhtml", "original", "style", "toc.ncx"]
+    assert sorted(os.listdir(epub_directory)) == contents
+    assert sorted(os.listdir(abspath(join(epub_directory, "content")))) == ["1.xhtml", "2.xhtml"]
+    assert sorted(os.listdir(abspath(join(epub_directory, "original")))) == ["1.txt", "2.txt"]
+    assert sorted(os.listdir(abspath(join(epub_directory, "style")))) == ["epubstyle.css"]

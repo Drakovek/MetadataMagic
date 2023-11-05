@@ -217,8 +217,9 @@ def get_metadata_from_user(metadata:dict, get_score:bool) -> dict:
     user_metadata["title"] = get_string_from_user("Title", user_metadata["title"])
     # Get the date
     regex = "(19[7-9][0-9]|2[0-1][0-9]{2})\\-(0[1-9]|1[0-2])\\-(0[1-9]|[1-2][0-9]|3[0-1])"
-    while user_metadata["date"] is None or len(re.findall(regex, user_metadata["date"])) == 0:
-        user_metadata["date"] = get_string_from_user("Date (YYYY-MM-DD)", None)
+    user_metadata["date"] = get_string_from_user("Date (YYYY-MM-DD)", None)
+    if user_metadata["date"] is None or len(re.findall(regex, user_metadata["date"])) == 0:
+        user_metadata["date"] = None
     # Get the artists
     user_metadata["artist"] = user_list_default("Illustrator", user_metadata["artist"])
     if user_metadata["cover_artist"] is None:
@@ -243,7 +244,11 @@ def get_metadata_from_user(metadata:dict, get_score:bool) -> dict:
         except KeyError: user_metadata["age_rating"] = None
     # Get the score
     if get_score:
-        user_metadata["score"] = user_string_default("Score (Range 0-5)", None)
+        try:
+            score = int(user_string_default("Score (Range 0-5)", None))
+            if score > -1 and score < 6:
+                user_metadata["score"] = str(score)
+        except ValueError: user_metadata["score"] = None
     # Return the user metadata
     return user_metadata
 
