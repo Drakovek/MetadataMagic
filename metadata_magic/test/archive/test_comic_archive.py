@@ -182,8 +182,11 @@ def test_get_info_from_cbz():
     text_file = abspath(join(temp_dir, "text.txt"))
     mm_file_tools.write_text_file(text_file, "Text")
     read_meta = mm_comic_archive.get_info_from_cbz(text_file)
-    assert read_meta["title"] is None
-    assert read_meta["artist"] is None
+    assert read_meta == mm_archive.get_empty_metadata()
+    zip_file = abspath(join(temp_dir, "not_cbz.cbz"))
+    mm_file_tools.create_zip(temp_dir, zip_file)
+    read_meta = mm_comic_archive.get_info_from_cbz(zip_file)
+    assert read_meta == mm_archive.get_empty_metadata()
     # Test if ComicInfo.xml is not in the home directory
     temp_dir = mm_file_tools.get_temp_dir()
     sub_dir = abspath(join(temp_dir, "Internal"))
@@ -318,3 +321,9 @@ def test_update_cbz_info():
     assert sorted(os.listdir(extract_dir)) == ["ComicInfo.xml", "Should Reflect Inside"]
     sub_dir = abspath(join(extract_dir, "Should Reflect Inside"))
     assert os.listdir(sub_dir) == ["text.txt"]
+    # Test updating a non-cbz file
+    temp_dir = mm_file_tools.get_temp_dir()
+    text_file = abspath(join(temp_dir, "text.txt"))
+    mm_file_tools.write_text_file(text_file, "This is text!")
+    mm_comic_archive.update_cbz_info(text_file, metadata)
+    assert mm_file_tools.read_text_file(text_file) == "This is text!"

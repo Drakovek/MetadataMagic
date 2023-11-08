@@ -1118,6 +1118,16 @@ def test_get_info_from_epub():
     assert read_meta["tags"] == "Some,Tags,&,Stuff"
     assert read_meta["age_rating"] == "Teen"
     assert read_meta["score"] is None
+    # Test getting info from a non-epub file
+    temp_dir = mm_file_tools.get_temp_dir()
+    text_file = abspath(join(temp_dir, "text.txt"))
+    mm_file_tools.write_text_file(text_file, "Text")
+    read_meta = mm_epub.get_info_from_epub(text_file)
+    assert read_meta == mm_archive.get_empty_metadata()
+    zip_file = abspath(join(temp_dir, "not_epub.zip"))
+    mm_file_tools.create_zip(temp_dir, zip_file)
+    read_meta = mm_epub.get_info_from_epub(zip_file)
+    assert read_meta == mm_archive.get_empty_metadata()
 
 def test_update_epub_info():
     """
@@ -1163,3 +1173,17 @@ def test_update_epub_info():
     assert sorted(os.listdir(abspath(join(epub_directory, "content")))) == ["1.xhtml", "2.xhtml"]
     assert sorted(os.listdir(abspath(join(epub_directory, "original")))) == ["1.txt", "2.txt"]
     assert sorted(os.listdir(abspath(join(epub_directory, "style")))) == ["epubstyle.css"]
+    # Test updating a non-epub file
+    temp_dir = mm_file_tools.get_temp_dir()
+    text_file = abspath(join(temp_dir, "text.txt"))
+    mm_file_tools.write_text_file(text_file, "This is text!")
+    mm_epub.update_epub_info(text_file, metadata)
+    assert mm_file_tools.read_text_file(text_file) == "This is text!"
+    zip_file = abspath(join(temp_dir, "not_epub.zip"))
+    mm_file_tools.create_zip(temp_dir, zip_file)
+    mm_epub.update_epub_info(zip_file, metadata)
+    extract_dir = abspath(join(temp_dir, "extract"))
+    os.mkdir(extract_dir)
+    assert mm_file_tools.extract_zip(zip_file, extract_dir)
+    assert sorted(os.listdir(extract_dir)) == ["text.txt"]
+    assert mm_file_tools.read_text_file(abspath(join(extract_dir, "text.txt"))) == "This is text!"

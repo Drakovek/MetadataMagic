@@ -69,85 +69,106 @@ def test_update_fields():
     assert new_metadata["age_rating"] == "Everyone"
     assert new_metadata["score"] == "5"
 
-def test_mass_update_cbzs():
+def test_mass_update_archives():
     """
-    Tests the mass_update_cbzs function.
+    Tests the mass_update_archives function.
     """
-    # Create test CBZ files
+    # Create test archive files
     temp_dir = mm_file_tools.get_temp_dir()
-    text_file = abspath(join(temp_dir, "text.txt"))
+    cbz_dir = abspath(join(temp_dir, "cbzs"))
+    os.mkdir(cbz_dir)
+    text_file = abspath(join(cbz_dir, "text.txt"))
     mm_file_tools.write_text_file(text_file, "This is text.")
     assert exists(text_file)
     metadata = mm_archive.get_empty_metadata()
-    metadata["title"] = "This is a title!"
+    metadata["title"] = "CBZ Title"
     metadata["artist"] = "Person"
     metadata["writer"] = "New"
     metadata["cover_artist"] = "Cover"
     metadata["publisher"] = "Nobody"
     metadata["age_rating"] = "Unknown"
     metadata["score"] = 3
-    cbz_file_1 = mm_comic_archive.create_cbz(temp_dir, "Name", metadata=metadata)
-    cbz_file_2 = abspath(join(temp_dir, "new.cbz"))
-    cbz_file_3 = abspath(join(temp_dir, "other.cbz"))
+    cbz_file_1 = mm_comic_archive.create_cbz(cbz_dir, "Name", metadata=metadata)
+    cbz_file_2 = abspath(join(cbz_dir, "other.cbz"))
     shutil.copy(cbz_file_1, cbz_file_2)
-    shutil.copy(cbz_file_1, cbz_file_3)
+    epub_dir = abspath(join(temp_dir, "epubs"))
+    os.mkdir(epub_dir)
+    text_file = abspath(join(epub_dir, "text.txt"))
+    mm_file_tools.write_text_file(text_file, "This is text.")
+    assert exists(text_file)
+    metadata["title"] = "EPUB Title"
+    chapters = mm_epub.get_default_chapters(epub_dir)
+    epub_file_1 = mm_epub.create_epub(chapters, metadata, epub_dir)
+    epub_file_2 = abspath(join(epub_dir, "new.epub"))
+    shutil.copy(epub_file_1, epub_file_2)
     assert exists(cbz_file_1)
     assert exists(cbz_file_2)
-    assert exists(cbz_file_3)
-    assert sorted(os.listdir(temp_dir)) == ["Name", "Name.cbz", "new.cbz", "other.cbz"]
+    assert exists(epub_file_1)
+    assert exists(epub_file_2)
+    assert sorted(os.listdir(temp_dir)) == ["cbzs", "epubs"]
+    assert sorted(os.listdir(cbz_dir)) == ["Name", "Name.cbz", "other.cbz"]
+    assert sorted(os.listdir(epub_dir)) == ["EPUB Title.epub", "new.epub", "text.txt"]
     # Test updating publisher
     metadata = mm_archive.get_empty_metadata()
     metadata["publisher"] = "New Publisher"
-    mm_update.mass_update_cbzs(temp_dir, metadata)
+    mm_update.mass_update_archives(temp_dir, metadata)
     read_meta = mm_comic_archive.get_info_from_cbz(cbz_file_1)
-    assert read_meta["title"] == "This is a title!"
+    assert read_meta["title"] == "CBZ Title"
     assert read_meta["artist"] == "Person"
     assert read_meta["writer"] == "New"
     assert read_meta["cover_artist"] == "Cover"
     assert read_meta["publisher"] == "New Publisher"
     assert read_meta["age_rating"] == "Unknown"
-    assert sorted(os.listdir(temp_dir)) == ["Name", "Name.cbz", "new.cbz", "other.cbz"]
+    assert sorted(os.listdir(temp_dir)) == ["cbzs", "epubs"]
+    assert sorted(os.listdir(cbz_dir)) == ["Name", "Name.cbz", "other.cbz"]
+    assert sorted(os.listdir(epub_dir)) == ["EPUB Title.epub", "new.epub", "text.txt"]
     # Test updating artists
     metadata = mm_archive.get_empty_metadata()
     metadata["artist"] = "New Guy"
     metadata["writer"] = "Writer Lad"
     metadata["cover_artist"] = "Other"
-    mm_update.mass_update_cbzs(temp_dir, metadata)
+    mm_update.mass_update_archives(temp_dir, metadata)
     read_meta = mm_comic_archive.get_info_from_cbz(cbz_file_2)
-    assert read_meta["title"] == "This is a title!"
+    assert read_meta["title"] == "CBZ Title"
     assert read_meta["artist"] == "New Guy"
     assert read_meta["writer"] == "Writer Lad"
     assert read_meta["cover_artist"] == "Other"
     assert read_meta["publisher"] == "New Publisher"
     assert read_meta["age_rating"] == "Unknown"
     assert read_meta["score"] == "3"
-    assert sorted(os.listdir(temp_dir)) == ["Name", "Name.cbz", "new.cbz", "other.cbz"]
+    assert sorted(os.listdir(temp_dir)) == ["cbzs", "epubs"]
+    assert sorted(os.listdir(cbz_dir)) == ["Name", "Name.cbz", "other.cbz"]
+    assert sorted(os.listdir(epub_dir)) == ["EPUB Title.epub", "new.epub", "text.txt"]
     # Test updating age rating
     metadata = mm_archive.get_empty_metadata()
     metadata["age_rating"] = "Everyone"
-    mm_update.mass_update_cbzs(temp_dir, metadata)
-    read_meta = mm_comic_archive.get_info_from_cbz(cbz_file_3)
-    assert read_meta["title"] == "This is a title!"
+    mm_update.mass_update_archives(temp_dir, metadata)
+    read_meta = mm_epub.get_info_from_epub(epub_file_1)
+    assert read_meta["title"] == "EPUB Title"
     assert read_meta["artist"] == "New Guy"
     assert read_meta["writer"] == "Writer Lad"
     assert read_meta["cover_artist"] == "Other"
     assert read_meta["publisher"] == "New Publisher"
     assert read_meta["age_rating"] == "Everyone"
     assert read_meta["score"] == "3"
-    assert sorted(os.listdir(temp_dir)) == ["Name", "Name.cbz", "new.cbz", "other.cbz"]
+    assert sorted(os.listdir(temp_dir)) == ["cbzs", "epubs"]
+    assert sorted(os.listdir(cbz_dir)) == ["Name", "Name.cbz", "other.cbz"]
+    assert sorted(os.listdir(epub_dir)) == ["EPUB Title.epub", "new.epub", "text.txt"]
     # Test updating score
     metadata = mm_archive.get_empty_metadata()
     metadata["score"] = 5
-    mm_update.mass_update_cbzs(temp_dir, metadata)
-    read_meta = mm_comic_archive.get_info_from_cbz(cbz_file_2)
-    assert read_meta["title"] == "This is a title!"
+    mm_update.mass_update_archives(temp_dir, metadata)
+    read_meta = mm_epub.get_info_from_epub(epub_file_2)
+    assert read_meta["title"] == "EPUB Title"
     assert read_meta["artist"] == "New Guy"
     assert read_meta["writer"] == "Writer Lad"
     assert read_meta["cover_artist"] == "Other"
     assert read_meta["publisher"] == "New Publisher"
     assert read_meta["age_rating"] == "Everyone"
     assert read_meta["score"] == "5"
-    assert sorted(os.listdir(temp_dir)) == ["Name", "Name.cbz", "new.cbz", "other.cbz"]
+    assert sorted(os.listdir(temp_dir)) == ["cbzs", "epubs"]
+    assert sorted(os.listdir(cbz_dir)) == ["Name", "Name.cbz", "other.cbz"]
+    assert sorted(os.listdir(epub_dir)) == ["EPUB Title.epub", "new.epub", "text.txt"]
     # Test updating multiple fields
     metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "Blah"
@@ -155,7 +176,7 @@ def test_mass_update_cbzs():
     metadata["writer"] = None
     metadata["publisher"] = "Blah Inc."
     metadata["score"] = None
-    mm_update.mass_update_cbzs(temp_dir, metadata)
+    mm_update.mass_update_archives(temp_dir, metadata)
     read_meta = mm_comic_archive.get_info_from_cbz(cbz_file_1)
     assert read_meta["title"] == "Blah"
     assert read_meta["artist"] == "Madam Anonymous"
@@ -164,103 +185,6 @@ def test_mass_update_cbzs():
     assert read_meta["publisher"] == "Blah Inc."
     assert read_meta["age_rating"] == "Everyone"
     assert read_meta["score"] == "5"
-    assert sorted(os.listdir(temp_dir)) == ["Name", "Name.cbz", "new.cbz", "other.cbz"]
-
-def test_mass_update_epubs():
-    """
-    Tests the mass_update_epubs function.
-    """
-    # Create test CBZ files
-    temp_dir = mm_file_tools.get_temp_dir()
-    text_file = abspath(join(temp_dir, "text.txt"))
-    mm_file_tools.write_text_file(text_file, "This is text.")
-    assert exists(text_file)
-    metadata = mm_archive.get_empty_metadata()
-    metadata["title"] = "Epub Title!"
-    metadata["artist"] = "Art Person"
-    metadata["writer"] = "Writer Person"
-    metadata["cover_artist"] = "Cover Person"
-    metadata["publisher"] = "BookCo"
-    metadata["age_rating"] = "Everyone"
-    metadata["score"] = 4
-    chapters = mm_epub.get_default_chapters(temp_dir)
-    epub_file_1 = mm_epub.create_epub(chapters, metadata, temp_dir)
-    epub_file_2 = abspath(join(temp_dir, "new.epub"))
-    epub_file_3 = abspath(join(temp_dir, "other.epub"))
-    shutil.copy(epub_file_1, epub_file_2)
-    shutil.copy(epub_file_1, epub_file_3)
-    assert exists(epub_file_1)
-    assert exists(epub_file_2)
-    assert exists(epub_file_3)
-    assert sorted(os.listdir(temp_dir)) == ["Epub Title!.epub", "new.epub", "other.epub", "text.txt"]
-    # Test updating publisher
-    metadata = mm_archive.get_empty_metadata()
-    metadata["publisher"] = "New Publisher"
-    mm_update.mass_update_epubs(temp_dir, metadata)
-    read_meta = mm_epub.get_info_from_epub(epub_file_1)
-    assert read_meta["title"] == "Epub Title!"
-    assert read_meta["artist"] == "Art Person"
-    assert read_meta["writer"] == "Writer Person"
-    assert read_meta["cover_artist"] == "Cover Person"
-    assert read_meta["publisher"] == "New Publisher"
-    assert read_meta["age_rating"] == "Everyone"
-    assert read_meta["score"] == "4"
-    assert sorted(os.listdir(temp_dir)) == ["Epub Title!.epub", "new.epub", "other.epub", "text.txt"]
-    # Test updating artists
-    metadata = mm_archive.get_empty_metadata()
-    metadata["artist"] = "New Guy"
-    metadata["writer"] = "Writer Lad"
-    metadata["cover_artist"] = "Other"
-    mm_update.mass_update_epubs(temp_dir, metadata)
-    read_meta = mm_epub.get_info_from_epub(epub_file_2)
-    assert read_meta["title"] == "Epub Title!"
-    assert read_meta["artist"] == "New Guy"
-    assert read_meta["writer"] == "Writer Lad"
-    assert read_meta["cover_artist"] == "Other"
-    assert read_meta["publisher"] == "New Publisher"
-    assert read_meta["age_rating"] == "Everyone"
-    assert read_meta["score"] == "4"
-    assert sorted(os.listdir(temp_dir)) == ["Epub Title!.epub", "new.epub", "other.epub", "text.txt"]
-    # Test updating age rating
-    metadata = mm_archive.get_empty_metadata()
-    metadata["age_rating"] = "Teen"
-    mm_update.mass_update_epubs(temp_dir, metadata)
-    read_meta = mm_epub.get_info_from_epub(epub_file_3)
-    assert read_meta["title"] == "Epub Title!"
-    assert read_meta["artist"] == "New Guy"
-    assert read_meta["writer"] == "Writer Lad"
-    assert read_meta["cover_artist"] == "Other"
-    assert read_meta["publisher"] == "New Publisher"
-    assert read_meta["age_rating"] == "Teen"
-    assert read_meta["score"] == "4"
-    assert sorted(os.listdir(temp_dir)) == ["Epub Title!.epub", "new.epub", "other.epub", "text.txt"]
-    # Test updating score
-    metadata = mm_archive.get_empty_metadata()
-    metadata["score"] = 5
-    mm_update.mass_update_epubs(temp_dir, metadata)
-    read_meta = mm_epub.get_info_from_epub(epub_file_2)
-    assert read_meta["title"] == "Epub Title!"
-    assert read_meta["artist"] == "New Guy"
-    assert read_meta["writer"] == "Writer Lad"
-    assert read_meta["cover_artist"] == "Other"
-    assert read_meta["publisher"] == "New Publisher"
-    assert read_meta["age_rating"] == "Teen"
-    assert read_meta["score"] == "5"
-    assert sorted(os.listdir(temp_dir)) == ["Epub Title!.epub", "new.epub", "other.epub", "text.txt"]
-    # Test updating multiple fields
-    metadata = mm_archive.get_empty_metadata()
-    metadata["title"] = "Blah"
-    metadata["artist"] = "Madam Anonymous"
-    metadata["writer"] = None
-    metadata["publisher"] = "Blah Inc."
-    metadata["score"] = None
-    mm_update.mass_update_epubs(temp_dir, metadata)
-    read_meta = mm_epub.get_info_from_epub(epub_file_1)
-    assert read_meta["title"] == "Blah"
-    assert read_meta["artist"] == "Madam Anonymous"
-    assert read_meta["writer"] == "Writer Lad"
-    assert read_meta["cover_artist"] == "Other"
-    assert read_meta["publisher"] == "Blah Inc."
-    assert read_meta["age_rating"] == "Teen"
-    assert read_meta["score"] == "5"
-    assert sorted(os.listdir(temp_dir)) == ["Epub Title!.epub", "new.epub", "other.epub", "text.txt"]
+    assert sorted(os.listdir(temp_dir)) == ["cbzs", "epubs"]
+    assert sorted(os.listdir(cbz_dir)) == ["Name", "Name.cbz", "other.cbz"]
+    assert sorted(os.listdir(epub_dir)) == ["EPUB Title.epub", "new.epub", "text.txt"]

@@ -670,7 +670,9 @@ def get_info_from_epub(epub_file:str) -> dict:
     extract_dir = mm_file_tools.get_temp_dir("dvk_meta_extract")
     assert exists(extract_dir)
     # Extract content.opf from given file
-    xml_file = abspath(mm_file_tools.extract_file_from_zip(epub_file, extract_dir, "content.opf", True))
+    xml_file = mm_file_tools.extract_file_from_zip(epub_file, extract_dir, "content.opf", True)
+    if xml_file is None or not exists(xml_file):
+        return mm_archive.get_empty_metadata()
     if xml_file is None or not exists(xml_file):
         return mm_archive.get_empty_metadata()
     # Read XML file
@@ -768,7 +770,8 @@ def update_epub_info(epub_file:str, metadata:dict):
     # Extract epub into temp file
     full_epub_file = abspath(epub_file)
     temp_dir = mm_file_tools.get_temp_dir("dvk_epub_info")
-    if mm_file_tools.extract_zip(full_epub_file, temp_dir):
+    mm_file_tools.extract_zip(full_epub_file, temp_dir)
+    try:
         # Get the opf content file
         opf_file = mm_file_tools.find_files_of_type(temp_dir, ".opf")[0]
         opf_text = mm_file_tools.read_text_file(opf_file)
@@ -797,3 +800,4 @@ def update_epub_info(epub_file:str, metadata:dict):
         os.remove(full_epub_file)
         shutil.copy(new_epub_file, full_epub_file)
         os.remove(new_epub_file)
+    except IndexError: pass

@@ -119,6 +119,43 @@ def get_info_from_jsons(path:str) -> dict:
     # Return metadata
     return metadata
 
+def get_info_from_archive(file:str) -> dict:
+    """
+    Attempts to get metadata information from any of the supported media archive formats.
+    Currently supports EPUB and CBZ.
+    
+    :param file: Path to media archive file
+    :type file: str, required
+    :return: Dictionary containing metadata as formatted in get_empty_metadata function
+    :rtype: dict
+    """
+    # Try getting info from a CBZ file
+    metadata = mm_comic_archive.get_info_from_cbz(file)
+    if not metadata == get_empty_metadata():
+        return metadata
+    # Try getting info from an EPUB file
+    metadata = mm_epub.get_info_from_epub(file)
+    if not metadata == get_empty_metadata():
+        return metadata
+    # Return empty metadata
+    return get_empty_metadata()
+
+def update_archive_info(archive_file:str, metadata:dict):
+    """
+    Replaces the metadata in a given archive file with the given metadata.
+    Supports CBZ and EPUB files.
+    
+    :param archive_file: Path of the archive file to update
+    :type archive_file: str, required
+    :param metadata: Metadata to use for the new metadata
+    :type metadata: dict
+    """
+    extension = html_string_tools.html.get_extension(archive_file).lower()
+    if extension == ".epub":
+        mm_epub.update_epub_info(archive_file, metadata)
+    if extension == ".cbz":
+        mm_comic_archive.update_cbz_info(archive_file, metadata)
+
 def get_string_from_user(value_type:str, default_value:str=None) -> str:
     """
     Gets a string from the user with prompt generated from given value type.
@@ -217,8 +254,9 @@ def get_metadata_from_user(metadata:dict, get_score:bool) -> dict:
     user_metadata["title"] = get_string_from_user("Title", user_metadata["title"])
     # Get the date
     regex = "(19[7-9][0-9]|2[0-1][0-9]{2})\\-(0[1-9]|1[0-2])\\-(0[1-9]|[1-2][0-9]|3[0-1])"
-    user_metadata["date"] = get_string_from_user("Date (YYYY-MM-DD)", None)
     if user_metadata["date"] is None or len(re.findall(regex, user_metadata["date"])) == 0:
+        user_metadata["date"] = get_string_from_user("Date (YYYY-MM-DD)", None)
+    if len(re.findall(regex, user_metadata["date"])) == 0:
         user_metadata["date"] = None
     # Get the artists
     user_metadata["artist"] = user_list_default("Illustrator", user_metadata["artist"])

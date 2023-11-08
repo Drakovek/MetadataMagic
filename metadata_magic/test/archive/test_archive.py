@@ -2,6 +2,8 @@
 
 import os
 import metadata_magic.archive.archive as mm_archive
+import metadata_magic.archive.epub as mm_epub
+import metadata_magic.archive.comic_archive as mm_comic_archive
 import metadata_magic.file_tools as mm_file_tools
 from os.path import abspath, exists, join
 
@@ -211,3 +213,114 @@ def test_get_info_from_jsons():
     assert meta["cover_artist"] is None
     assert meta["publisher"] is None
     assert meta["url"] is None
+
+def test_get_info_from_archive():
+    """
+    Tests the get_info_from_archive function.
+    """
+    # Test getting info from a CBZ file
+    temp_dir = mm_file_tools.get_temp_dir()
+    metadata = mm_archive.get_empty_metadata()
+    metadata["title"] = "CBZ Title!"
+    metadata["tags"] = "Some,Tags"
+    text_file = abspath(join(temp_dir, "text.txt"))
+    mm_file_tools.write_text_file(text_file, "Text")
+    assert exists(text_file)
+    cbz_file = mm_comic_archive.create_cbz(temp_dir, metadata=metadata)
+    assert exists(cbz_file)
+    read_meta = mm_archive.get_info_from_archive(cbz_file)
+    assert read_meta["title"] == "CBZ Title!"
+    assert read_meta["tags"] == "Some,Tags"
+    # Test getting info from an EPUB file
+    temp_dir = mm_file_tools.get_temp_dir()
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "Here's some text!")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "2.txt")), "And")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "3.pdf")), "Stuff")
+    chapters = mm_epub.get_default_chapters(temp_dir)
+    metadata = mm_archive.get_empty_metadata()
+    metadata["title"] = "This is an epub!!"
+    metadata["artist"] = "Art Person"
+    metadata["description"] = "Some Words"
+    epub_file = mm_epub.create_epub(chapters, metadata, temp_dir)
+    assert exists(epub_file)
+    read_meta = mm_archive.get_info_from_archive(epub_file)
+    assert read_meta["title"] == "This is an epub!!"
+    assert read_meta["artist"] == "Art Person"
+    assert read_meta["description"] == "Some Words"
+    # Test getting info from an invalid file
+    temp_dir = mm_file_tools.get_temp_dir()
+    text_file = abspath(join(temp_dir, "text.txt"))
+    assert mm_archive.get_info_from_archive(text_file) == mm_archive.get_empty_metadata()
+
+def test_update_archive_info():
+    """
+    Test the update_archive_info function.
+    """
+    # Test updating a CBZ file
+    temp_dir = mm_file_tools.get_temp_dir()
+    metadata = mm_archive.get_empty_metadata()
+    metadata["title"] = "CBZ Title!"
+    metadata["tags"] = "Some,Tags"
+    text_file = abspath(join(temp_dir, "text.txt"))
+    mm_file_tools.write_text_file(text_file, "Text")
+    assert exists(text_file)
+    cbz_file = mm_comic_archive.create_cbz(temp_dir, metadata=metadata)
+    assert exists(cbz_file)
+    read_meta = mm_archive.get_info_from_archive(cbz_file)
+    assert read_meta["title"] == "CBZ Title!"
+    assert read_meta["tags"] == "Some,Tags"
+    assert read_meta["description"] is None
+    metadata["title"] = "New!"
+    metadata["description"] = "New Words..."
+    mm_archive.update_archive_info(cbz_file, metadata)
+    read_meta = mm_archive.get_info_from_archive(cbz_file)
+    assert read_meta["title"] == "New!"
+    assert read_meta["tags"] == "Some,Tags"
+    assert read_meta["description"] == "New Words..."
+    extract_dir = abspath(join(temp_dir, "extracted"))
+    os.mkdir(extract_dir)
+    mm_file_tools.extract_zip(cbz_file, extract_dir)
+    assert sorted(os.listdir(extract_dir)) == ["CBZ Title!", "ComicInfo.xml"]
+    # Test updating an EPUB file
+    temp_dir = mm_file_tools.get_temp_dir()
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "Here's some text!")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "2.txt")), "And")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "3.pdf")), "Stuff")
+    chapters = mm_epub.get_default_chapters(temp_dir)
+    metadata = mm_archive.get_empty_metadata()
+    metadata["title"] = "This is an epub!!"
+    metadata["artist"] = "Art Person"
+    metadata["description"] = "Some Words"
+    epub_file = mm_epub.create_epub(chapters, metadata, temp_dir)
+    assert exists(epub_file)
+    read_meta = mm_archive.get_info_from_archive(epub_file)
+    assert read_meta["title"] == "This is an epub!!"
+    assert read_meta["artist"] == "Art Person"
+    assert read_meta["description"] == "Some Words"
+    assert read_meta["writer"] is None
+    metadata["title"] = "Different Title"
+    metadata["writer"] = "Author"
+    mm_archive.update_archive_info(epub_file, metadata)
+    read_meta = mm_archive.get_info_from_archive(epub_file)
+    assert read_meta["title"] == "Different Title"
+    assert read_meta["artist"] == "Art Person"
+    assert read_meta["description"] == "Some Words"
+    assert read_meta["writer"] == "Author"
+    extract_dir = abspath(join(temp_dir, "extracted"))
+    os.mkdir(extract_dir)
+    mm_file_tools.extract_zip(epub_file, extract_dir)
+    assert sorted(os.listdir(extract_dir)) == ["EPUB", "META-INF", 'mimetype']
+    # Test updating a non-archive file
+    temp_dir = mm_file_tools.get_temp_dir()
+    text_file = abspath(join(temp_dir, "text.txt"))
+    mm_file_tools.write_text_file(text_file, "This is text!")
+    mm_archive.update_archive_info(text_file, metadata)
+    assert mm_file_tools.read_text_file(text_file) == "This is text!"
+    zip_file = abspath(join(temp_dir, "not_epub.zip"))
+    mm_file_tools.create_zip(temp_dir, zip_file)
+    mm_archive.update_archive_info(zip_file, metadata)
+    extract_dir = abspath(join(temp_dir, "extract"))
+    os.mkdir(extract_dir)
+    assert mm_file_tools.extract_zip(zip_file, extract_dir)
+    assert sorted(os.listdir(extract_dir)) == ["text.txt"]
+    assert mm_file_tools.read_text_file(abspath(join(extract_dir, "text.txt"))) == "This is text!"

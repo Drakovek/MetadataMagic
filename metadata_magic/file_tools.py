@@ -298,4 +298,4 @@ def extract_file_from_zip(zip_path:str, extract_directory:str, extract_file:str,
             # Copy file to new location
             shutil.copy(extracted, new_file)
             return new_file
-    except (zipfile.BadZipFile, KeyError): return None
+    except (zipfile.BadZipFile, FileNotFoundError, KeyError): return None

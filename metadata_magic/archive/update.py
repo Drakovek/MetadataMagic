@@ -7,8 +7,6 @@ import html_string_tools.html
 import python_print_tools.printer
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.archive as mm_archive
-import metadata_magic.archive.epub as mm_epub
-import metadata_magic.archive.comic_archive as mm_comic_archive
 from os.path import abspath, isdir, exists
 
 def update_fields(existing_metadata:dict, updating_metadata:dict) -> dict:
@@ -31,39 +29,25 @@ def update_fields(existing_metadata:dict, updating_metadata:dict) -> dict:
             return_metadata[item[0]] = updating_metadata[item[0]]
     return return_metadata
 
-def mass_update_cbzs(directory:str, metadata:dict):
+def mass_update_archives(directory:str, metadata:dict):
     """
-    Updates all the cbz files in a given directory to use new metadata.
-    Any metadata fields with a value of None will be unaltered from the orignal cbz file.
+    Updates all the media archive files in a given directory to use new metadata.
+    Any metadata fields with a value of None will be unaltered from the orignal archive file.
+    Currently supports CBZ and EPUB files.
     
-    :param directory: Directory in which to look for cbz files, including subdirectories
+    :param directory: Directory in which to look for archivefiles, including subdirectories
     :type directory: str, required
-    :param metadata: Metadata to update the cbz files with
+    :param metadata: Metadata to update the archive files with
     :type metadata: dict, required
     """
-    # Get list of cbz files in the directory
-    cbz_files = mm_file_tools.find_files_of_type(directory, ".cbz")
-    for cbz_file in tqdm.tqdm(cbz_files):
-        # Update the cbz file with the metadata
-        new_metadata = update_fields(mm_comic_archive.get_info_from_cbz(cbz_file), metadata)
-        mm_comic_archive.update_cbz_info(cbz_file, new_metadata)
-
-def mass_update_epubs(directory:str, metadata:dict):
-    """
-    Updates all the epub files in a given directory to use new metadata.
-    Any metadata fields with a value of None will be unaltered from the orignal epub file.
-    
-    :param directory: Directory in which to look for epub files, including subdirectories
-    :type directory: str, required
-    :param metadata: Metadata to update the epub files with
-    :type metadata: dict, required
-    """
-    # Get list of epub files in the directory
-    epub_files = mm_file_tools.find_files_of_type(directory, ".epub")
-    for epub_file in tqdm.tqdm(epub_files):
-        # Update the epub file with the metadata
-        new_metadata = update_fields(mm_epub.get_info_from_epub(epub_file), metadata)
-        mm_epub.update_epub_info(epub_file, new_metadata) 
+    # Get list of archive files in the directory
+    archive_files = mm_file_tools.find_files_of_type(directory, ".cbz")
+    archive_files.extend(mm_file_tools.find_files_of_type(directory, ".epub"))
+    # Run through archive files
+    for archive_file in tqdm.tqdm(archive_files):
+        # Update the archive file with the metadata
+        new_metadata = update_fields(mm_archive.get_info_from_archive(archive_file), metadata)
+        mm_archive.update_archive_info(archive_file, new_metadata)
 
 def user_update_file(file:str):
     """
@@ -71,19 +55,12 @@ def user_update_file(file:str):
     """
     # Read info from the given file
     full_file = abspath(file)
-    updating_metadata = mm_archive.get_empty_metadata()
-    extension = html_string_tools.html.get_extension(full_file).lower()
+    existing_metadata = mm_archive.get_info_from_archive(full_file)
+    # Get metadata from the user
     updating_metadata = mm_archive.get_metadata_from_user(mm_archive.get_empty_metadata(), True)
-    # Update CBZ
-    if extension == ".cbz":
-        existing_metadata = mm_comic_archive.get_info_from_cbz(full_file)
-        updating_metadata = update_fields(existing_metadata, updating_metadata)
-        mm_comic_archive.update_cbz_info(full_file, updating_metadata)
-    # Update EPUB
-    if extension == ".epub":
-        existing_metadata = mm_epub.get_info_from_epub(full_file)
-        updating_metadata = update_fields(existing_metadata, updating_metadata)
-        mm_epub.update_epub_info(full_file, updating_metadata)
+    # Update the archive metadata
+    updating_metadata = update_fields(existing_metadata, updating_metadata)
+    mm_comic_archive.update_archive_info(full_file, updating_metadata)
 
 def user_mass_update(directory:str):
     """
@@ -92,8 +69,7 @@ def user_mass_update(directory:str):
     # Get metadata to update
     updating_metadata = mm_archive.get_metadata_from_user(mm_archive.get_empty_metadata(), True)
     # Mass update cbz and epub files
-    mass_update_cbzs(abspath(directory), updating_metadata)
-    mass_update_epubs(abspath(directory), updating_metadata)
+    mass_update_archives(abspath(directory), updating_metadata)
 
 def main():
     """
