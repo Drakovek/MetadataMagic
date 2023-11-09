@@ -8,8 +8,7 @@ console_scripts = [
     "mm-archive = metadata_magic.archive.archive:main",
     "mm-update = metadata_magic.archive.update:main",
     "mm-error = metadata_magic.error:main",
-    "meta-rename = metadata_magic.rename.meta_rename:main",
-    "sort-rename = metadata_magic.rename.sort_rename:main",    
+    "mm-rename = metadata_magic.rename:main",
     "archive-series = metadata_magic.archive.series_info:main",
     "archive-all-comics = metadata_magic.archive.archive_all:main",
     "extract-all-comics = metadata_magic.archive.extract_all:main"]
@@ -19,7 +18,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="Metadata-Magic",
-    version="0.8.0",
+    version="0.8.1",
     author="Drakovek",
     author_email="DrakovekMail@gmail.com",
     description="Utility for managing metadata.",

@@ -4,10 +4,10 @@ import os
 import tqdm
 import argparse
 import python_print_tools.printer
+import metadata_magic.sort as mm_sort
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.archive.archive as mm_archive
-import metadata_magic.rename.rename_tools as mm_rename_tools
 from os.path import abspath, exists
 from typing import List
 
@@ -86,7 +86,7 @@ def find_missing_fields(path:str, fields:List[str]) -> List[str]:
                     break
             except KeyError: pass
     # Return the list of missing files
-    return mm_rename_tools.sort_alphanum(missing)
+    return mm_sort.sort_alphanum(missing)
 
 def print_errors(error_files:List[str], root_directory:str, print_text:str):
     """
@@ -109,7 +109,7 @@ def print_errors(error_files:List[str], root_directory:str, print_text:str):
     
 def main():
     """
-    Sets up the parser for the user to find JSONs with missing media files.
+    Sets up the parser for the user to find errors in metadata.
     """
     # Set up argument parser
     parser = argparse.ArgumentParser()

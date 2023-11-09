@@ -6,15 +6,13 @@ import shutil
 import argparse
 import html_string_tools
 import python_print_tools.printer
+import metadata_magic.rename as mm_rename
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.comic_xml as mm_comic_xml
 import metadata_magic.archive.comic_archive as mm_comic_archive
-import metadata_magic.rename.rename_tools as mm_rename_tools
 from os.path import abspath, basename, exists, join
-
-
 
 def archive_all(directory:str):
     """
@@ -46,8 +44,8 @@ def archive_all(directory:str):
         # Copy cbz to the original directory
         filename = basename(pair["json"])
         filename = filename[:len(filename) - 5]
-        filename = mm_rename_tools.get_available_filename(cbz_file, filename, full_directory)
-        new_cbz = abspath(join(full_directory, filename))
+        filename = mm_rename.get_available_filename([cbz_file], filename, full_directory)
+        new_cbz = abspath(join(full_directory, f"{filename}.cbz"))
         shutil.copy(cbz_file, new_cbz)
         assert exists(new_cbz)
         # Delete the original files

@@ -4,10 +4,11 @@ import math
 import shutil
 import html_string_tools
 import python_print_tools.printer
+import metadata_magic.sort as mm_sort
+import metadata_magic.rename as mm_rename
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.comic_xml as mm_comic_xml
-import metadata_magic.rename.rename_tools as mm_rename_tools
 from xml.etree import ElementTree
 from os.path import abspath, basename, exists, isdir, join
 from typing import List
@@ -120,7 +121,7 @@ def get_default_chapters(directory:str, title:str=None) -> List[dict]:
     """
     # Find all text files in the given directory
     text_files = mm_file_tools.find_files_of_type(directory, ".txt", include_subdirectories=False)
-    text_files = mm_rename_tools.sort_alphanum(text_files)
+    text_files = mm_sort.sort_alphanum(text_files)
     # Set default chapter values for each text file
     chapters = []
     for i in range(0, len(text_files)):
@@ -650,8 +651,8 @@ def create_epub(chapters:List[dict], metadata:dict, directory:str) -> str:
     # Create the content.opf file
     create_content_opf(updated_chapters, metadata, epub_directory)
     # Get the epub file path
-    filename = mm_rename_tools.get_available_filename("a.epub", metadata["title"], directory)
-    epub_file = abspath(join(directory, filename))
+    filename = mm_rename.get_available_filename(["a.epub"], metadata["title"], directory)
+    epub_file = abspath(join(directory, f"{filename}.epub"))
     # Create the epub file
     assert mm_file_tools.create_zip(build_directory, epub_file, 8, "application/epub+zip")
     return epub_file

@@ -6,10 +6,11 @@ import chardet
 import shutil
 import zipfile
 import tempfile
-import html_string_tools
+import html_string_tools.html
+import metadata_magic.rename as mm_rename
+import metadata_magic.sort as mm_sort
 from typing import List
 from os.path import abspath, basename, exists, isdir, join, relpath
-from .rename import rename_tools as mm_rename_tools
 
 def get_temp_dir(folder_name:str="dvk_meta_magic") -> str:
     """
@@ -107,7 +108,7 @@ def find_files_of_type(directory:str, extension:str, include_subdirectories:bool
     # Run through all directories
     while len(directories) > 0:
         # Get list of all files in the current directory
-        current_files = mm_rename_tools.sort_alphanum(os.listdir(directories[0]))
+        current_files = mm_sort.sort_alphanum(os.listdir(directories[0]))
         for filename in current_files:
             # Find file properties
             full_file = abspath(join(directories[0], filename))
@@ -233,7 +234,7 @@ def extract_zip(zip_path:str, extract_directory:str, create_folder:bool=False,
         filename = basename(zip_path)
         extension = html_string_tools.html.get_extension(filename)
         filename = filename[:len(filename) - len(extension)]
-        filename = mm_rename_tools.get_available_filename("AAAAAAAAAA", filename, main_dir)
+        filename = mm_rename.get_available_filename(["AAAAAAAAAA"], filename, main_dir)
         new_dir = abspath(join(main_dir, filename))
         os.mkdir(new_dir)
     # Delete listed files
@@ -249,10 +250,11 @@ def extract_zip(zip_path:str, extract_directory:str, create_folder:bool=False,
     # Copy files to new directory
     files = os.listdir(temp_dir)
     for file in files:
-        filename = file[:len(file) - len(html_string_tools.html.get_extension(file))]
-        filename = mm_rename_tools.get_available_filename(file, filename, new_dir)
+        extension = html_string_tools.html.get_extension(file)
+        filename = file[:len(file) - len(extension)]
+        filename = mm_rename.get_available_filename([file], filename, new_dir)
         current_file = abspath(join(temp_dir, file))
-        new_file = abspath(join(new_dir, filename))
+        new_file = abspath(join(new_dir, f"{filename}{extension}"))
         if isdir(current_file):
             shutil.copytree(current_file, new_file)
         else:
@@ -293,8 +295,8 @@ def extract_file_from_zip(zip_path:str, extract_directory:str, extract_file:str,
             if exists(new_file):
                 extension = html_string_tools.html.get_extension(extract_file)
                 filename = extract_file[:len(extract_file) - len(extension)]
-                filename = mm_rename_tools.get_available_filename(extracted, filename, extract_directory)
-                new_file = abspath(join(extract_directory, filename))
+                filename = mm_rename.get_available_filename([extracted], filename, extract_directory)
+                new_file = abspath(join(extract_directory, f"{filename}{extension}"))
             # Copy file to new location
             shutil.copy(extracted, new_file)
             return new_file

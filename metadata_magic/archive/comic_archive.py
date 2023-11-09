@@ -4,10 +4,11 @@ import os
 import re
 import shutil
 import html_string_tools
+import metadata_magic.sort as mm_sort
+import metadata_magic.rename as mm_rename
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.comic_xml as mm_comic_xml
-import metadata_magic.rename.rename_tools as mm_rename_tools
 from os.path import abspath, basename, exists, isdir, join
 
 def create_cbz(directory:str, name:str=None, metadata:dict=None, remove_files:bool=False) -> str:
@@ -30,13 +31,13 @@ def create_cbz(directory:str, name:str=None, metadata:dict=None, remove_files:bo
     if len(os.listdir(full_directory)) == 0:
         return None
     # Create CBZ filename
-    filename = mm_rename_tools.get_available_filename("a.cbz", basename(full_directory), full_directory)
+    filename = mm_rename.get_available_filename(["a.cbz"], basename(full_directory), full_directory)
     if name is not None:
-        filename = mm_rename_tools.get_available_filename("a.cbz", name, full_directory)
-    cbz_file = abspath(join(full_directory, filename))
+        filename = mm_rename.get_available_filename(["a.cbz"], name, full_directory)
+    cbz_file = abspath(join(full_directory, f"{filename}.cbz"))
     # Check if there are existing directories
     move_files = True
-    files = mm_rename_tools.sort_alphanum(os.listdir(full_directory))
+    files = mm_sort.sort_alphanum(os.listdir(full_directory))
     for file in files:
         if isdir(abspath(join(full_directory, file))):
             move_files = False
@@ -51,8 +52,8 @@ def create_cbz(directory:str, name:str=None, metadata:dict=None, remove_files:bo
                 assert folder_name is not None
             except (AssertionError, KeyError, TypeError):
                 folder_name = files[0][:len(files[0]) - len(html_string_tools.html.get_extension(files[0]))]
-        folder_name = mm_rename_tools.create_filename(folder_name)
-        folder_name = mm_rename_tools.get_available_filename("AAAAAAAAAA", folder_name, full_directory)
+        folder_name = mm_rename.get_file_friendly_text(folder_name)
+        folder_name = mm_rename.get_available_filename(["AAAAAAAAAA"], folder_name, full_directory)
         new_folder = abspath(join(full_directory, folder_name))
         os.mkdir(new_folder)
         # Move existing files to the new folder

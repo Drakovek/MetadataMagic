@@ -3,9 +3,9 @@
 import os
 import tqdm
 import html_string_tools.html
-from typing import List
+import metadata_magic.sort as mm_sort
 from os.path import abspath, basename, exists, isdir, join
-from .rename import rename_tools as mm_rename_tools
+from typing import List
 
 def separate_files(path:str) -> tuple:
     """
@@ -39,8 +39,8 @@ def separate_files(path:str) -> tuple:
         jsons.extend(new_jsons)
         media.extend(new_media)
     # Return JSON and media files separated
-    jsons = mm_rename_tools.sort_alphanum(jsons)
-    media = mm_rename_tools.sort_alphanum(media)
+    jsons = mm_sort.sort_alphanum(jsons)
+    media = mm_sort.sort_alphanum(media)
     return (jsons, media)
 
 def get_pairs(path:str) -> List[dict]:
