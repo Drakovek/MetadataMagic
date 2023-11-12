@@ -2,6 +2,8 @@ import os
 import re
 import math
 import shutil
+import lxml.html
+import lxml.etree
 import html_string_tools
 import python_print_tools.printer
 import metadata_magic.sort as mm_sort
@@ -46,10 +48,14 @@ def format_xhtml(html:str, title:str) -> str:
     formatted_html = re.sub(r"\s*<div></div>\s*|\s*<div\s*/>\s*", "", formatted_html)
     if not formatted_html.startswith("<") and not formatted_html.endswith(">"):
         formatted_html = f"<p>{formatted_html}</p>"
-    # Add text to the body
+    # Use LXML to clean up tags
+    root = lxml.html.fromstring(f"<html><body>{formatted_html}</body></html>")
+    formatted_html = lxml.etree.tostring(root).decode("UTF-8")
+    formatted_html = re.sub(r"^\s*<\s*html\s*>|<\s*\/\s*html\s*>\s*$", "", formatted_html)
+    formatted_html = re.sub(r"^\s*<\s*body\s*>|<\s*\/\s*body\s*>\s*$", "", formatted_html)
+    # Add as body to the main XML tree
     try:
-        formatted_html = f"<body>{formatted_html}</body>"
-        body = ElementTree.fromstring(formatted_html)
+        body = ElementTree.fromstring(f"<body>{formatted_html}</body>")
         base.append(body)
     except ElementTree.ParseError as parse_error:
         character = ord(formatted_html[parse_error.position[0]])
@@ -66,7 +72,7 @@ def txt_to_xhtml(txt_file:str, title:str) -> str:
     Reads the text in a .txt file and formats it into XHTML for an EPUB file
     
     :param txt_file: Text file to read
-    :type text_file: str, required
+    :type txt_file: str, required
     :param title: Title to use for the XHTML header
     :type title: str, required
     :return: XHTML formatted text
@@ -91,6 +97,49 @@ def txt_to_xhtml(txt_file:str, title:str) -> str:
     html.replace("\r", "")
     # Return with XHTML formatting
     return format_xhtml(html, title)
+
+def html_to_xhtml(html_file:str, title:str) -> str:
+    """
+    Reads the text in an .html file and formats it into XHTML for an EPUB file
+    
+    :param html_file: HTML file to read
+    :type html_file: str, required
+    :param title: Title to use for the XHTML header
+    :type title: str, required
+    :return: XHTML formatted text
+    :rtype: str
+    """
+    # Parse HTML file
+    text = mm_file_tools.read_text_file(html_file)
+    root = lxml.html.fromstring(text)
+    # Get internal html tag
+    delete_encapsulation = False
+    try:
+        html = root.xpath("//html")[0]
+        root = html
+        delete_encapsulation = True
+    except IndexError: pass
+    # Get internal body tag
+    try:
+        body = root.xpath("//body")[0]
+        root = body
+        delete_encapsulation = True
+    except IndexError: pass
+    # Get text block (Deviantart formatted html)
+    try:
+        text_class = root.xpath("//div[@class='text']")[0]
+        root = text_class
+        delete_encapsulation = True
+    except IndexError: pass
+    # Get text from the root
+    content = lxml.etree.tostring(root).decode("UTF-8")
+    # Delete encapsulation
+    if delete_encapsulation:
+        content = re.sub(r"^<[^>]*>|<\s*\/[^>]*>$", "", content)
+    # Delete javascript tags
+    content = re.sub(r"<\s*script[^>]*>[^<]*<\s*\/\s*script\s*>|<\s*script\s*\/\s*>", "", content)
+    # Return in XHTML format
+    return format_xhtml(content.strip(), title)
 
 def get_title_from_file(file:str) -> str:
     """
@@ -121,6 +170,8 @@ def get_default_chapters(directory:str, title:str=None) -> List[dict]:
     """
     # Find all text files in the given directory
     text_files = mm_file_tools.find_files_of_type(directory, ".txt", include_subdirectories=False)
+    text_files.extend(mm_file_tools.find_files_of_type(directory, ".html", include_subdirectories=False))
+    text_files.extend(mm_file_tools.find_files_of_type(directory, ".htm", include_subdirectories=False))
     text_files = mm_sort.sort_alphanum(text_files)
     # Set default chapter values for each text file
     chapters = []
@@ -247,7 +298,11 @@ def create_content_files(chapters:List[dict], output_directory:str) -> List[dict
         filename = filename[:len(filename) - len(html_string_tools.html.get_extension(filename))]
         xhtml_file = abspath(join(content_dir, f"{filename}.xhtml"))
         # Create the file
-        xhtml = txt_to_xhtml(chapters[i]["file"], chapters[i]["title"])
+        extension = html_string_tools.html.get_extension(chapters[i]["file"])
+        if extension == ".html" or extension == ".htm":
+            xhtml = html_to_xhtml(chapters[i]["file"], chapters[i]["title"])
+        else:
+            xhtml = txt_to_xhtml(chapters[i]["file"], chapters[i]["title"])
         mm_file_tools.write_text_file(xhtml_file, xhtml)
         updated_chapters[i]["file"] = f"content/{filename}.xhtml"
     return chapters

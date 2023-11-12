@@ -16,6 +16,15 @@ def test_get_directory_archive_type():
     mm_file_tools.write_text_file(abspath(join(temp_dir, "text.txt")), "AAA")
     mm_file_tools.write_text_file(abspath(join(temp_dir, "image.png")), "AAA")
     assert mm_archive.get_directory_archive_type(temp_dir) == "epub"
+    # Test getting epub from folder with html files
+    temp_dir = mm_file_tools.get_temp_dir()
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "thing.html")), "AAA")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "image.jpg")), "AAA")
+    assert mm_archive.get_directory_archive_type(temp_dir) == "epub"
+    temp_dir = mm_file_tools.get_temp_dir()
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "web.htm")), "AAA")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "image.jpeg")), "AAA")
+    assert mm_archive.get_directory_archive_type(temp_dir) == "epub"
     # Test getting cbz from folder with images
     temp_dir = mm_file_tools.get_temp_dir()
     mm_file_tools.write_text_file(abspath(join(temp_dir, "meta.json")), "AAA")
@@ -65,7 +74,7 @@ def test_get_info_from_jsons():
     temp_dir = mm_file_tools.get_temp_dir()
     sub_dir = abspath(join(temp_dir, "sub"))
     os.mkdir(sub_dir)
-    main_media = abspath(join(temp_dir, "json.txt"))
+    main_media = abspath(join(temp_dir, "json.jpg"))
     main_json = abspath(join(temp_dir, "json.json"))
     sub_media = abspath(join(sub_dir, "blah.png"))
     sub_json = abspath(join(sub_dir, "blah.json"))
@@ -213,6 +222,20 @@ def test_get_info_from_jsons():
     assert meta["cover_artist"] is None
     assert meta["publisher"] is None
     assert meta["url"] is None
+    # Test that only the writer field is credited to the artist if it is a text file
+    temp_dir = mm_file_tools.get_temp_dir()
+    main_media = abspath(join(temp_dir, "json.txt"))
+    main_json = abspath(join(temp_dir, "json.json"))
+    json_meta = {"title":"This is a title!", "author":"Some Person"}
+    mm_file_tools.write_text_file(main_media, "This is text")
+    mm_file_tools.write_json_file(main_json, json_meta)
+    assert exists(main_media)
+    assert exists(main_json)
+    meta = mm_archive.get_info_from_jsons(temp_dir)
+    assert meta["title"] == "This is a title!"
+    assert meta["writer"] == "Some Person"
+    assert meta["artist"] is None
+    assert meta["cover_artist"] is None
 
 def test_get_info_from_archive():
     """

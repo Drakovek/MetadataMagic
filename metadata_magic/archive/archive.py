@@ -25,7 +25,7 @@ def get_directory_archive_type(directory:str) -> str:
     :rtype: str
     """
     # Return "epub" if the directory contains text files
-    if mm_file_tools.directory_contains(directory, [".txt"], False):
+    if mm_file_tools.directory_contains(directory, [".txt", ".html", ".htm"], False):
         return "epub"
     # Return "cbz" if the directory contains image files
     if mm_file_tools.directory_contains(directory, [".png", ".jpeg", ".jpg"], True):
@@ -75,16 +75,19 @@ def get_info_from_jsons(path:str) -> dict:
     # Get first instance of JSON metadata
     try:
         main_meta = json_metas[0]
+        extension = html_string_tools.html.get_extension(pairs[0]["media"])
     except IndexError: return get_empty_metadata()
     # Get most metadata from first JSON
     metadata = get_empty_metadata()
     metadata["title"] = main_meta["title"]
     metadata["date"] = main_meta["date"]
     metadata["writer"] = main_meta["writer"]
-    metadata["artist"] = main_meta["artist"]
-    metadata["cover_artist"] = main_meta["artist"]
     metadata["publisher"] = main_meta["publisher"]
     metadata["url"] = main_meta["url"]
+    # Don't set the artist/cover artist if the file is a text file
+    if not extension == ".txt" and not extension == ".html" and not extension == ".htm":
+        metadata["artist"] = main_meta["artist"]
+        metadata["cover_artist"] = main_meta["artist"]
     # Get description metadata
     description = main_meta["description"]
     if description is not None:
@@ -256,7 +259,7 @@ def get_metadata_from_user(metadata:dict, get_score:bool) -> dict:
     regex = "(19[7-9][0-9]|2[0-1][0-9]{2})\\-(0[1-9]|1[0-2])\\-(0[1-9]|[1-2][0-9]|3[0-1])"
     if user_metadata["date"] is None or len(re.findall(regex, user_metadata["date"])) == 0:
         user_metadata["date"] = get_string_from_user("Date (YYYY-MM-DD)", None)
-    if len(re.findall(regex, user_metadata["date"])) == 0:
+    if user_metadata["date"] is None or len(re.findall(regex, user_metadata["date"])) == 0:
         user_metadata["date"] = None
     # Get the artists
     user_metadata["artist"] = user_list_default("Illustrator", user_metadata["artist"])
@@ -286,7 +289,7 @@ def get_metadata_from_user(metadata:dict, get_score:bool) -> dict:
             score = int(user_string_default("Score (Range 0-5)", None))
             if score > -1 and score < 6:
                 user_metadata["score"] = str(score)
-        except ValueError: user_metadata["score"] = None
+        except (TypeError, ValueError): user_metadata["score"] = None
     # Return the user metadata
     return user_metadata
 
