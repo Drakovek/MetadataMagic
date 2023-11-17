@@ -71,10 +71,26 @@ def test_format_xhtml():
     compare = f"{compare}\n    </body>"
     compare = f"{compare}\n</html>"
     assert xhtml == compare
+    # Test removing extraneous paragraph and div tags
+    html = "<p/><div/><p/><p>This is fine</p> <p> </p> <div> </div> <div>Blah</div>"
+    xhtml = mm_epub.format_xhtml(html, "Remove Space")
+    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
+    compare = f"{compare}\n    <head>"
+    compare = f"{compare}\n        <title>Remove Space</title>"
+    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
+    compare = f"{compare}\n    </head>"
+    compare = f"{compare}\n    <body>"
+    compare = f"{compare}\n        <p>This is fine</p>"
+    compare = f"{compare}\n        <div>Blah</div>"
+    compare = f"{compare}\n    </body>"
+    compare = f"{compare}\n</html>"
+    assert xhtml == compare
 
-def test_txt_to_xhtml():
+def test_txt_to_xml():
     """
-    Tests the text_to_xhtml function.
+    Tests the text_to_xml function.
     """
     # Test a single paragraph
     temp_dir = mm_file_tools.get_temp_dir()
@@ -82,87 +98,28 @@ def test_txt_to_xhtml():
     text = "This is a simple sentence!"
     mm_file_tools.write_text_file(text_file, text)
     assert exists(text_file)
-    xhtml = mm_epub.txt_to_xhtml(text_file, "Title!")
-    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
-    compare = f"{compare}\n    <head>"
-    compare = f"{compare}\n        <title>Title!</title>"
-    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
-    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
-    compare = f"{compare}\n    </head>"
-    compare = f"{compare}\n    <body>"
-    compare = f"{compare}\n        <p>This is a simple sentence!</p>"
-    compare = f"{compare}\n    </body>"
-    compare = f"{compare}\n</html>"
-    assert xhtml == compare
+    xml = mm_epub.txt_to_xml(text_file)
+    assert xml == "<p>This is a simple sentence!</p>"
     # Test multiple paragraphs
     text = "Different paragraphs!\n\nHow cool!"
     mm_file_tools.write_text_file(text_file, text)
-    xhtml = mm_epub.txt_to_xhtml(text_file, "Thing...")
-    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
-    compare = f"{compare}\n    <head>"
-    compare = f"{compare}\n        <title>Thing...</title>"
-    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
-    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
-    compare = f"{compare}\n    </head>"
-    compare = f"{compare}\n    <body>"
-    compare = f"{compare}\n        <p>Different paragraphs!</p>"
-    compare = f"{compare}\n        <p>How cool!</p>"
-    compare = f"{compare}\n    </body>"
-    compare = f"{compare}\n</html>"
-    assert xhtml == compare
+    xml = mm_epub.txt_to_xml(text_file)
+    assert xml == "<p>Different paragraphs!</p><p>How cool!</p>"
     # Test single new line character with HTML escape entities
     text = "More text!\nAnd This & That..."
     mm_file_tools.write_text_file(text_file, text)
-    xhtml = mm_epub.txt_to_xhtml(text_file, "Escape")
-    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
-    compare = f"{compare}\n    <head>"
-    compare = f"{compare}\n        <title>Escape</title>"
-    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
-    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
-    compare = f"{compare}\n    </head>"
-    compare = f"{compare}\n    <body>"
-    compare = f"{compare}\n        <p>More text!<br />And This &amp; That...</p>"
-    compare = f"{compare}\n    </body>"
-    compare = f"{compare}\n</html>"
-    assert xhtml == compare
+    xml = mm_epub.txt_to_xml(text_file)
+    assert xml == "<p>More text!<br />And This &#38; That...</p>"
     # Test new lines and separate paragraphs
     text = "Paragraph\n\nOther\nText!\n\nFinal\nParagraph..."
     mm_file_tools.write_text_file(text_file, text)
-    xhtml = mm_epub.txt_to_xhtml(text_file, "Both!")
-    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
-    compare = f"{compare}\n    <head>"
-    compare = f"{compare}\n        <title>Both!</title>"
-    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
-    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
-    compare = f"{compare}\n    </head>"
-    compare = f"{compare}\n    <body>"
-    compare = f"{compare}\n        <p>Paragraph</p>"
-    compare = f"{compare}\n        <p>Other<br />Text!</p>"
-    compare = f"{compare}\n        <p>Final<br />Paragraph...</p>"
-    compare = f"{compare}\n    </body>"
-    compare = f"{compare}\n</html>"
-    assert xhtml == compare
+    xml = mm_epub.txt_to_xml(text_file)
+    assert xml == "<p>Paragraph</p><p>Other<br />Text!</p><p>Final<br />Paragraph...</p>"
     # Test with more than one two new lines
-    text = "Thing\n\n\n\r\n\nOther"
+    text = "Thing\n\n\r\n\r\n\nOther\r"
     mm_file_tools.write_text_file(text_file, text)
-    xhtml = mm_epub.txt_to_xhtml(text_file, "Multiple")
-    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
-    compare = f"{compare}\n    <head>"
-    compare = f"{compare}\n        <title>Multiple</title>"
-    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
-    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
-    compare = f"{compare}\n    </head>"
-    compare = f"{compare}\n    <body>"
-    compare = f"{compare}\n        <p>Thing</p>"
-    compare = f"{compare}\n        <p>Other</p>"
-    compare = f"{compare}\n    </body>"
-    compare = f"{compare}\n</html>"
-    assert xhtml == compare
+    xml = mm_epub.txt_to_xml(text_file)
+    assert xml == "<p>Thing</p><p>Other</p>"
 
 def test_html_to_xml():
     """
@@ -174,69 +131,23 @@ def test_html_to_xml():
     text = "<p>This is a simple sentence!</p>"
     mm_file_tools.write_text_file(html_file, text)
     assert exists(html_file)
-    xhtml = mm_epub.html_to_xhtml(html_file, "Title!")
-    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
-    compare = f"{compare}\n    <head>"
-    compare = f"{compare}\n        <title>Title!</title>"
-    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
-    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
-    compare = f"{compare}\n    </head>"
-    compare = f"{compare}\n    <body>"
-    compare = f"{compare}\n        <p>This is a simple sentence!</p>"
-    compare = f"{compare}\n    </body>"
-    compare = f"{compare}\n</html>"
-    assert xhtml == compare
+    xml = mm_epub.html_to_xml(html_file)
+    assert xml == "<p>This is a simple sentence!</p>"
     # Test with multiple paragraphs
     text = "<html><p>Some text.</p><p>&amp; More!</p></html>"
     mm_file_tools.write_text_file(html_file, text)
-    xhtml = mm_epub.html_to_xhtml(html_file, "New")
-    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
-    compare = f"{compare}\n    <head>"
-    compare = f"{compare}\n        <title>New</title>"
-    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
-    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
-    compare = f"{compare}\n    </head>"
-    compare = f"{compare}\n    <body>"
-    compare = f"{compare}\n        <p>Some text.</p>"
-    compare = f"{compare}\n        <p>&amp; More!</p>"
-    compare = f"{compare}\n    </body>"
-    compare = f"{compare}\n</html>"
-    assert xhtml == compare
+    xml = mm_epub.html_to_xml(html_file)
+    assert xml == "<p>Some text.</p><p>&amp; More!</p>"
     # Test with a body
     text = "<!DOCTYPE html>\n<html>\n<body>\n<p>New.</p>\n<p>Words</p>\n<body>\n</html>"
     mm_file_tools.write_text_file(html_file, text)
-    xhtml = mm_epub.html_to_xhtml(html_file, "Other")
-    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
-    compare = f"{compare}\n    <head>"
-    compare = f"{compare}\n        <title>Other</title>"
-    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
-    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
-    compare = f"{compare}\n    </head>"
-    compare = f"{compare}\n    <body>"
-    compare = f"{compare}\n        <p>New.</p>"
-    compare = f"{compare}\n        <p>Words</p>"
-    compare = f"{compare}\n    </body>"
-    compare = f"{compare}\n</html>"
-    assert xhtml == compare
+    xml = mm_epub.html_to_xml(html_file)
+    assert xml == "<p>New.</p><p>Words</p>"
     # Test with newlines and no formatting
-    text = "This is a test.\n\n\nHopefully nothing added."
+    text = "This is a test.\n\r\r\n\nHopefully nothing added."
     mm_file_tools.write_text_file(html_file, text)
-    xhtml = mm_epub.html_to_xhtml(html_file, "Next")
-    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
-    compare = f"{compare}\n    <head>"
-    compare = f"{compare}\n        <title>Next</title>"
-    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
-    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
-    compare = f"{compare}\n    </head>"
-    compare = f"{compare}\n    <body>"
-    compare = f"{compare}\n        <p>This is a test.Hopefully nothing added.</p>"
-    compare = f"{compare}\n    </body>"
-    compare = f"{compare}\n</html>"
-    assert xhtml == compare
+    xml = mm_epub.html_to_xml(html_file)
+    assert xml == "<p>This is a test.Hopefully nothing added.</p>"
     # Test with DeviantArt formatting
     text = "<!DOCTYPE html><html><head>Not at all relevant</head><body>"
     text = f"{text}<div class='blah'>Random metadata and stuff.</div><span>Other things</span>"
@@ -244,21 +155,26 @@ def test_html_to_xml():
     text = f"{text}<script type'thing'>Blah</script><p>More.<p></div>"
     text = f"{text}</body></html>"
     mm_file_tools.write_text_file(html_file, text)
-    xhtml = mm_epub.html_to_xhtml(html_file, "DeviantArt")
-    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
-    compare = f"{compare}\n    <head>"
-    compare = f"{compare}\n        <title>DeviantArt</title>"
-    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
-    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
-    compare = f"{compare}\n    </head>"
-    compare = f"{compare}\n    <body>"
-    compare = f"{compare}\n        <p>This is the real stuff.</p>"
-    compare = f"{compare}\n        <p>Right<br />Here.</p>"
-    compare = f"{compare}\n        <p>More.</p>"
-    compare = f"{compare}\n    </body>"
-    compare = f"{compare}\n</html>"    
-    assert xhtml == compare
+    xml = mm_epub.html_to_xml(html_file)
+    assert xml == "<p>This is the real stuff.</p><p>Right<br/>Here.</p><p>More.</p><p/>"
+
+def test_image_to_xml():
+    """
+    Tests the image_to_xml function.
+    """
+    # Test getting image as XML
+    temp_dir = mm_file_tools.get_temp_dir()
+    image_file = abspath(join(temp_dir, "image.png"))
+    mm_file_tools.write_text_file(image_file, "BLAH")
+    assert exists(image_file)
+    xml = mm_epub.image_to_xml(image_file)
+    assert xml == "<img src=\"../images/image.png\" alt=\"image\" />"
+    # Different dimensions
+    image_file = abspath(join(temp_dir, "[01] Other.jpg"))
+    mm_file_tools.write_text_file(image_file, "BLAH")
+    assert exists(image_file)
+    xml = mm_epub.image_to_xml(image_file)
+    assert xml == "<img src=\"../images/[01] Other.jpg\" alt=\"Other\" />"
 
 def test_get_title_from_file():
     """
@@ -289,29 +205,178 @@ def test_get_default_chapters():
     mm_file_tools.write_text_file(abspath(join(sub_dir, "sub.txt")), "TEXT")
     mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "TEXT")
     mm_file_tools.write_text_file(abspath(join(temp_dir, "2.html")), "TEXT")
-    mm_file_tools.write_text_file(abspath(join(temp_dir, "3.txt")), "TEXT")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "3.png")), "TEXT")
     mm_file_tools.write_text_file(abspath(join(temp_dir, "4.thing")), "TEXT")
     chapters = mm_epub.get_default_chapters(temp_dir)
     assert len(chapters) == 3
-    assert chapters[0]["id"] == "item0"
     assert chapters[0]["include"]
     assert chapters[0]["title"] == "1"
-    assert basename(chapters[0]["file"]) == "1.txt"
-    assert chapters[1]["id"] == "item1"
+    assert len(chapters[0]["files"]) == 1
+    assert chapters[0]["files"][0]["id"] == "item0"
+    assert basename(chapters[0]["files"][0]["file"]) == "1.txt"
     assert chapters[1]["include"]
     assert chapters[1]["title"] == "2"
-    assert basename(chapters[1]["file"]) == "2.html"
-    assert chapters[2]["id"] == "item2"
+    assert len(chapters[1]["files"]) == 1
+    assert chapters[1]["files"][0]["id"] == "item1"
+    assert basename(chapters[1]["files"][0]["file"]) == "2.html"
     assert chapters[2]["include"]
     assert chapters[2]["title"] == "3"
-    assert basename(chapters[2]["file"]) == "3.txt"
+    assert len(chapters[2]["files"]) == 1
+    assert chapters[2]["files"][0]["id"] == "item2"
+    assert basename(chapters[2]["files"][0]["file"]) == "3.png"
     # Test getting default chapter information for one text file with a title
     chapters = mm_epub.get_default_chapters(sub_dir, "Title!")
     assert len(chapters) == 1
-    assert chapters[0]["id"] == "item0"
     assert chapters[0]["include"]
     assert chapters[0]["title"] == "Title!"
-    assert basename(chapters[0]["file"]) == "sub.txt"
+    assert chapters[0]["files"][0]["id"] == "item0"
+    assert basename(chapters[0]["files"][0]["file"]) == "sub.txt"
+
+def test_group_chapters():
+    """
+    Tests the group_chapters function.
+    """
+    # Create test group of chapters
+    chapters = []
+    chapters.append({"include":False, "title":"Item", "files":[{"id":"item0", "file":"file1.txt"}]})
+    chapters.append({"include":True, "title":"Part 2", "files":[{"id":"item1", "file":"file2.png"}]})
+    chapters.append({"include":True, "title":"Part 3", "files":[{"id":"item2", "file":"file3.jpg"}]})
+    chapters.append({"include":False, "title":"Final", "files":[{"id":"item3", "file":"file4.jpeg"}]})
+    # Combine groups of 1
+    new_chapters = mm_epub.group_chapters(chapters, [2,0])
+    assert len(new_chapters) == 3
+    assert new_chapters[0]["include"] is True
+    assert new_chapters[0]["title"] == "Item"
+    assert new_chapters[0]["files"] == [{"id":"item0", "file":"file1.txt"}, {"id":"item2", "file":"file3.jpg"}]
+    assert new_chapters[1] == {"include":True, "title":"Part 2", "files":[{"id":"item1", "file":"file2.png"}]}
+    assert new_chapters[2] == {"include":False, "title":"Final", "files":[{"id":"item3", "file":"file4.jpeg"}]}
+    # Combine an already combined group
+    new_chapters = mm_epub.group_chapters(new_chapters, [2,0,1,0])
+    assert len(new_chapters) == 1
+    assert new_chapters[0]["include"] is True
+    assert new_chapters[0]["title"] == "Item"
+    assert len(new_chapters[0]["files"]) == 4
+    assert new_chapters[0]["files"][0] == {"id":"item0", "file":"file1.txt"}
+    assert new_chapters[0]["files"][1] == {"id":"item1", "file":"file2.png"}
+    assert new_chapters[0]["files"][2] == {"id":"item2", "file":"file3.jpg"}
+    assert new_chapters[0]["files"][3] == {"id":"item3", "file":"file4.jpeg"}
+    # Try combining with just one entry
+    new_chapters = mm_epub.group_chapters(chapters, [1,1,1])
+    assert len(new_chapters) == 4
+    assert new_chapters[0]["include"] is False
+    assert new_chapters[0]["title"] == "Item"
+    assert new_chapters[0]["files"] == [{"id":"item0", "file":"file1.txt"}]
+    assert new_chapters[1]["include"] is True
+    assert new_chapters[1]["title"] == "Part 2"
+    assert new_chapters[1]["files"] == [{"id":"item1", "file":"file2.png"}]
+    assert new_chapters[2]["include"] is True
+    assert new_chapters[2]["title"] == "Part 3"
+    assert new_chapters[2]["files"] == [{"id":"item2", "file":"file3.jpg"}]
+    assert new_chapters[3]["include"] is False
+    assert new_chapters[3]["title"] == "Final"
+    assert new_chapters[3]["files"] == [{"id":"item3", "file":"file4.jpeg"}]
+    # Try combining non-existant entries
+    new_chapters = mm_epub.group_chapters(chapters, [-1])
+    assert len(new_chapters) == 4
+    new_chapters = mm_epub.group_chapters(chapters, [6])
+    assert len(new_chapters) == 4
+    new_chapters = mm_epub.group_chapters(chapters, [4, 2, 1, -1])
+    assert len(new_chapters) == 3
+    assert new_chapters[0]["include"] is False
+    assert new_chapters[0]["title"] == "Item"
+    assert new_chapters[0]["files"] == [{"id":"item0", "file":"file1.txt"}]
+    assert new_chapters[1]["include"] is True
+    assert new_chapters[1]["title"] == "Part 2"
+    assert new_chapters[1]["files"] == [{"id":"item1", "file":"file2.png"}, {"id":"item2", "file":"file3.jpg"}]
+    assert new_chapters[2]["include"] is False
+    assert new_chapters[2]["title"] == "Final"
+    assert new_chapters[2]["files"] == [{"id":"item3", "file":"file4.jpeg"}]
+
+def test_separate_chapters():
+    """
+    Tests the separate_chapters function.
+    """
+    # Create test group of chapters
+    chapters = []
+    chapters.append({"include":False, "title":"Item", "files":[{"id":"item0", "file":"[00] a.txt"}]})
+    files = [{"id":"item1", "file":"[01] B.png"}, {"id":"item3", "file":"[3] file.jpg"}]
+    chapters.append({"include":False, "title":"Part 2", "files":files})
+    files = [{"id":"item2", "file":"[02] Z.png"}, {"id":"item4", "file":"[4] E.jpg"}, {"id":"item5", "file":"[5] D.jpg"}]
+    chapters.append({"include":False, "title":"Final", "files":files})
+    # Test ungrouping a chapter with two files
+    new_chapters = mm_epub.separate_chapters(chapters, 1)
+    assert len(new_chapters) == 4
+    assert new_chapters[0]["include"] is False
+    assert new_chapters[0]["title"] == "Item"
+    assert new_chapters[0]["files"] == [{"id":"item0", "file":"[00] a.txt"}]
+    assert new_chapters[1]["include"] is True
+    assert new_chapters[1]["title"] == "B"
+    assert new_chapters[1]["files"] == [{"id":"item1", "file":"[01] B.png"}]
+    assert new_chapters[2]["include"] is False
+    assert new_chapters[2]["title"] == "Final"
+    assert len(new_chapters[2]["files"]) == 3
+    assert new_chapters[2]["files"][0] == {"id":"item2", "file":"[02] Z.png"}
+    assert new_chapters[2]["files"][1] == {"id":"item4", "file":"[4] E.jpg"}
+    assert new_chapters[2]["files"][2] == {"id":"item5", "file":"[5] D.jpg"}
+    assert new_chapters[3]["include"] is True
+    assert new_chapters[3]["title"] == "file"
+    assert new_chapters[3]["files"] == [{"id":"item3", "file":"[3] file.jpg"}]
+    # Test ungrouping a chapter with more than two files
+    new_chapters = mm_epub.separate_chapters(chapters, 2)
+    assert len(new_chapters) == 5
+    assert new_chapters[0]["include"] is False
+    assert new_chapters[0]["title"] == "Item"
+    assert new_chapters[0]["files"] == [{"id":"item0", "file":"[00] a.txt"}]
+    assert new_chapters[1]["include"] is False
+    assert new_chapters[1]["title"] == "Part 2"
+    assert len(new_chapters[1]["files"]) == 2
+    assert new_chapters[1]["files"][0] == {"id":"item1", "file":"[01] B.png"}
+    assert new_chapters[1]["files"][1] == {"id":"item3", "file":"[3] file.jpg"}
+    assert new_chapters[2]["include"] is True
+    assert new_chapters[2]["title"] == "Z"
+    assert new_chapters[2]["files"] == [{"id":"item2", "file":"[02] Z.png"}]
+    assert new_chapters[3]["include"] is True
+    assert new_chapters[3]["title"] == "E"
+    assert new_chapters[3]["files"] == [{"id":"item4", "file":"[4] E.jpg"}]
+    assert new_chapters[4]["include"] is True
+    assert new_chapters[4]["title"] == "D"
+    assert new_chapters[4]["files"] == [{"id":"item5", "file":"[5] D.jpg"}]
+    # Test ungrouping a chapter with only one file
+    new_chapters = mm_epub.separate_chapters(chapters, 0)
+    assert len(new_chapters) == 3
+    assert new_chapters[0]["include"] is False
+    assert new_chapters[0]["title"] == "Item"
+    assert new_chapters[0]["files"] == [{"id":"item0", "file":"[00] a.txt"}]
+    assert new_chapters[1]["include"] is False
+    assert new_chapters[1]["title"] == "Part 2"
+    assert len(new_chapters[1]["files"]) == 2
+    assert new_chapters[1]["files"][0] == {"id":"item1", "file":"[01] B.png"}
+    assert new_chapters[1]["files"][1] == {"id":"item3", "file":"[3] file.jpg"}
+    assert new_chapters[2]["include"] is False
+    assert new_chapters[2]["title"] == "Final"
+    assert len(new_chapters[2]["files"]) == 3
+    assert new_chapters[2]["files"][0] == {"id":"item2", "file":"[02] Z.png"}
+    assert new_chapters[2]["files"][1] == {"id":"item4", "file":"[4] E.jpg"}
+    assert new_chapters[2]["files"][2] == {"id":"item5", "file":"[5] D.jpg"}
+    # Test ungrouping a chapter at in invalid index
+    new_chapters = mm_epub.separate_chapters(chapters, -1)
+    assert len(new_chapters) == 3
+    new_chapters = mm_epub.separate_chapters(chapters, 5)
+    assert len(new_chapters) == 3
+    assert new_chapters[0]["include"] is False
+    assert new_chapters[0]["title"] == "Item"
+    assert new_chapters[0]["files"] == [{"id":"item0", "file":"[00] a.txt"}]
+    assert new_chapters[1]["include"] is False
+    assert new_chapters[1]["title"] == "Part 2"
+    assert len(new_chapters[1]["files"]) == 2
+    assert new_chapters[1]["files"][0] == {"id":"item1", "file":"[01] B.png"}
+    assert new_chapters[1]["files"][1] == {"id":"item3", "file":"[3] file.jpg"}
+    assert new_chapters[2]["include"] is False
+    assert new_chapters[2]["title"] == "Final"
+    assert len(new_chapters[2]["files"]) == 3
+    assert new_chapters[2]["files"][0] == {"id":"item2", "file":"[02] Z.png"}
+    assert new_chapters[2]["files"][1] == {"id":"item4", "file":"[4] E.jpg"}
+    assert new_chapters[2]["files"][2] == {"id":"item5", "file":"[5] D.jpg"}
 
 def test_get_chapters_string():
     """
@@ -329,7 +394,7 @@ def test_get_chapters_string():
     chapters = mm_epub.get_default_chapters(temp_dir)
     # Test getting string from default chapter info
     chapters_string = mm_epub.get_chapters_string(chapters)
-    compare = "ENTRY     TITLE    FILE "
+    compare = "ENTRY     TITLE    FILES"
     compare = f"{compare}\n------------------------"
     compare = f"{compare}\n001       1        1.txt"
     compare = f"{compare}\n002       2        2.htm"
@@ -340,7 +405,7 @@ def test_get_chapters_string():
     chapters[1]["title"] = "Chapter 01"
     chapters[2]["title"] = "Epilogue"
     chapters_string = mm_epub.get_chapters_string(chapters)
-    compare = "ENTRY     TITLE          FILE "
+    compare = "ENTRY     TITLE          FILES"
     compare = f"{compare}\n------------------------------"
     compare = f"{compare}\n001       Cover Image    1.txt"
     compare = f"{compare}\n002       Chapter 01     2.htm"
@@ -350,11 +415,22 @@ def test_get_chapters_string():
     chapters[1]["include"] = False
     chapters[2]["include"] = False
     chapters_string = mm_epub.get_chapters_string(chapters)
-    compare = "ENTRY     TITLE          FILE "
+    compare = "ENTRY     TITLE          FILES"
     compare = f"{compare}\n------------------------------"
     compare = f"{compare}\n001       Cover Image    1.txt"
     compare = f"{compare}\n002*      Chapter 01     2.htm"
     compare = f"{compare}\n003*      Epilogue       3.txt"
+    assert chapters_string == compare
+    # Test getting string with grouped files
+    files = chapters[1]["files"]
+    files.append({"id":"aaa", "file":"a.png"})
+    chapters[1]["files"] = files
+    chapters_string = mm_epub.get_chapters_string(chapters)
+    compare = "ENTRY     TITLE          FILES       "
+    compare = f"{compare}\n-------------------------------------"
+    compare = f"{compare}\n001       Cover Image    1.txt       "
+    compare = f"{compare}\n002*      Chapter 01     2.htm, a.png"
+    compare = f"{compare}\n003*      Epilogue       3.txt       "
     assert chapters_string == compare
 
 def test_create_content_files():
@@ -366,7 +442,7 @@ def test_create_content_files():
     output_dir = mm_file_tools.get_temp_dir("dvk-epub-output")
     mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "Here's some text!")
     mm_file_tools.write_text_file(abspath(join(temp_dir, "2.html")), "<html><body><p>Word<p><p>Things!</p></body></html>")
-    mm_file_tools.write_text_file(abspath(join(temp_dir, "3.txt")), "Stuff")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "3.jpg")), "IMAGE")
     chapters = mm_epub.get_default_chapters(temp_dir)
     # Test creating the content files from the given chapters
     chapters = mm_epub.create_content_files(chapters, output_dir)
@@ -377,6 +453,9 @@ def test_create_content_files():
     assert chapters[0]["file"] == "content/1.xhtml"
     assert chapters[1]["file"] == "content/2.xhtml"
     assert chapters[2]["file"] == "content/3.xhtml"
+    assert sorted(os.listdir(output_dir)) == ["content", "images"]
+    image_dir = abspath(join(output_dir, "images"))
+    assert sorted(os.listdir(image_dir)) == ["3.jpg"]
     content_dir = abspath(join(output_dir, "content"))
     assert sorted(os.listdir(content_dir)) == ["1.xhtml", "2.xhtml", "3.xhtml"]
     text = mm_file_tools.read_text_file(abspath(join(content_dir, "1.xhtml")))
@@ -392,7 +471,7 @@ def test_create_content_files():
     compare = f"{compare}\n    </body>"
     compare = f"{compare}\n</html>"
     assert text == compare
-    # Test that html was created correctly
+    # Test that HTML based XHTML was created correctly
     text = mm_file_tools.read_text_file(abspath(join(content_dir, "2.xhtml")))
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
     compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
@@ -406,6 +485,59 @@ def test_create_content_files():
     compare = f"{compare}\n        <p>Things!</p>"
     compare = f"{compare}\n    </body>"
     compare = f"{compare}\n</html>"
+    # Test that image XHTML was created correctly
+    text = mm_file_tools.read_text_file(abspath(join(content_dir, "3.xhtml")))    
+    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
+    compare = f"{compare}\n    <head>"
+    compare = f"{compare}\n        <title>3</title>"
+    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
+    compare = f"{compare}\n    </head>"
+    compare = f"{compare}\n    <body>"
+    compare = f"{compare}\n        <img src=\"../images/3.jpg\" alt=\"3\" />"
+    compare = f"{compare}\n    </body>"
+    compare = f"{compare}\n</html>"
+    assert text == compare
+    # Test if chapters are grouped
+    temp_dir = mm_file_tools.get_temp_dir()
+    chapters = mm_epub.get_default_chapters(temp_dir)
+    output_dir = mm_file_tools.get_temp_dir("dvk-epub-output")
+    text_file = abspath(join(temp_dir, "A.txt"))
+    html_file = abspath(join(temp_dir, "B.html"))
+    image_file = abspath(join(temp_dir, "C.jpg"))
+    mm_file_tools.write_text_file(text_file, "Some text here!")
+    mm_file_tools.write_text_file(html_file, "<html><body><p>Different</p><p>Thing</p></body></html>")
+    mm_file_tools.write_text_file(image_file, "thing")
+    assert exists(text_file)
+    assert exists(html_file)
+    assert exists(image_file)
+    files = [{"id":"item0", "file":text_file}, {"id":"item1", "file":image_file}, {"id":"item2", "file":html_file}]
+    chapters = [{"include":True, "title":"Grouped", "files":files}]
+    chapters = mm_epub.create_content_files(chapters, output_dir)
+    assert len(chapters) == 1
+    assert chapters[0]["include"]
+    assert chapters[0]["id"] == "item0"
+    assert chapters[0]["title"] == "Grouped"
+    assert chapters[0]["file"] == "content/A.xhtml"
+    content_dir = abspath(join(output_dir, "content"))
+    assert sorted(os.listdir(content_dir)) == ["A.xhtml"]
+    text = mm_file_tools.read_text_file(abspath(join(content_dir, "A.xhtml")))
+    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
+    compare = f"{compare}\n    <head>"
+    compare = f"{compare}\n        <title>Grouped</title>"
+    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
+    compare = f"{compare}\n    </head>"
+    compare = f"{compare}\n    <body>"
+    compare = f"{compare}\n        <p>Some text here!</p>"
+    compare = f"{compare}\n        <img src=\"../images/C.jpg\" alt=\"C\" />"
+    compare = f"{compare}\n        <p>Different</p>"
+    compare = f"{compare}\n        <p>Thing</p>"
+    compare = f"{compare}\n    </body>"
+    compare = f"{compare}\n</html>"
+    assert text == compare
 
 def test_copy_original_files():
     """
@@ -456,9 +588,14 @@ def test_create_style_file():
     style_file = abspath(join(sub_dir, "epubstyle.css"))
     style = mm_file_tools.read_text_file(style_file)
     compare = ""
-    compare = f"{compare}body{{\n"
-    compare = f"{compare}    margin: 0px 0px 0px 0px;\n"
-    compare = f"{compare}}}"
+    compare = f"{compare}img {{"
+    compare = f"{compare}\n    display: block;"
+    compare = f"{compare}\n    max-width: 100%;"
+    compare = f"{compare}\n    max-height: 100%;"
+    compare = f"{compare}\n    text-align: center;"
+    compare = f"{compare}\n    margin-left: auto;"
+    compare = f"{compare}\n    margin-right: auto;"
+    compare = f"{compare}\n}}"
     assert style == compare
 
 def test_create_nav_file():
@@ -475,7 +612,7 @@ def test_create_nav_file():
     chapters = mm_epub.create_content_files(chapters, output_dir)
     # Test creating the nav file
     mm_epub.create_nav_file(chapters, "Title!", output_dir)
-    assert sorted(os.listdir(output_dir)) == ["content", "nav.xhtml"]
+    assert sorted(os.listdir(output_dir)) == ["content", "images", "nav.xhtml"]
     nav_file = abspath(join(output_dir, "nav.xhtml"))
     nav_contents = mm_file_tools.read_text_file(nav_file)
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -507,7 +644,7 @@ def test_create_nav_file():
     chapters[1]["include"] = False
     chapters[2]["title"] = "Chapter 2"
     mm_epub.create_nav_file(chapters, "Not the Same", output_dir)
-    assert sorted(os.listdir(output_dir)) == ["content", "nav.xhtml"]
+    assert sorted(os.listdir(output_dir)) == ["content", "images", "nav.xhtml"]
     nav_file = abspath(join(output_dir, "nav.xhtml"))
     nav_contents = mm_file_tools.read_text_file(nav_file)
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -546,7 +683,7 @@ def test_create_ncx_file():
     chapters = mm_epub.create_content_files(chapters, output_dir)
     # Test creating the nav file
     mm_epub.create_ncx_file(chapters, "Title!", "/page/url/", output_dir)
-    assert sorted(os.listdir(output_dir)) == ["content", "toc.ncx"]
+    assert sorted(os.listdir(output_dir)) == ["content", "images", "toc.ncx"]
     ncx_file = abspath(join(output_dir, "toc.ncx"))
     ncx_contents = mm_file_tools.read_text_file(ncx_file)
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -587,7 +724,7 @@ def test_create_ncx_file():
     chapters[1]["include"] = False
     chapters[2]["title"] = "Chapter 2"
     mm_epub.create_ncx_file(chapters, "Not the Same", None, output_dir)
-    assert sorted(os.listdir(output_dir)) == ["content", "toc.ncx"]
+    assert sorted(os.listdir(output_dir)) == ["content", "images", "toc.ncx"]
     ncx_file = abspath(join(output_dir, "toc.ncx"))
     ncx_contents = mm_file_tools.read_text_file(ncx_file)
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -929,15 +1066,21 @@ def test_get_manifest_xml():
     mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "Here's some text!")
     mm_file_tools.write_text_file(abspath(join(temp_dir, "2.txt")), "And")
     mm_file_tools.write_text_file(abspath(join(temp_dir, "3.html")), "Stuff")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "4.png")), "Image")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "5.jpeg")), "Image2")
     chapters = mm_epub.get_default_chapters(temp_dir)
     chapters = mm_epub.create_content_files(chapters, output_dir)
     # Get manifest xml
-    xml = mm_epub.get_manifest_xml(chapters)
+    xml = mm_epub.get_manifest_xml(chapters, output_dir)
     compare = ""
     compare = f"{compare}<manifest>"
     compare = f"{compare}\n    <item href=\"content/1.xhtml\" id=\"item0\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n    <item href=\"content/2.xhtml\" id=\"item1\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n    <item href=\"content/3.xhtml\" id=\"item2\" media-type=\"application/xhtml+xml\" />"
+    compare = f"{compare}\n    <item href=\"content/4.xhtml\" id=\"item3\" media-type=\"application/xhtml+xml\" />"
+    compare = f"{compare}\n    <item href=\"content/5.xhtml\" id=\"item4\" media-type=\"application/xhtml+xml\" />"
+    compare = f"{compare}\n    <item href=\"images/4.png\" id=\"image0\" media-type=\"image/png\" />"
+    compare = f"{compare}\n    <item href=\"images/5.jpeg\" id=\"image1\" media-type=\"image/jpeg\" />"
     compare = f"{compare}\n    <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
     compare = f"{compare}\n    <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
     compare = f"{compare}\n    <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"
@@ -953,14 +1096,14 @@ def test_create_content_opf():
     output_dir = mm_file_tools.get_temp_dir("dvk-epub-output")
     mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "Here's some text!")
     mm_file_tools.write_text_file(abspath(join(temp_dir, "2.html")), "And")
-    mm_file_tools.write_text_file(abspath(join(temp_dir, "3.txt")), "Stuff")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "3.jpg")), "Stuff")
     chapters = mm_epub.get_default_chapters(temp_dir)
     chapters = mm_epub.create_content_files(chapters, output_dir)
     # Test creating the opf file
     metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "Thing!"
     mm_epub.create_content_opf(chapters, metadata, output_dir)
-    assert sorted(os.listdir(output_dir)) == ["content", "content.opf"]
+    assert sorted(os.listdir(output_dir)) == ["content", "content.opf", "images"]
     opf_file = abspath(join(output_dir, "content.opf"))
     opf_contents = mm_file_tools.read_text_file(opf_file)
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -978,6 +1121,7 @@ def test_create_content_opf():
     compare = f"{compare}\n        <item href=\"content/1.xhtml\" id=\"item0\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n        <item href=\"content/2.xhtml\" id=\"item1\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n        <item href=\"content/3.xhtml\" id=\"item2\" media-type=\"application/xhtml+xml\" />"
+    compare = f"{compare}\n        <item href=\"images/3.jpg\" id=\"image0\" media-type=\"image/jpeg\" />"
     compare = f"{compare}\n        <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
     compare = f"{compare}\n        <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
     compare = f"{compare}\n        <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"
@@ -999,6 +1143,7 @@ def test_create_epub():
     mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "Here's some text!")
     mm_file_tools.write_text_file(abspath(join(temp_dir, "2.html")), "And")
     mm_file_tools.write_text_file(abspath(join(temp_dir, "3.pdf")), "Stuff")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "a.png")), "image")
     chapters = mm_epub.get_default_chapters(temp_dir)
     # Create the epub file
     metadata = mm_archive.get_empty_metadata()
@@ -1027,16 +1172,19 @@ def test_create_epub():
     assert container == compare
     # Check the contents of the epub folder
     epub_directory = abspath(join(extracted, "EPUB"))
-    assert sorted(os.listdir(epub_directory)) == ["content", "content.opf", "nav.xhtml", "original", "style", "toc.ncx"]
+    assert sorted(os.listdir(epub_directory)) == ["content", "content.opf", "images", "nav.xhtml", "original", "style", "toc.ncx"]
     # Check the contents of the content folder
     content_directory = abspath(join(epub_directory, "content"))
-    assert sorted(os.listdir(content_directory)) == ["1.xhtml", "2.xhtml"]
+    assert sorted(os.listdir(content_directory)) == ["1.xhtml", "2.xhtml", "a.xhtml"]
     # Check the contents of the original directory
     original_directory = abspath(join(epub_directory, "original"))
-    assert sorted(os.listdir(original_directory)) == ["1.txt", "2.html", "3.pdf"]
+    assert sorted(os.listdir(original_directory)) == ["1.txt", "2.html", "3.pdf", "a.png"]
     # Check the contents of the style directory
     style_directory = abspath(join(epub_directory, "style"))
     assert sorted(os.listdir(style_directory)) == ["epubstyle.css"]
+    # Check the contents of the images directory
+    style_directory = abspath(join(epub_directory, "images"))
+    assert sorted(os.listdir(style_directory)) == ["a.png"]
     # Check the contents of the content.opf file
     content = mm_file_tools.read_text_file(abspath(join(epub_directory, "content.opf")))
     compare = ""
@@ -1054,6 +1202,8 @@ def test_create_epub():
     compare = f"{compare}\n    <manifest>"
     compare = f"{compare}\n        <item href=\"content/1.xhtml\" id=\"item0\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n        <item href=\"content/2.xhtml\" id=\"item1\" media-type=\"application/xhtml+xml\" />"
+    compare = f"{compare}\n        <item href=\"content/a.xhtml\" id=\"item2\" media-type=\"application/xhtml+xml\" />"
+    compare = f"{compare}\n        <item href=\"images/a.png\" id=\"image0\" media-type=\"image/png\" />"
     compare = f"{compare}\n        <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
     compare = f"{compare}\n        <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
     compare = f"{compare}\n        <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"
@@ -1061,6 +1211,7 @@ def test_create_epub():
     compare = f"{compare}\n    <spine toc=\"ncx\">"
     compare = f"{compare}\n        <itemref idref=\"item0\" />"
     compare = f"{compare}\n        <itemref idref=\"item1\" />"
+    compare = f"{compare}\n        <itemref idref=\"item2\" />"
     compare = f"{compare}\n    </spine>"
     compare = f"{compare}\n</package>"
     assert content == compare
@@ -1279,7 +1430,7 @@ def test_update_epub_info():
     # Check that contents are still correct
     assert mm_file_tools.read_text_file(abspath(join(extracted, "mimetype"))) == "application/epub+zip"
     epub_directory = abspath(join(extracted, "EPUB"))
-    contents = ["content", "content.opf", "nav.xhtml", "original", "style", "toc.ncx"]
+    contents = ["content", "content.opf", "images", "nav.xhtml", "original", "style", "toc.ncx"]
     assert sorted(os.listdir(epub_directory)) == contents
     assert sorted(os.listdir(abspath(join(epub_directory, "content")))) == ["1.xhtml", "2.xhtml"]
     assert sorted(os.listdir(abspath(join(epub_directory, "original")))) == ["1.txt", "2.txt"]

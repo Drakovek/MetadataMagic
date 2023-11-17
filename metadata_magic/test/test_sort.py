@@ -32,6 +32,7 @@ def test_compare_sections():
     assert mm_sort.compare_sections("3,500", "3,000") == 1
     assert mm_sort.compare_sections("0105.3", "105.38") == -1
     assert mm_sort.compare_sections("1.5", "1.25") == 1
+    assert mm_sort.compare_sections("1", "1.5") == -1
     # Test comparing just text
     assert mm_sort.compare_sections("text", "text") == 0
     assert mm_sort.compare_sections("abc", "def") == -1
@@ -77,3 +78,94 @@ def test_sort_alphanum():
     lst = ["test 10", "test 1", "test 003", "3.5", "06 Next", "middle"]
     sort = mm_sort.sort_alphanum(lst)
     assert sort == ["3.5", "06 Next", "middle", "test 1", "test 003", "test 10"]
+
+def test_get_value_from_dictionary():
+    """
+    Tests the get_value_from_dictionary function.
+    """
+    # Test getting a basic value
+    dictionary = {"name":"thing", "other":"name"}
+    assert mm_sort.get_value_from_dictionary(dictionary, ["name"]) == "thing"
+    assert mm_sort.get_value_from_dictionary(dictionary, ["other"]) == "name"
+    # Test getting a deeply nested value
+    dictionary = {"thing":{"a":123, "b":456}, "even":{"deeper":{"a":"abc"}}}
+    assert mm_sort.get_value_from_dictionary(dictionary, ["thing","a"]) == 123
+    assert mm_sort.get_value_from_dictionary(dictionary, ["thing","b"]) == 456
+    assert mm_sort.get_value_from_dictionary(dictionary, ["even","deeper","a"]) == "abc"
+    # Test getting an array value
+    dictionary = {"thing":["a","b","c","d"], "other":{"list":[10,20,30]}}
+    assert mm_sort.get_value_from_dictionary(dictionary, ["thing",1]) == "b"
+    assert mm_sort.get_value_from_dictionary(dictionary, ["other","list",1]) == 20
+    # Test getting a mix of array and key values
+    dictionary = {"a":[{"name":"title"}, {"name":"other"}]}
+    assert mm_sort.get_value_from_dictionary(dictionary, ["a",0,"name"]) == "title"
+    assert mm_sort.get_value_from_dictionary(dictionary, ["a",1,"name"]) == "other"
+    # Test getting an invalid key
+    assert mm_sort.get_value_from_dictionary(dictionary, [1]) is None
+    assert mm_sort.get_value_from_dictionary(dictionary, ["item"]) is None
+    assert mm_sort.get_value_from_dictionary(["thing"], [2]) is None
+    assert mm_sort.get_value_from_dictionary(["thing"], ["item"]) is None
+    assert mm_sort.get_value_from_dictionary(dictionary, ["a",5]) is None
+    assert mm_sort.get_value_from_dictionary(dictionary, ["a","thing"]) is None
+
+def test_compare_dictionaries_alphanum():
+    """
+    Tests the compare_dictionaries_alphanum function.
+    """
+    # Test comparing dictionaries one key deep
+    dict1 = {"dvk_alpha_sort_key":"name", "name":"", "other":"blah"}
+    dict2 = {"dvk_alpha_sort_key":"name", "name":"", "other":"thing"}
+    assert mm_sort.compare_dictionaries_alphanum(dict1, dict2) == 0
+    dict1 = {"dvk_alpha_sort_key":"name", "name":"001", "other":"blah"}
+    dict2 = {"dvk_alpha_sort_key":"name", "name":"2", "other":"thing"}
+    assert mm_sort.compare_dictionaries_alphanum(dict1, dict2) == -1
+    dict1 = {"dvk_alpha_sort_key":"other", "name":"001", "other":"Part 23.5"}
+    dict2 = {"dvk_alpha_sort_key":"other", "name":"2", "other":"Part 23"}
+    assert mm_sort.compare_dictionaries_alphanum(dict1, dict2) == 1
+    # Test comparing dictionaries multiple keys deep
+    dict1 = {"dvk_alpha_sort_key":["name","thing"], "name":{"thing":"0"}, "other":"blah"}
+    dict2 = {"dvk_alpha_sort_key":["name","thing"], "name":{"thing":"0"}, "other":"new"}
+    assert mm_sort.compare_dictionaries_alphanum(dict1, dict2) == 0
+    dict1 = {"dvk_alpha_sort_key":["name","thing"], "name":{"thing":"A"}, "other":"blah"}
+    dict2 = {"dvk_alpha_sort_key":["name","thing"], "name":{"thing":"B"}, "other":"new"}
+    assert mm_sort.compare_dictionaries_alphanum(dict1, dict2) == -1
+    dict1 = {"dvk_alpha_sort_key":["name","thing","a"], "name":{"thing":{"a":"thing"}}, "other":"blah"}
+    dict2 = {"dvk_alpha_sort_key":["name","thing","a"], "name":{"thing":{"a":"other"}}, "other":"new"}
+    assert mm_sort.compare_dictionaries_alphanum(dict1, dict2) == 1
+    # Test comparing dictionaries with keys referencing a given array value
+    dict1 = {"dvk_alpha_sort_key":["list",2], "list":["1","2","c","3"]}
+    dict2 = {"dvk_alpha_sort_key":["list",2], "list":["a","b","c","d"]}
+    assert mm_sort.compare_dictionaries_alphanum(dict1, dict2) == 0
+    dict1 = {"dvk_alpha_sort_key":["list",0], "list":["1","2","c","3"]}
+    dict2 = {"dvk_alpha_sort_key":["list",0], "list":["a","b","c","d"]}
+    assert mm_sort.compare_dictionaries_alphanum(dict1, dict2) == -1
+    dict1 = {"dvk_alpha_sort_key":["list",3], "list":["1","2","c","Other"]}
+    dict2 = {"dvk_alpha_sort_key":["list",3], "list":["a","b","c","25"]}
+    assert mm_sort.compare_dictionaries_alphanum(dict1, dict2) == 1
+
+def test_sort_dictionaries_alphanum():
+    """
+    Tests the sort_dictionaries_alphanum function.
+    """
+    dictionaries = []
+    dictionaries.append({"name":"Title 1", "other":{"a":"123", "b":"245"}})
+    dictionaries.append({"name":"Title 10", "other":{"a":"523", "b":"Thing"}})
+    dictionaries.append({"name":"Name", "other":{"a":"a", "b":"b"}})
+    dictionaries.append({"name":"ZZZ", "other":{"a":"name", "b":"title"}})
+    dictionaries.append({"name":"AAA", "other":{"a":"123.5", "b":"Blah"}})
+    # Test sorting by a standard value
+    dictionaries = mm_sort.sort_dictionaries_alphanum(dictionaries, "name")
+    assert len(dictionaries) == 5
+    assert dictionaries[0] == {"name":"AAA", "other":{"a":"123.5", "b":"Blah"}}
+    assert dictionaries[1] == {"name":"Name", "other":{"a":"a", "b":"b"}}
+    assert dictionaries[2] == {"name":"Title 1", "other":{"a":"123", "b":"245"}}
+    assert dictionaries[3] == {"name":"Title 10", "other":{"a":"523", "b":"Thing"}}
+    assert dictionaries[4] == {"name":"ZZZ", "other":{"a":"name", "b":"title"}}
+    # Test sorting by a deeper value
+    dictionaries = mm_sort.sort_dictionaries_alphanum(dictionaries, ["other","a"])
+    assert len(dictionaries) == 5
+    assert dictionaries[0] == {"name":"Title 1", "other":{"a":"123", "b":"245"}}
+    assert dictionaries[1] == {"name":"AAA", "other":{"a":"123.5", "b":"Blah"}}
+    assert dictionaries[2] == {"name":"Title 10", "other":{"a":"523", "b":"Thing"}}
+    assert dictionaries[3] == {"name":"Name", "other":{"a":"a", "b":"b"}}
+    assert dictionaries[4] == {"name":"ZZZ", "other":{"a":"name", "b":"title"}}

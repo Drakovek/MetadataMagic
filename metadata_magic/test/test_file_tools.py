@@ -143,6 +143,16 @@ def test_find_files_of_type():
     assert basename(files[0]) == "blah.thing"
     assert basename(files[1]) == "other.png"
     assert basename(files[2]) == "deep.png"
+    # Test finding files of multiple types
+    files = mm_file_tools.find_files_of_type(temp_dir, [".txt", ".png"], include_subdirectories=False)
+    assert len(files) == 3
+    assert basename(files[0]) == "new.txt"
+    assert basename(files[1]) == "other.png"
+    assert basename(files[2]) == "text.txt"
+    # Test finding files of multiple types with inverted extension
+    files = mm_file_tools.find_files_of_type(temp_dir, [".txt", ".png"], inverted=True, include_subdirectories=False)
+    assert len(files) == 1
+    assert basename(files[0]) == "blah.thing"
 
 def test_directory_contains():
     """

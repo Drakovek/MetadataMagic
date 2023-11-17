@@ -189,7 +189,7 @@ def test_rename_media_archives():
     shutil.copy(cbz_file, sub_dir)
     build_dir = mm_file_tools.get_temp_dir("dvk_test_builder")
     text_file = abspath(join(build_dir, "text.txt"))
-    mm_file_tools.write_text_file(media_file, "Text")
+    mm_file_tools.write_text_file(text_file, "Text")
     metadata["title"] = "EPUB Root"
     metadata["artist"] = "Writer"
     chapters = mm_epub.get_default_chapters(build_dir)

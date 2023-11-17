@@ -94,8 +94,8 @@ def find_files_of_type(directory:str, extension:str, include_subdirectories:bool
     
     :param directory: Directory in which to search for files
     :type directory: str, required
-    :param extension: File extension to search for
-    :type extension: str, required
+    :param extension: File extension(s) to search for
+    :type extension: str/List[str], required
     :param include_subdirectories: Whether to also search subdirectories for files, defaults to True
     :type include_subdirectories: bool, optional
     :param inverted: If true, searches for files WITHOUT the given extension, defaults to False
@@ -105,14 +105,23 @@ def find_files_of_type(directory:str, extension:str, include_subdirectories:bool
     """
     files = []
     directories = [abspath(directory)]
+    # Get the list of extensions
+    extensions = extension
+    if isinstance(extensions, str):
+        extensions = [extensions]
     # Run through all directories
     while len(directories) > 0:
         # Get list of all files in the current directory
         current_files = mm_sort.sort_alphanum(os.listdir(directories[0]))
         for filename in current_files:
             # Find file properties
+            has_extension = False
             full_file = abspath(join(directories[0], filename))
-            has_extension = html_string_tools.html.get_extension(full_file).lower() == extension
+            check_extension = html_string_tools.html.get_extension(full_file).lower()
+            for ex in extensions:
+                if check_extension == ex:
+                    has_extension = True
+                    break
             # Add directory to the list
             if isdir(full_file):
                 if include_subdirectories:

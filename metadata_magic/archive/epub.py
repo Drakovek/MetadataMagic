@@ -15,6 +15,20 @@ from xml.etree import ElementTree
 from os.path import abspath, basename, exists, isdir, join
 from typing import List
 
+def get_title_from_file(file:str) -> str:
+    """
+    Returns an appropriate title for a given file.
+    
+    :param file: Path and filename of a file
+    :type file: str, required
+    :return: Title to use for the file in XHTML header
+    :rtype: str
+    """
+    title = basename(file)
+    title = re.sub(r"\.[^\.]{1,6}$", "", title).strip()
+    title = re.sub(r"^\[[^\]]+\]\s*|^\([^\)]+\)\s*", "", title)
+    return title
+
 def format_xhtml(html:str, title:str) -> str:
     """
     Formats HTML text into XHTML text ready to be included in an EPUB file.
@@ -25,7 +39,7 @@ def format_xhtml(html:str, title:str) -> str:
     :type title: str, required
     :return: XHTML formatted text
     :rtype: str
-    """
+    """  
     # Set the base element for the XHTML 
     base = ElementTree.Element("html")
     base.attrib = {"xmlns":"http://www.w3.org/1999/xhtml"}
@@ -67,23 +81,24 @@ def format_xhtml(html:str, title:str) -> str:
     xml = ElementTree.tostring(base).decode("UTF-8")
     return f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
 
-def txt_to_xhtml(txt_file:str, title:str) -> str:
+def txt_to_xml(txt_file:str) -> str:
     """
-    Reads the text in a .txt file and formats it into XHTML for an EPUB file
+    Reads the text in a .txt file and formats it into XML for use in an EPUB file.
+    Does not include the header with title and formatting, must be passed through format_xhtml function.
     
     :param txt_file: Text file to read
     :type txt_file: str, required
-    :param title: Title to use for the XHTML header
-    :type title: str, required
-    :return: XHTML formatted text
+    :return: XML formatted text
     :rtype: str
     """
     # Read text from the given txt file
     text = mm_file_tools.read_text_file(txt_file)
-    # Remove unnessecary whitespace
-    text.replace("\r\n", "\n")
-    text.replace("\n\r", "\n")
-    text.replace("\r", "")
+    # Remove all carriage returns
+    for i in range(len(text)-1, -1, -1):
+        if ord(text[i]) == 13:
+            text = text[:i] + text[i+1:]
+    # Collapse 3 or more newline characters to just 2
+    text = re.sub(r"\n", "\n", text)
     text = re.sub(r"\n{2,}", "\n\n", text).strip()
     # Split into paragraphs
     html = ""
@@ -95,22 +110,25 @@ def txt_to_xhtml(txt_file:str, title:str) -> str:
         formatted = formatted.replace("{{{{br}}}}", "<br />")
         html = f"{html}<p>{formatted}</p>"
     html.replace("\r", "")
-    # Return with XHTML formatting
-    return format_xhtml(html, title)
+    # Return the HTML
+    return html
 
-def html_to_xhtml(html_file:str, title:str) -> str:
+def html_to_xml(html_file:str) -> str:
     """
     Reads the text in an .html file and formats it into XHTML for an EPUB file
     
     :param html_file: HTML file to read
     :type html_file: str, required
-    :param title: Title to use for the XHTML header
-    :type title: str, required
-    :return: XHTML formatted text
+    :return: XML formatted text
     :rtype: str
     """
-    # Parse HTML file
+    # Read text from the HTML file
     text = mm_file_tools.read_text_file(html_file)
+    # Remove all carriage returns
+    for i in range(len(text)-1, -1, -1):
+        if ord(text[i]) == 13:
+            text = text[:i] + text[i+1:]
+    # Parse the HTML text
     root = lxml.html.fromstring(text)
     # Get internal html tag
     delete_encapsulation = False
@@ -138,22 +156,25 @@ def html_to_xhtml(html_file:str, title:str) -> str:
         content = re.sub(r"^<[^>]*>|<\s*\/[^>]*>$", "", content)
     # Delete javascript tags
     content = re.sub(r"<\s*script[^>]*>[^<]*<\s*\/\s*script\s*>|<\s*script\s*\/\s*>", "", content)
-    # Return in XHTML format
-    return format_xhtml(content.strip(), title)
+    # Return in XML format
+    return content.strip().replace("\n", "")
 
-def get_title_from_file(file:str) -> str:
+def image_to_xml(image_file:str) -> str:
     """
-    Returns an appropriate title for a given file.
+    Creates an XML svg and img container to reference a given image for use in an EPUB file.
     
-    :param file: Path and filename of a file
-    :type file: str, required
-    :return: Title to use for the file in XHTML header
+    :param image_file: Image file to reference
+    :type image_file: str, required
+    :return: XML formatted text
     :rtype: str
     """
-    title = basename(file)
-    title = re.sub(r"\.[^\.]{1,6}$", "", title).strip()
-    title = re.sub(r"^\[[^\]]+\]\s*|^\([^\)]+\)\s*", "", title)
-    return title
+    # Get the image path
+    image_path = basename(image_file)
+    image_path = f"../images/{image_path}"
+    # Get the alt tag
+    title = get_title_from_file(image_file)
+    # Construct the xml
+    return f"<img src=\"{image_path}\" alt=\"{title}\" />"
 
 def get_default_chapters(directory:str, title:str=None) -> List[dict]:
     """
@@ -168,25 +189,95 @@ def get_default_chapters(directory:str, title:str=None) -> List[dict]:
     :return: List of info for each chapter
     :rtype: List[dict]
     """
-    # Find all text files in the given directory
-    text_files = mm_file_tools.find_files_of_type(directory, ".txt", include_subdirectories=False)
-    text_files.extend(mm_file_tools.find_files_of_type(directory, ".html", include_subdirectories=False))
-    text_files.extend(mm_file_tools.find_files_of_type(directory, ".htm", include_subdirectories=False))
-    text_files = mm_sort.sort_alphanum(text_files)
+    # Find all media files in the given directory
+    file_types = [".txt", ".html", ".htm", ".png", ".jpeg", ".jpg", ".bmp", ".tiff"]
+    media_files = mm_file_tools.find_files_of_type(directory, file_types, include_subdirectories=False)
+    media_files = mm_sort.sort_alphanum(media_files)
     # Set default chapter values for each text file
     chapters = []
-    for i in range(0, len(text_files)):
+    for i in range(0, len(media_files)):
+        # Set the info for the full chapter
         chapter = dict()
-        chapter["id"] = f"item{i}"
-        chapter["file"] = text_files[i]
         chapter["include"] = True
-        chapter["title"] = get_title_from_file(text_files[i])
+        chapter["title"] = get_title_from_file(media_files[i])
+        # Set the info for the individual files
+        file_info = dict()
+        file_info["id"] = f"item{i}"
+        file_info["file"] = media_files[i]
+        chapter["files"] = [file_info]
+        # Add to the chapter list
         chapters.append(chapter)
     # Use a different title, if specified
     if title is not None and len(chapters) == 1:
         chapters[0]["title"] = title
     # Return the default chapters
     return chapters
+
+def group_chapters(chapters:List[dict], group:List[int]) -> List[dict]:
+    """
+    Groups the files of the given chapters into one new chapter.
+
+    :param chapters: List of chapters as returned by get_default_chapters
+    :type chapters: List[dict], required
+    :param group: List of indexes of the entries to group together
+    :type group: List[int], required
+    :return: New list of chapters with the given entries grouped
+    :rtype: List[dict]
+    """
+    # Remove out of range items in the group list
+    sorted_group = list(set(group))
+    sorted_group = sorted(sorted_group)
+    for i in range(len(sorted_group)-1,-1,-1):
+        if sorted_group[i] < 0 or sorted_group[i] > (len(chapters)-1):
+            del sorted_group[i]
+    # Get the title and include key
+    try:
+        title = chapters[sorted_group[0]]["title"]
+        grouped_entry = {"title":title, "include":True}
+    except IndexError: return chapters
+    # Get a list of all the files
+    files = []
+    updated_chapters = []
+    updated_chapters.extend(chapters)
+    for i in range(len(sorted_group)-1, -1, -1):
+        files.extend(chapters[sorted_group[i]]["files"])
+        del updated_chapters[sorted_group[i]]
+    # Add the grouped entry
+    grouped_entry["files"] = mm_sort.sort_dictionaries_alphanum(files, "file")
+    updated_chapters.append(grouped_entry)
+    updated_chapters = mm_sort.sort_dictionaries_alphanum(updated_chapters, ["files",0,"file"])
+    # Return the updated chapters
+    return updated_chapters
+
+def separate_chapters(chapters:List[dict], chapter_num:str) -> List[dict]:
+    """
+    Separates the files of a given grouped chapter into separate chapters.
+
+    :param chapters: List of chapters as returned by get_default_chapters
+    :type chapters: List[dict], required
+    :param chapter_num: The chapter with files to separate into different chapters
+    :type chapter_num: int, required 
+    :return: New list of chapters with the given entry separated into multiple chapters
+    :rtype: List[dict]
+    """
+    # Return the existing chapters if separating is unneccessary
+    try:
+        if chapter_num < 0 or len(chapters[chapter_num]["files"]) == 1:
+            return chapters
+    except IndexError: return chapters
+    # Get the new chapters
+    new_chapters = []
+    new_chapters.extend(chapters)
+    for file in chapters[chapter_num]["files"]:
+        new_chapter = {"include":True, "title":get_title_from_file(file["file"])}
+        new_chapter["files"] = [{"id":file["id"], "file":file["file"]}]
+        new_chapters.append(new_chapter)
+    # Delete the old grouped chapter
+    del new_chapters[chapter_num]
+    # Sort the list of chapters
+    new_chapters = mm_sort.sort_dictionaries_alphanum(new_chapters, ["files",0,"file"])
+    # Return the new chapters
+    return new_chapters
 
 def get_chapters_string(chapters:List[dict]) -> str:
     """
@@ -198,20 +289,27 @@ def get_chapters_string(chapters:List[dict]) -> str:
     :rtype: str
     """
     # Get the length of the block of characters for each field
-    file_length = 4
+    files_length = 5
     title_length = 5
     entry_length = 10
+    basenames = []
     for chapter in chapters:
-        temp_file_length = len(basename(chapter["file"]))
-        if temp_file_length > file_length:
-            file_length = temp_file_length
+        # Get the length of the file list
+        filename = ""
+        for file in chapter["files"]:
+            filename = filename + basename(file["file"]) + ", "
+        filename = re.sub(r",\s*$", "", filename)
+        basenames.append(filename)
+        # Set the length of the block
+        if len(filename) > files_length:
+            files_length = len(filename)
         if len(chapter["title"]) > title_length:
             title_length = len(chapter["title"])
     title_length += 4
     # Set the chapters string header
-    total_length = entry_length + title_length + file_length
+    total_length = entry_length + title_length + files_length
     chapters_string = "-" * total_length
-    chapters_string = f"{{:<{file_length}}}\n{chapters_string}".format("FILE")
+    chapters_string = f"{{:<{files_length}}}\n{chapters_string}".format("FILES")
     chapters_string = f"{{:<{title_length}}}{chapters_string}".format("TITLE")
     chapters_string = f"{{:<{entry_length}}}{chapters_string}".format("ENTRY")
     # Get a string for each chapter entry
@@ -224,7 +322,7 @@ def get_chapters_string(chapters:List[dict]) -> str:
         # Get the title value
         chapter_string = f"{chapter_string}{{:<{title_length}}}".format(chapters[i]["title"])
         # Get the file value
-        chapter_string = f"{chapter_string}{{:<{file_length}}}".format(basename(chapters[i]["file"]))
+        chapter_string = f"{chapter_string}{{:<{files_length}}}".format(basenames[i])
         # Add to the overall chapters string
         chapters_string = f"{chapters_string}\n{chapter_string}"
     # Return the chapters string
@@ -254,23 +352,40 @@ def get_chapters_from_user(directory:str, title:str=None) -> List[dict]:
         print("OPTIONS:")
         print("T - Edit Chapter Title")
         print("C - Toggle Inclusion in Contents")
+        print("G - Group Files")
+        print("S - Separate Files")
         print("W - Commit Changes\n")
         # Get the user response
         response = input("Command: ").lower()
         if response == "w":
             break
-        if response == "t" or response == "c":
+        # Edit the title
+        if response == "t":
             try:
-                # Get the entry number
-                entry_num = int(input("Entry Number: ")) - 1
-                if response == "c":
-                    # Set the include value
-                    chapters[entry_num]["include"] = not chapters[entry_num]["include"]
-                if response == "t":
-                    # Set the title value
-                    title = input("Title: ")
-                    chapters[entry_num]["title"] = title
+                entry_num = int(input("Entry Number: ")) -1
+                chapters[entry_num]["title"] = input("Title: ")
             except (IndexError, ValueError): pass
+        # Toggle the include flag
+        if response == "c":
+            try:
+                entry_num = int(input("Entry Number: ")) -1
+                chapters[entry_num]["include"] = not chapters[entry_num]["include"]
+            except (IndexError, ValueError): pass
+        # Separate files
+        if response == "s":
+            try:
+                entry_num = int(input("Entry Number: ")) -1
+                chapters = separate_chapters(chapters, entry_num)
+            except ValueError: pass
+        # Group files
+        if response == "g":
+            try:
+                response = input("Entry Numbers (Separate with \",\"): ")
+                entry_nums = re.sub(r"\s*,\s*", ",", response).split(",")
+                for i in range(0, len(entry_nums)):
+                    entry_nums[i] = int(entry_nums[i])-1
+                chapters = group_chapters(chapters, entry_nums)
+            except ValueError:pass
     # Return the chapters
     return chapters
 
@@ -286,26 +401,42 @@ def create_content_files(chapters:List[dict], output_directory:str) -> List[dict
     :return: List with chapter file info, now with "file" fields pointing to the new XHTML files
     :rtype: List[dict]
     """
-    # Create the content folder
+    # Create the content and images folders
     content_dir = abspath(join(output_directory, "content"))
+    image_dir = abspath(join(output_directory, "images"))
     os.mkdir(content_dir)
+    os.mkdir(image_dir)
     # Convert files to XHTML
     updated_chapters = []
     updated_chapters.extend(chapters)
     for i in range(0, len(updated_chapters)):
         # Get the filename for the XHTML file
-        filename = basename(chapters[i]["file"])
+        title = chapters[i]["title"]
+        filename = basename(chapters[i]["files"][0]["file"])
         filename = filename[:len(filename) - len(html_string_tools.html.get_extension(filename))]
         xhtml_file = abspath(join(content_dir, f"{filename}.xhtml"))
-        # Create the file
-        extension = html_string_tools.html.get_extension(chapters[i]["file"])
-        if extension == ".html" or extension == ".htm":
-            xhtml = html_to_xhtml(chapters[i]["file"], chapters[i]["title"])
-        else:
-            xhtml = txt_to_xhtml(chapters[i]["file"], chapters[i]["title"])
-        mm_file_tools.write_text_file(xhtml_file, xhtml)
+        # Convert all the files for the chapter into XML
+        chapter_xml = ""
+        for file in chapters[i]["files"]:
+            # Get the file extension
+            extension = html_string_tools.html.get_extension(file["file"])
+            # Convert based on the appropriate format
+            if extension == ".txt":
+                xml = html_to_xml(file["file"])
+            elif extension == ".html" or extension == ".htm":
+                xml = html_to_xml(file["file"])
+            else:
+                xml = image_to_xml(file["file"])
+                shutil.copy(file["file"], image_dir)
+            # Append to the chapter xml
+            chapter_xml = f"{chapter_xml}{xml}"
+        # Write with proper XHTML formatting
+        mm_file_tools.write_text_file(xhtml_file, format_xhtml(chapter_xml, title))
+        # Update info for the chapter
+        updated_chapters[i]["id"] = updated_chapters[i]["files"][0]["id"]
         updated_chapters[i]["file"] = f"content/{filename}.xhtml"
-    return chapters
+        updated_chapters[i].pop("files")
+    return updated_chapters
 
 def copy_original_files(input_directory:str, output_directory:str):
     """
@@ -351,9 +482,14 @@ def create_style_file(output_directory:str):
     os.mkdir(style_dir)
     # Create the style text
     style = ""
-    style = f"{style}body{{\n"
-    style = f"{style}    margin: 0px 0px 0px 0px;\n"
-    style = f"{style}}}"
+    style = f"{style}img {{"
+    style = f"{style}\n    display: block;"
+    style = f"{style}\n    max-width: 100%;"
+    style = f"{style}\n    max-height: 100%;"
+    style = f"{style}\n    text-align: center;"
+    style = f"{style}\n    margin-left: auto;"
+    style = f"{style}\n    margin-right: auto;"
+    style = f"{style}\n}}"
     # Write style to a CSS file
     style_file = abspath(join(style_dir, "epubstyle.css"))
     mm_file_tools.write_text_file(style_file, style)
@@ -587,12 +723,14 @@ def get_metadata_xml(metadata:dict) -> str:
     # Return xml as string
     return ElementTree.tostring(base).decode("UTF-8")
 
-def get_manifest_xml(chapters:List[dict]) -> str:
+def get_manifest_xml(chapters:List[dict], output_directory:str) -> str:
     """
     Creates the manifest section of a content.opf XML file for the EPUB.
     
     :param chapters: Chapter info as returned by create_content_files
     :type chapters: List[dict], required
+    :param output_directory: Directory in which to the content.opf file is being constructed
+    :type output_directory: str, required
     :return: XML manifest
     :rtype: str
     """
@@ -604,6 +742,28 @@ def get_manifest_xml(chapters:List[dict]) -> str:
         attributes["href"] = chapter["file"]
         attributes["id"] = chapter["id"]
         attributes["media-type"] = "application/xhtml+xml"
+        chapter_item = ElementTree.SubElement(base, "item")
+        chapter_item.attrib = attributes
+    # Add the images
+    image_directory = abspath(join(output_directory, "images"))
+    images = mm_sort.sort_alphanum(os.listdir(image_directory))
+    for i in range(0, len(images)):
+        attributes = dict()
+        attributes["href"] = f"images/{images[i]}"
+        attributes["id"] = f"image{i}"
+        # Set the mimetype
+        extension = html_string_tools.html.get_extension(images[i])
+        mimetype = "application/xhtml+xml"
+        if extension == ".png":
+            mimetype = "image/png"
+        elif extension == ".jpg" or ".jpeg":
+            mimetype = "image/jpeg"
+        elif extension == ".bmp":
+            mimetype = "image/bmp"
+        elif extension == ".tiff":
+            mimetype = "image/tiff"
+        attributes["media-type"] = mimetype
+        # Add the item to the manifest
         chapter_item = ElementTree.SubElement(base, "item")
         chapter_item.attrib = attributes
     # Add the style file
@@ -647,7 +807,7 @@ def create_content_opf(chapters:List[dict], metadata:dict, output_directory:str)
     metadata_element.attrib = metadata_attributes
     base.append(metadata_element)
     # Create the manifest tags
-    manifest_xml = get_manifest_xml(chapters)
+    manifest_xml = get_manifest_xml(chapters, output_directory)
     base.append(ElementTree.fromstring(manifest_xml))
     # Create the spine
     spine_element = ElementTree.SubElement(base, "spine")
