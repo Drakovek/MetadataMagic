@@ -275,9 +275,19 @@ def sort_rename(path:str, template:str, index:int=1):
 def user_sort_rename(path:str):
     """
     Prompts the user for info needed for the sort_rename function.
+    
+    :param path: Path of the directory in which to rename files
+    :type path: str, required
     """
+    # Get the default template based on filenames in the given directory
+    title = None
+    for file in mm_sort.sort_alphanum(os.listdir(path)):
+        if not isdir(abspath(join(path, file))):
+            title = re.sub(r"\..{0,6}$", "", file)
+            break
+    title = mm_archive.remove_page_number(title)
     # Get the rename template
-    template = str(input("Sort Rename Template: "))
+    template = mm_archive.get_string_from_user("Sort Rename Template", title)
     # Get the starting index
     index = None
     while index == None:
@@ -291,6 +301,9 @@ def user_sort_rename(path:str):
 def user_metadata_rename(path:str):
     """
     Prompts the user for info needed for the rename_archives and rename_json_pairs functions.
+    
+    :param path: Path of the directory in which to rename files
+    :type path: str, required
     """
     # Get what type of template the user wants.
     print("Rename in the format \"[options] title\"")

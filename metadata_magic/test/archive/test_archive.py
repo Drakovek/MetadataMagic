@@ -347,3 +347,70 @@ def test_update_archive_info():
     assert mm_file_tools.extract_zip(zip_file, extract_dir)
     assert sorted(os.listdir(extract_dir)) == ["text.txt"]
     assert mm_file_tools.read_text_file(abspath(join(extract_dir, "text.txt"))) == "This is text!"
+
+def test_remove_page_number():
+    """
+    Tests the remove_page_number function
+    """
+    # Test Removing a standalone number
+    assert mm_archive.remove_page_number("Test 123") == "Test"
+    assert mm_archive.remove_page_number("1 Number 01 ") == "1 Number"
+    assert mm_archive.remove_page_number("New Thing15") == "New Thing"
+    assert mm_archive.remove_page_number("1. A Thing") == "1. A Thing"
+    assert mm_archive.remove_page_number("12 13 A 14 B") == "12 13 A 14 B"
+    # Test Removing number with total
+    assert mm_archive.remove_page_number("Something 1/2") == "Something"
+    assert mm_archive.remove_page_number("Other Name  17/43  ") == "Other Name"
+    assert mm_archive.remove_page_number("Another 1 / 2") == "Another"
+    assert mm_archive.remove_page_number("Text 1-0") == "Text"
+    assert mm_archive.remove_page_number("Title 12 - 43") == "Title"
+    assert mm_archive.remove_page_number("1/2 Name") == "1/2 Name"
+    assert mm_archive.remove_page_number("Two 1 / 2 Name") == "Two 1 / 2 Name"
+    assert mm_archive.remove_page_number("3-4 Thing") == "3-4 Thing"
+    # Test Removing number with number symbol
+    assert mm_archive.remove_page_number("4 Test #123") == "4 Test"
+    assert mm_archive.remove_page_number("Thing #1/2 ") == "Thing"
+    assert mm_archive.remove_page_number("Another # 16  ") == "Another"
+    assert mm_archive.remove_page_number("#1 Fan") == "#1 Fan"
+    assert mm_archive.remove_page_number("#1 #2 #3 Thing") == "#1 #2 #3 Thing"
+    # Test Removing number with "page" or "part"
+    assert mm_archive.remove_page_number("Test Part 1") == "Test"
+    assert mm_archive.remove_page_number("Thing page2") == "Thing"
+    assert mm_archive.remove_page_number("Other P. 1/2 ") == "Other"
+    assert mm_archive.remove_page_number("Pass Page2-3") == "Pass"
+    assert mm_archive.remove_page_number("Test part1") == "Test"
+    assert mm_archive.remove_page_number("Thing Page 25") == "Thing"
+    assert mm_archive.remove_page_number("Other p.12 ") == "Other"
+    assert mm_archive.remove_page_number("Part 1 of 5 ") == "Part 1 of"
+    assert mm_archive.remove_page_number("Some Pages 5") == "Some Pages"
+    assert mm_archive.remove_page_number("p.3 Something") == "p.3 Something"
+    assert mm_archive.remove_page_number("stoppage 5") == "stoppage"
+    assert mm_archive.remove_page_number("rampart 10") == "rampart"
+    assert mm_archive.remove_page_number("Stop. 5") == "Stop."
+    # Test Removing number with brackets or parenthesis
+    assert mm_archive.remove_page_number("Test[01]") == "Test"
+    assert mm_archive.remove_page_number("Name [Part 1/3] ") == "Name"
+    assert mm_archive.remove_page_number("Something [P. 4-5] ") == "Something"
+    assert mm_archive.remove_page_number("Thing [ #06 ]") == "Thing"
+    assert mm_archive.remove_page_number("Test(01)") == "Test"
+    assert mm_archive.remove_page_number("Name (page 3/6 ) ") == "Name"
+    assert mm_archive.remove_page_number("Another (page 4-6) ") == "Another"
+    assert mm_archive.remove_page_number("Thing ( #09 )") == "Thing"
+    assert mm_archive.remove_page_number("Next (page 1)") == "Next"
+    assert mm_archive.remove_page_number("Other (p. 1)") == "Other"
+    assert mm_archive.remove_page_number("[01] Thing") == "[01] Thing"
+    assert mm_archive.remove_page_number("Test (Not Num)") == "Test (Not Num)"
+    assert mm_archive.remove_page_number("Other [1] Thing") == "Other [1] Thing"
+    assert mm_archive.remove_page_number("Other (1") == "Other ("
+    assert mm_archive.remove_page_number("Other 12)") == "Other 12)"
+    assert mm_archive.remove_page_number("Thing [12)") == "Thing [12)"
+    assert mm_archive.remove_page_number("Thing [1") == "Thing ["
+    assert mm_archive.remove_page_number("Final 23]") == "Final 23]"
+    # Test Removing number with all options
+    assert mm_archive.remove_page_number("A Picture [Page #15/30]") == "A Picture"
+    assert mm_archive.remove_page_number("Something Else ( Part #1 / 2 ) ") == "Something Else"
+    # Test that the original text is returned if there is nothing left
+    assert mm_archive.remove_page_number("34") == "34"
+    assert mm_archive.remove_page_number(" [1/5] ") == " [1/5] "
+    # Test returning None if text is None
+    assert mm_archive.remove_page_number(None) is None
