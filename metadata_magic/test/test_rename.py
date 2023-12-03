@@ -256,7 +256,7 @@ def test_rename_json_pairs():
     assert sorted(os.listdir(temp_dir)) == ["Other.json", "Other.txt", "Title A!.json", "Title A!.txt", "sub"]
     assert sorted(os.listdir(sub_dir)) == ["Final.json", "Final.txt", "unrelated.txt"]
     # Test with additional keys
-    mm_rename.rename_json_pairs(temp_dir, "{title} ({artist})")
+    mm_rename.rename_json_pairs(temp_dir, "{title} ({writers})")
     assert sorted(os.listdir(temp_dir)) == ["Other (Name).json", "Other (Name).txt", "Title A! (Artist).json", "Title A! (Artist).txt", "sub"]
     assert sorted(os.listdir(sub_dir)) == ["Final (New).json", "Final (New).txt", "unrelated.txt"]
     # Test renaming if JSON filename already exists

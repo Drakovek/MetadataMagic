@@ -36,15 +36,15 @@ def test_load_metadata():
     mm_file_tools.write_json_file(test_json, {"title":"test"})
     assert exists(test_json)
     # Attempt to load the JSON file
-    meta = mm_meta_reader.load_metadata(test_json)
+    meta = mm_meta_reader.load_metadata(test_json, "a.txt")
     assert meta["json_path"] == test_json
     # Test loading from an invalid path
-    meta = mm_meta_reader.load_metadata("/not/real/directory/")
+    meta = mm_meta_reader.load_metadata("/not/real/directory/", "a.txt")
     assert not exists(meta["json_path"])
     assert meta["id"] is None
     assert meta["title"] is None
-    assert meta["artist"] is None
-    assert meta["writer"] is None
+    assert meta["artists"] is None
+    assert meta["writers"] is None
     assert meta["date"] is None
     assert meta["description"] is None
     assert meta["publisher"] is None
@@ -68,50 +68,99 @@ def test_get_title():
     mm_file_tools.write_json_file(test_json, {"thing":"other", "title":"Loaded!"})
     assert exists(test_json)
     # Test getting title when read directly from JSON
-    meta = mm_meta_reader.load_metadata(test_json)
+    meta = mm_meta_reader.load_metadata(test_json, "b.jpg")
     assert meta["json_path"] == test_json
     assert meta["title"] == "Loaded!"
 
-def test_get_artist():
+def test_get_artists_and_writers():
     """
-    Tests the get_artist function.
+    Tests the get_artists_and_writers function.
     """
-    # Test getting artist from dictionary
-    dictionary = {"thing":50, "artist":"Artist", "author":"other"}
-    assert mm_meta_reader.get_artist(dictionary) == "Artist"
-    dictionary = {"uploader":"Person", "other":True, "innner":{"artist":"blah"}}
-    assert mm_meta_reader.get_artist(dictionary) == "Person"
-    dictionary = {"thing":"Person", "user":"Third", "name":"blah"}
-    assert mm_meta_reader.get_artist(dictionary) == "Third"
-    dictionary = {"author":"Person", "username":"another"}
-    assert mm_meta_reader.get_artist(dictionary) == "another"
-    dictionary = {"thing":"blah", "author":{"username":"Yep"}, "person":"Next"}
-    assert mm_meta_reader.get_artist(dictionary) == "Yep"
-    dictionary = {"user":{"name":"Cpt. Human"}, "artist":50, "owner":"thing"}
-    assert mm_meta_reader.get_artist(dictionary) == "Cpt. Human"
-    dictionary = {"owner":"New", "type":"other"}
-    assert mm_meta_reader.get_artist(dictionary) == "New"
-    dictionary = {"total":True, "creator":{"full_name":"Real Person"}}
-    assert mm_meta_reader.get_artist(dictionary) == "Real Person"
-    assert mm_meta_reader.get_artist(dictionary) == "Real Person"
-    # Test getting artist from artist list in dictionary
-    dictionary = {"artists":["New Person", "blah"], "type":"other"}
-    assert mm_meta_reader.get_artist(dictionary) == "New Person"
-    dictionary = {"info":{"artists":["ArtLass"], "title":"blah"}, "next":"this"}
-    assert mm_meta_reader.get_artist(dictionary) == "ArtLass"
-    # Test if there is no artist
-    assert mm_meta_reader.get_artist({"no":"artist"}) is None
-    assert mm_meta_reader.get_artist({"artists":[]}) is None
+    # Test getting a single artist and writer
+    dictionary = {"artist":"Person", "writer":"Other", "Thing":123}
+    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".jpg")
+    assert artists == ["Person"]
+    assert writers == ["Other"]
+    # Test getting multiple artists and writers
+    dictionary = {"artists":["A","B"], "writers":["1","2","3"], "Final":"Thing"}
+    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".png")
+    assert artists == ["A","B"]
+    assert writers == ["1","2","3"]
+    # Test only artists
+    dictionary = {"artist":"Guy", "Thing":"Other"}
+    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".jpeg")
+    assert artists == ["Guy"]
+    assert writers == ["Guy"]
+    dictionary = {"artists":["Some", "People"], "Thing":"Other"}
+    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".bmp")
+    assert artists == ["Some", "People"]
+    assert writers == ["Some", "People"]
+    # Test only writers
+    dictionary = {"id":"Thing", "writer":"dude"}
+    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".mp4")
+    assert artists == ["dude"]
+    assert writers == ["dude"]
+    dictionary = {"bleh":"blah", "writers":["writer","author"]}
+    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".webm")
+    assert artists == ["writer","author"]
+    assert writers == ["writer","author"]
+    # Test no artists or writers
+    dictionary = {"id":"nothing"}
+    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".png")
+    assert artists is None
+    assert writers is None
+    # Test if the media file is a written work
+    dictionary = {"id":"Thing", "artist":"Author"}
+    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".html")
+    assert artists is None
+    assert writers == ["Author"]
+    dictionary = {"id":"Thing", "writers":["People","Thingies"]}
+    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".doc")
+    assert artists is None
+    assert writers == ["People","Thingies"]
+    dictionary = {"id":"Thing", "writer":"Person", "artist":"Other"}
+    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".txt")
+    assert artists == ["Other"]
+    assert writers == ["Person"]
+    # Deviantart style username
+    dictionary = {"author":{"username":"my dude"}, "id":"Thing"}
+    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".png")
+    assert artists == ["my dude"]
+    assert writers == ["my dude"]
+    # Inkbunny style username
+    dictionary = {"username":"Artist", "id":"Thing"}
+    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".jpg")
+    assert artists == ["Artist"]
+    assert writers == ["Artist"]
+    # Newgrounds style username
+    dictionary = {"AAA":"AAAAA", "user":"Person", "id":"Thing"}
+    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".mp4")
+    assert artists == ["Person"]
+    assert writers == ["Person"]
+    # Patreon style username
+    dictionary = {"creator":{"full_name":"Creator Person"}, "id":"Thing"}
+    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".png")
+    assert artists == ["Creator Person"]
+    assert writers == ["Creator Person"]
+    # Pixiv style username
+    dictionary = {"A":"A","user":{"name":"Another"}, "C":"C"}
+    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".jpg")
+    assert artists == ["Another"]
+    assert writers == ["Another"]
+    # Weasyl style username
+    dictionary = {"A":"B", "owner":"Thing"}
+    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".jpg")
+    assert artists == ["Thing"]
+    assert writers == ["Thing"]
     # Create JSON to load
     temp_dir = mm_file_tools.get_temp_dir()
-    test_json = abspath(join(temp_dir, "artists.json"))
-    mm_file_tools.write_json_file(test_json, {"thing":"other", "uploader":"Name!!!"})
+    test_json = abspath(join(temp_dir, "date.json"))
+    mm_file_tools.write_json_file(test_json, {"artists":["Artist", "Other"], "writer":"person"})
     assert exists(test_json)
-    # Test getting artist when read directly from JSON
-    meta = mm_meta_reader.load_metadata(test_json)
-    assert meta["json_path"] == test_json
-    assert meta["artist"] == "Name!!!"
-    assert meta["writer"] == "Name!!!"
+    # Test reading artist and writer from a JSON file
+    meta = mm_meta_reader.load_metadata(test_json, "Blah.txt")
+    assert meta["artists"] == ["Artist", "Other"]
+    assert meta["writers"] == ["person"]
 
 def test_get_date():
     """
@@ -146,7 +195,7 @@ def test_get_date():
     mm_file_tools.write_json_file(test_json, {"thing":"other", "date":"20230513"})
     assert exists(test_json)
     # Test getting date when read directly from JSON
-    meta = mm_meta_reader.load_metadata(test_json)
+    meta = mm_meta_reader.load_metadata(test_json, "b.txt")
     assert meta["json_path"] == test_json
     assert meta["date"] == "2023-05-13"
 
@@ -163,6 +212,8 @@ def test_get_description():
     assert mm_meta_reader.get_description(dictionary) == "More text"
     dictionary = {"thing":"other", "info":{"description":"New Text"}}
     assert mm_meta_reader.get_description(dictionary) == "New Text"
+    dictionary = {"webtoon_summary":"<p>A THING!</p>", "blah":"blah"}
+    assert mm_meta_reader.get_description(dictionary) == "<p>A THING!</p>"
     # Test if there is no description
     dictionary = {"no":"description"}
     assert mm_meta_reader.get_description(dictionary) is None
@@ -172,7 +223,7 @@ def test_get_description():
     mm_file_tools.write_json_file(test_json, {"thing":"other", "description":"New<br><br>Description!"})
     assert exists(test_json)
     # Test getting decscription when read directly from JSON
-    meta = mm_meta_reader.load_metadata(test_json)
+    meta = mm_meta_reader.load_metadata(test_json, "a.png")
     assert meta["json_path"] == test_json
     assert meta["description"] == "New<br><br>Description!"
 
@@ -227,7 +278,7 @@ def test_get_id():
     mm_file_tools.write_json_file(test_json, {"thing":"other", "id":"Blah"})
     assert exists(test_json)
     # Test getting ID when read directly from JSON
-    meta = mm_meta_reader.load_metadata(test_json)
+    meta = mm_meta_reader.load_metadata(test_json, "b.txt")
     assert meta["json_path"] == test_json
     assert meta["id"] == "Blah"
 
@@ -275,6 +326,29 @@ def test_get_publisher():
     assert mm_meta_reader.get_publisher(dictionary) == "YouTube"
     dictionary = {"this":"thing", "category":"YouTube"}
     assert mm_meta_reader.get_publisher(dictionary) == "YouTube"
+    # Test getting Tumblr as a publisher
+    dictionary = {"post_url":"https://person.tumblr.com/post/454", "type":"Thing"}
+    assert mm_meta_reader.get_publisher(dictionary) == "Tumblr"
+    dictionary = {"category":"tumblr", "other":"Thing"}
+    assert mm_meta_reader.get_publisher(dictionary) == "Tumblr"
+    # Test getting Twitter(X) as a publisher
+    dictionary = {"thing":"other", "category":"twitter"}
+    assert mm_meta_reader.get_publisher(dictionary) == "Twitter"
+    # Test getting Doc's Lab as a publisher
+    dictionary = {"thing":"other", "url":"https://www.docs-lab.com/submissions/187381830927"}
+    assert mm_meta_reader.get_publisher(dictionary) == "Doc's Lab"
+    # Test getting TGComics as a publisher
+    dictionary = {"thing":"other", "page_url":"https://tgcomics.com/tgc/comics/cname/"}
+    assert mm_meta_reader.get_publisher(dictionary) == "TGComics"
+    # Test getting Transfur as a publisher
+    dictionary = {"url":"https://www.transfur.com/users/someone", "blah":"Thing"}
+    assert mm_meta_reader.get_publisher(dictionary) == "Transfur"
+    # Test getting Kemono Café as a publisher
+    dictionary = {"url":"https://bethellium.kemono.cafe/comic/jkjasjdf/", "A":"B"}
+    assert mm_meta_reader.get_publisher(dictionary) == "Kemono Café"
+    # Test getting Webtoon as a publisher
+    dictionary = {"url":"https://www.webtoons.com/en/genre/thing/other", "A":"B"}
+    assert mm_meta_reader.get_publisher(dictionary) == "Webtoon"
     # Test if there is no viable publisher
     dictionary = {"url":"none"}
     assert mm_meta_reader.get_publisher(dictionary) is None
@@ -286,7 +360,7 @@ def test_get_publisher():
     mm_file_tools.write_json_file(test_json, {"thing":"other", "url":"www.deviantart.com/art/blah"})
     assert exists(test_json)
     # Test getting publisher when read directly from JSON
-    meta = mm_meta_reader.load_metadata(test_json)
+    meta = mm_meta_reader.load_metadata(test_json, "b.txt")
     assert meta["json_path"] == test_json
     assert meta["publisher"] == "DeviantArt"
 
@@ -303,7 +377,7 @@ def test_get_url():
     assert mm_meta_reader.get_url(dictionary, None, "123") == "New.url.thing"
     dictionary = {"webpage_url":"newthing.txt.thing", "id":"ABC"}
     assert mm_meta_reader.get_url(dictionary, "Fur Affinity", None) == "newthing.txt.thing"
-    dictionary = {"web":{"page_url":"new/url/value"}, "id":"ABC"}
+    dictionary = {"web":{"page_url":"new/url/value", "url":"not_this"}, "id":"ABC"}
     assert mm_meta_reader.get_url(dictionary, "Deviantart", None) == "new/url/value"
     # Test getting Fur Affinity URL
     assert mm_meta_reader.get_url({"D":"M"}, "Fur Affinity", "ID123") == "https://www.furaffinity.net/view/ID123/"
@@ -323,7 +397,7 @@ def test_get_url():
     mm_file_tools.write_json_file(test_json, dictionary)
     assert exists(test_json)
     # Test getting URL when read directly from JSON
-    meta = mm_meta_reader.load_metadata(test_json)
+    meta = mm_meta_reader.load_metadata(test_json, "a.png")
     assert meta["json_path"] == test_json
     assert meta["id"] == "ID-ABC"
     assert meta["publisher"] == "Fur Affinity"
@@ -353,6 +427,10 @@ def test_get_tags():
     # Test getting tags from multiple sources
     dictionary = {"tags":[{"name":"thing"}], "categories":["Tag", "Things"], "theme":"other", "species":["nope"]}
     assert mm_meta_reader.get_tags(dictionary) == ["thing", "Tag", "Things", "other"]
+    # TGComics tags
+    dictionary = {"genres":["Humor"], "transformations":["TG","TF"], "transformation_details":["blah"],
+            "sexual_preferences":["nope"], "status":"Complete"}
+    assert mm_meta_reader.get_tags(dictionary) == ["Humor", "TG", "TF", "blah", "nope"]
     # Test with no tags
     assert mm_meta_reader.get_tags({"no":"tags"}) is None
     assert mm_meta_reader.get_tags({"tags":[{"nope":"nope"}]}) is None
@@ -363,7 +441,7 @@ def test_get_tags():
     mm_file_tools.write_json_file(test_json, dictionary)
     assert exists(test_json)
     # Test getting tags when read directly from JSON
-    meta = mm_meta_reader.load_metadata(test_json)
+    meta = mm_meta_reader.load_metadata(test_json, "a.jpg")
     assert meta["json_path"] == test_json
     assert meta["tags"] == ["These", "are", "some", "tags"]
 
@@ -441,6 +519,22 @@ def test_get_age_rating():
     assert mm_meta_reader.get_age_rating(dictionary, "Weasyl") == "Unknown"
     dictionary = {"blah":"thing"}
     assert mm_meta_reader.get_age_rating(dictionary, "Weasyl") == "Unknown"
+    # Test getting Doc's Lab style ratings
+    dictionary = {"age_rating":"PG", "blah":"blah"}
+    assert mm_meta_reader.get_age_rating(dictionary, "Doc's Lab") == "Teen"
+    dictionary = {"age_rating":"R", "other":"thing"}
+    assert mm_meta_reader.get_age_rating(dictionary, "Doc's Lab") == "Mature 17+"
+    dictionary = {"age_rating":"X", "Word":"Stuff"}
+    assert mm_meta_reader.get_age_rating(dictionary, "Doc's Lab") == "X18+"
+    # Test getting TGComics style ratings
+    dictionary = {"age_rating":"TGC-C", "blah":"blah"}
+    assert mm_meta_reader.get_age_rating(dictionary, "TGComics") == "Teen"
+    dictionary = {"age_rating":"TGC-R", "other":"thing"}
+    assert mm_meta_reader.get_age_rating(dictionary, "TGComics") == "Mature 17+"
+    dictionary = {"age_rating":"TGC-M", "Word":"Stuff"}
+    assert mm_meta_reader.get_age_rating(dictionary, "TGComics") == "X18+"
+    dictionary = {"age_rating":"TGC-X", "Word":"bleh"}
+    assert mm_meta_reader.get_age_rating(dictionary, "TGComics") == "X18+"
     # Test with invalid Publisher
     dictionary = {"rating":"General"}
     assert mm_meta_reader.get_age_rating(dictionary, "NotRecognized") == "Unknown"
@@ -455,7 +549,7 @@ def test_get_age_rating():
     mm_file_tools.write_json_file(test_json, dictionary)
     assert exists(test_json)
     # Test getting age rating when read directly from JSON
-    meta = mm_meta_reader.load_metadata(test_json)
+    meta = mm_meta_reader.load_metadata(test_json, "a.txt")
     assert meta["json_path"] == test_json
     assert meta["publisher"] == "Fur Affinity"
     assert meta["age_rating"] == "Mature 17+"

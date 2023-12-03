@@ -71,7 +71,7 @@ def get_info_from_jsons(path:str) -> dict:
     # Read all JSON metadata
     json_metas = []
     for pair in pairs:
-        json_metas.append(mm_meta_reader.load_metadata(pair["json"]))
+        json_metas.append(mm_meta_reader.load_metadata(pair["json"], pair["media"]))
     # Get first instance of JSON metadata
     try:
         main_meta = json_metas[0]
@@ -81,13 +81,16 @@ def get_info_from_jsons(path:str) -> dict:
     metadata = get_empty_metadata()
     metadata["title"] = main_meta["title"]
     metadata["date"] = main_meta["date"]
-    metadata["writer"] = main_meta["writer"]
     metadata["publisher"] = main_meta["publisher"]
     metadata["url"] = main_meta["url"]
-    # Don't set the artist/cover artist if the file is a text file
-    if not extension == ".txt" and not extension == ".html" and not extension == ".htm":
-        metadata["artist"] = main_meta["artist"]
-        metadata["cover_artist"] = main_meta["artist"]
+    # Get artists and writers
+    metadata["artist"] = None
+    metadata["writer"] = None
+    if main_meta["artists"] is not None:
+        metadata["artist"] = ",".join(main_meta["artists"])
+    if main_meta["writers"] is not None:
+        metadata["writer"] = ",".join(main_meta["writers"])
+    metadata["cover_artist"] = metadata["artist"]
     # Get description metadata
     description = main_meta["description"]
     if description is not None:

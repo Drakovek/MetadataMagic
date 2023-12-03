@@ -120,13 +120,14 @@ def test_get_info_from_jsons():
     assert meta["date"] == "2012-12-21"
     assert meta["cover_artist"] is None
     # Test getting artist data
-    json_meta["artist"] = "Person!"
+    json_meta["artists"] = ["Illustrator!"]
+    json_meta["writers"] = ["Story", "People"]
     mm_file_tools.write_json_file(main_json, json_meta)
     meta = mm_archive.get_info_from_jsons(temp_dir)
     assert meta["title"] == "This is a title!"
-    assert meta["writer"] == "Person!"
-    assert meta["cover_artist"] == "Person!"
-    assert meta["artist"] == "Person!"
+    assert meta["writer"] == "Story,People"
+    assert meta["cover_artist"] == "Illustrator!"
+    assert meta["artist"] == "Illustrator!"
     assert meta["publisher"] is None
     # Test getting publisher
     json_meta["url"] = "youtube.com/something"

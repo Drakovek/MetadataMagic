@@ -148,7 +148,10 @@ def get_string_from_metadata(metadata:dict, template:str) -> str:
         try:
             if metadata[key] is None:
                 return None
-            filename = filename.replace(f"{{{key}}}", str(metadata[key]))
+            value = metadata[key]
+            if isinstance(value, list):
+                value = ",".join(value)
+            filename = filename.replace(f"{{{key}}}", value)
         except KeyError: return None
     # Remove all key references that weren't found in the metadata
     filename = re.sub(r"{[^}]*}", "", filename).strip()
@@ -200,7 +203,7 @@ def rename_json_pairs(path:str, template:str):
         json = pair["json"]
         media = pair["media"]
         # Get the base filename
-        metadata = mm_meta_reader.load_metadata(json)
+        metadata = mm_meta_reader.load_metadata(json, media)
         filename = get_string_from_metadata(metadata, template)
         # Don't rename if the filename is already correct or metadata can't be found
         try:
