@@ -3,6 +3,7 @@ import metadata_magic.archive.epub as mm_epub
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.archive as mm_archive
 from os.path import abspath, basename, exists, join
+from PIL import Image
 
 def test_format_xhtml():
     """
@@ -203,27 +204,27 @@ def test_get_default_chapters():
     sub_dir = abspath(join(temp_dir, "sub"))
     os.mkdir(sub_dir)
     mm_file_tools.write_text_file(abspath(join(sub_dir, "sub.txt")), "TEXT")
-    mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "TEXT")
-    mm_file_tools.write_text_file(abspath(join(temp_dir, "2.html")), "TEXT")
-    mm_file_tools.write_text_file(abspath(join(temp_dir, "3.png")), "TEXT")
-    mm_file_tools.write_text_file(abspath(join(temp_dir, "4.thing")), "TEXT")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "[1] 1.txt")), "TEXT")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "[2] 2.html")), "TEXT")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "[3] Thing.png")), "TEXT")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "[4] 4.thing")), "TEXT")
     chapters = mm_epub.get_default_chapters(temp_dir)
     assert len(chapters) == 3
     assert chapters[0]["include"]
     assert chapters[0]["title"] == "1"
     assert len(chapters[0]["files"]) == 1
     assert chapters[0]["files"][0]["id"] == "item0"
-    assert basename(chapters[0]["files"][0]["file"]) == "1.txt"
+    assert basename(chapters[0]["files"][0]["file"]) == "[1] 1.txt"
     assert chapters[1]["include"]
     assert chapters[1]["title"] == "2"
     assert len(chapters[1]["files"]) == 1
     assert chapters[1]["files"][0]["id"] == "item1"
-    assert basename(chapters[1]["files"][0]["file"]) == "2.html"
+    assert basename(chapters[1]["files"][0]["file"]) == "[2] 2.html"
     assert chapters[2]["include"]
-    assert chapters[2]["title"] == "3"
+    assert chapters[2]["title"] == "Thing"
     assert len(chapters[2]["files"]) == 1
     assert chapters[2]["files"][0]["id"] == "item2"
-    assert basename(chapters[2]["files"][0]["file"]) == "3.png"
+    assert basename(chapters[2]["files"][0]["file"]) == "[3] Thing.png"
     # Test getting default chapter information for one text file with a title
     chapters = mm_epub.get_default_chapters(sub_dir, "Title!")
     assert len(chapters) == 1
@@ -231,6 +232,41 @@ def test_get_default_chapters():
     assert chapters[0]["title"] == "Title!"
     assert chapters[0]["files"][0]["id"] == "item0"
     assert basename(chapters[0]["files"][0]["file"]) == "sub.txt"
+
+def test_add_cover_to_chapters():
+    """
+    Tests the add cover_to_chapters function
+    """
+    # Get default chapter information
+    temp_dir = mm_file_tools.get_temp_dir()
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "TEXT")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "Thing.html")), "TEXT")
+    chapters = mm_epub.get_default_chapters(temp_dir)
+    assert len(chapters) == 2
+    # Test adding a cover image to the chapter
+    metadata = {"title":"Some Title", "writer":"Artist Person"}
+    chapters = mm_epub.add_cover_to_chapters(chapters, metadata)
+    assert len(chapters) == 3
+    assert chapters[0]["include"]
+    assert chapters[0]["title"] == "Cover"
+    assert len(chapters[0]["files"]) == 1
+    assert chapters[0]["files"][0]["id"] == "cover"
+    assert basename(chapters[0]["files"][0]["file"]) == "mm_cover_image.jpg"
+    assert exists(chapters[0]["files"][0]["file"])
+    image = Image.open(chapters[0]["files"][0]["file"])
+    assert image.size == (600, 800)
+    assert chapters[1]["include"]
+    assert chapters[1]["title"] == "1"
+    assert len(chapters[1]["files"]) == 1
+    assert chapters[1]["files"][0]["id"] == "item0"
+    assert basename(chapters[1]["files"][0]["file"]) == "1.txt"
+    assert exists(chapters[1]["files"][0]["file"])
+    assert chapters[2]["include"]
+    assert chapters[2]["title"] == "Thing"
+    assert len(chapters[2]["files"]) == 1
+    assert chapters[2]["files"][0]["id"] == "item1"
+    assert basename(chapters[2]["files"][0]["file"]) == "Thing.html"
+    assert exists(chapters[2]["files"][0]["file"])
 
 def test_group_chapters():
     """

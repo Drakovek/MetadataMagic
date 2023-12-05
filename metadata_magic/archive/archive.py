@@ -2,14 +2,17 @@
 
 import os
 import re
+import math
 import argparse
 import html_string_tools.html
 import python_print_tools.printer
+import easy_text_to_image.text_to_image as etti
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.meta_reader as mm_meta_reader
 import metadata_magic.archive.epub as mm_epub
 import metadata_magic.archive.comic_archive as mm_comic_archive
+from PIL import Image
 from os.path import abspath, isdir, exists
 
 def get_directory_archive_type(directory:str) -> str:
@@ -184,6 +187,59 @@ def update_archive_info(archive_file:str, metadata:dict):
         mm_epub.update_epub_info(archive_file, metadata)
     if extension == ".cbz":
         mm_comic_archive.update_cbz_info(archive_file, metadata)
+
+def get_cover_image(title:str, authors:str, portrait:bool=True, uppercase:bool=True) -> Image:
+    """
+    Creates and returns a cover image based on a given title and author.
+    
+    :param title: Title to use for the cover image
+    :type title: str, required
+    :param authors: Author(s) to use for the cover image
+    :type authors: str, required
+    :param portrait: Wheter the image should be in portrait orientation, defaults to True
+    :type portrait: bool, optional
+    :param uppercase: Whether to set all text to uppercase, defaults to True
+    :type uppercase: bool, optional
+    :return: Cover image
+    :rtype: PIL.Image
+    """
+    # Get the dimensions of the full cover image
+    full_width = 600
+    full_height = 800
+    if portrait is False:
+        full_width = 800
+        full_height = 600
+    # Get the colors for the image
+    foreground, background, text = etti.get_color_palette()
+    # Create the base image
+    margin = 50
+    cover = Image.new("RGBA", size=(full_width, full_height), color=foreground)
+    inner = Image.new("RGBA", size=(full_width - (margin * 2), full_height - (margin * 2)), color=background)
+    cover.alpha_composite(inner, (margin, margin))
+    # Get the font for the image
+    system_fonts = etti.get_system_fonts()
+    font = etti.get_basic_font("sans-serif", system_fonts, bold=True)
+    # Create the text for the author
+    text_width = full_width - (margin * 4)
+    text_height = math.floor((full_height - (margin * 4)) / 4)
+    author_text = re.sub(r"\s*,\s*", " and ", authors)
+    author_text = f"by {author_text}"
+    if uppercase:
+        author_text = author_text.upper()
+    author_image = etti.text_image_fit_box(author_text, font, image_width=text_width, image_height=text_height,
+            foreground=text, background="#00000000", justified="c", vertical="b", minimum_characters=200)
+    author_height = author_image.size[1]
+    cover.alpha_composite(author_image, (margin * 2, (full_height - (margin * 2)) - author_height))
+    # Create the text for the title
+    text_height = (full_height - (margin * 4)) - author_height
+    title_text = title
+    if uppercase:
+        title_text = title_text.upper()
+    title_image = etti.text_image_fit_box(title_text, font, image_width=text_width, image_height=text_height,
+            foreground=text, background="#00000000", justified="c", vertical="t")
+    cover.alpha_composite(title_image, (margin * 2, margin * 2))
+    # Return the image
+    return cover
 
 def get_string_from_user(value_type:str, default_value:str=None) -> str:
     """
@@ -411,5 +467,5 @@ def main():
             if archive_type == "cbz":
                 mm_comic_archive.create_cbz(path, metadata["title"], metadata)
             if archive_type == "epub":
-                chapters = mm_epub.get_chapters_from_user(path, metadata["title"])
+                chapters = mm_epub.get_chapters_from_user(path, metadata)
                 mm_epub.create_epub(chapters, metadata, path)

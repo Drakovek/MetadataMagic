@@ -415,3 +415,12 @@ def test_remove_page_number():
     assert mm_archive.remove_page_number(" [1/5] ") == " [1/5] "
     # Test returning None if text is None
     assert mm_archive.remove_page_number(None) is None
+
+def test_get_cover_image():
+    """
+    Tests the get_cover_image function.
+    """
+    image = mm_archive.get_cover_image("This is a title", "Drakovek")
+    assert image.size == (600, 800)
+    image = mm_archive.get_cover_image("This is a title", "Drakovek", portrait=False)
+    assert image.size == (800, 600)

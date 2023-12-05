@@ -213,6 +213,36 @@ def get_default_chapters(directory:str, title:str=None) -> List[dict]:
     # Return the default chapters
     return chapters
 
+def add_cover_to_chapters(chapters:List[dict], metadata:dict) -> List[dict]:
+    """
+    Adds information for a cover image to a list of chapter information.
+    
+    :param chapters: List of chapters as returned by get_default_chapters
+    :type chapters: List[dict], required
+    :param metadata: Metadata dict as returned by meta_reader.py's get_empty_metadata function.
+    :type metadata: dict, required
+    :return: List of chapter information with cover image added to the beginning
+    :rtype: List[dict]
+    """
+    # Create new chapters list
+    new_chapters = []
+    new_chapters.extend(chapters)
+    # Create a cover image
+    cover_directory = mm_file_tools.get_temp_dir("dvk_cover_gen")
+    cover_file = abspath(join(cover_directory, "mm_cover_image.jpg"))
+    cover_image = mm_archive.get_cover_image(metadata["title"], metadata["writer"], uppercase=True)
+    cover_image = cover_image.convert("RGB")
+    cover_image.save(cover_file, quality=95)
+    # Create a cover image chapter entry
+    entry = dict()
+    entry["include"] = True
+    entry["title"] = "Cover"
+    entry["files"] = [{"id":"cover", "file":cover_file}]
+    # Add the entry to the chapters
+    new_chapters.insert(0, entry)
+    # Return the new chapters
+    return new_chapters
+
 def group_chapters(chapters:List[dict], group:List[int]) -> List[dict]:
     """
     Groups the files of the given chapters into one new chapter.
@@ -328,7 +358,7 @@ def get_chapters_string(chapters:List[dict]) -> str:
     # Return the chapters string
     return chapters_string
 
-def get_chapters_from_user(directory:str, title:str=None) -> List[dict]:
+def get_chapters_from_user(directory:str, metadata:dict) -> List[dict]:
     """
     Returns a list of chapter information for use when converting files into an EPUB file.
     Initial chapter info is gatherd from the get_default_chapters function, then the user is prompted to modify fields.
@@ -336,12 +366,12 @@ def get_chapters_from_user(directory:str, title:str=None) -> List[dict]:
     
     :param directory: Directory of files to use for chapters in an EPUB file
     :type directory: str, required
-    :param title: Title of the whole ebook used if there is only one chapter, defaults to None
-    :type title: str, optional
+    :param metadata: Metadata dict as returned by meta_reader.py's get_empty_metadata function.
+    :type metadata: dict, required
     :return: List of info for each chapter
     :rtype: List[dict]
     """
-    chapters = get_default_chapters(directory, title)
+    chapters = get_default_chapters(directory, metadata["title"])
     while True:
         # Clear the console
         python_print_tools.printer.clear_console()
@@ -386,6 +416,9 @@ def get_chapters_from_user(directory:str, title:str=None) -> List[dict]:
                     entry_nums[i] = int(entry_nums[i])-1
                 chapters = group_chapters(chapters, entry_nums)
             except ValueError:pass
+    # Ask whether to add a cover image
+    if input("Generate Cover Image? (Y/N): ").lower() == "y":
+        chapters = add_cover_to_chapters(chapters, metadata)
     # Return the chapters
     return chapters
 
