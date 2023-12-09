@@ -95,7 +95,7 @@ def get_artists_and_writers(json:dict, extension:str) -> (List[str], List[str]):
     writers = get_value_from_keylist(json, multiple_writer_keys, list)
     # Get single artist and writers
     single_artist_keys = [["artist"], ["username"], ["user"], ["owner"],
-            ["author", "username"], ["user", "name"]]
+            ["author", "username"], ["user", "name"], ["info", "artists"]]
     single_writer_keys = [["writer"], ["author"], ["creator", "full_name"]]
     single_artist = get_value_from_keylist(json, single_artist_keys, str)
     single_writer = get_value_from_keylist(json, single_writer_keys, str)

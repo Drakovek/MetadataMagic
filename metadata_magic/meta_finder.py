@@ -43,34 +43,45 @@ def separate_files(path:str) -> tuple:
     media = mm_sort.sort_alphanum(media)
     return (jsons, media)
 
-def get_pairs(path:str) -> List[dict]:
+def get_pairs(path:str, print_info:bool=True) -> List[dict]:
     """
     Returns a list of media files paired with their corresponding JSON metadata file.
     Returned in dicts with "json" and "media" fields.
 
     :param path: Directory in which to search for media files
     :type path: str, required
+    :param print_info: Whether to print search updates to the user, defaults to true
+    :type print_info: bool, optional
     :return: List of media files paired with JSONs
     :rtype: List[dict]
     """
-    print("Searching directory...")
+    # Print info if appropriate
+    if print_info:
+        print("Searching directory...")
+    # Get the list of json and media files and pair when appropriate
     jsons, media = separate_files(path)
-    return get_pairs_from_lists(media)
+    return get_pairs_from_lists(media, print_info)
 
-def get_pairs_from_lists(media:List[str]) -> List[dict]:
+def get_pairs_from_lists(media:List[str], print_info:bool=True) -> List[dict]:
     """
     Returns a list of media files paired with their corresponding JSON metadata file.
     Returned in dicts with "json" and "media" fields.
 
     :param media: List of non-JSON media files
     :type media: List[str], required
+    :param print_info: Whether to print search updates to the user, defaults to true
+    :type print_info: bool, optional
     :return: List of media files paired with JSONs
     :rtype: List[dict]
     """
-    # Get pairs
+    # Print info if appropriate
     pairs = []
-    print("Finding JSON metadata:")
-    for file in tqdm.tqdm(media):
+    iterator = media
+    if print_info:
+        print("Finding JSON metadata:")
+        iterator = tqdm.tqdm(media)
+    # Get JSON-media pairs
+    for file in iterator:
         # Check if JSON with extension exists
         base = basename(file)
         parent = abspath(join(file, os.pardir))

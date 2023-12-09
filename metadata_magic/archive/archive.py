@@ -12,8 +12,11 @@ import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.meta_reader as mm_meta_reader
 import metadata_magic.archive.epub as mm_epub
 import metadata_magic.archive.comic_archive as mm_comic_archive
-from PIL import Image
+from PIL import Image, ImageDraw
 from os.path import abspath, isdir, exists
+
+SUPPORTED_IMAGES = [".png", ".jpeg", ".jpg"]
+SUPPORTED_TEXT = [".txt", ".html", ".htm"]
 
 def get_directory_archive_type(directory:str) -> str:
     """
@@ -28,10 +31,10 @@ def get_directory_archive_type(directory:str) -> str:
     :rtype: str
     """
     # Return "epub" if the directory contains text files
-    if mm_file_tools.directory_contains(directory, [".txt", ".html", ".htm"], False):
+    if mm_file_tools.directory_contains(directory, SUPPORTED_TEXT, False):
         return "epub"
     # Return "cbz" if the directory contains image files
-    if mm_file_tools.directory_contains(directory, [".png", ".jpeg", ".jpg"], True):
+    if mm_file_tools.directory_contains(directory, SUPPORTED_IMAGES, True):
         return "cbz"
     # Return None if no appropriate archive format could be found
     return None
@@ -70,7 +73,7 @@ def get_info_from_jsons(path:str) -> dict:
     :rtype: dict
     """
     # Get all the JSON pairs
-    pairs = mm_meta_finder.get_pairs(path)
+    pairs = mm_meta_finder.get_pairs(path, print_info=False)
     # Read all JSON metadata
     json_metas = []
     for pair in pairs:
@@ -212,32 +215,39 @@ def get_cover_image(title:str, authors:str, portrait:bool=True, uppercase:bool=T
     # Get the colors for the image
     foreground, background, text = etti.get_color_palette()
     # Create the base image
-    margin = 50
-    cover = Image.new("RGBA", size=(full_width, full_height), color=foreground)
-    inner = Image.new("RGBA", size=(full_width - (margin * 2), full_height - (margin * 2)), color=background)
-    cover.alpha_composite(inner, (margin, margin))
+    margin = 60
+    half_margin = math.floor(margin/2)
+    cover = Image.new("RGBA", size=(full_width, full_height), color=background)
+    inner = Image.new("RGBA", size=(full_width - margin, full_height), color=foreground)
+    cover.alpha_composite(inner, (margin, 0))
     # Get the font for the image
     system_fonts = etti.get_system_fonts()
-    font = etti.get_basic_font("sans-serif", system_fonts, bold=True)
+    italic_font = etti.get_basic_font("sans-serif", system_fonts, bold=True, italic=True)
+    bold_font = etti.get_basic_font("sans-serif", system_fonts, bold=True)
     # Create the text for the author
-    text_width = full_width - (margin * 4)
-    text_height = math.floor((full_height - (margin * 4)) / 4)
-    author_text = re.sub(r"\s*,\s*", " and ", authors)
+    text_width = full_width - math.floor(margin * 2.5)
+    author_text = re.sub(r"\s*,\s*", " and ", str(authors))
     author_text = f"by {author_text}"
     if uppercase:
         author_text = author_text.upper()
-    author_image = etti.text_image_fit_box(author_text, font, image_width=text_width, image_height=text_height,
-            foreground=text, background="#00000000", justified="c", vertical="b", minimum_characters=200)
+    author_image = etti.text_image_fit_width(author_text, bold_font, image_width=text_width,
+            foreground=background, background="#00000000", justified="l", minimum_characters=200)
     author_height = author_image.size[1]
-    cover.alpha_composite(author_image, (margin * 2, (full_height - (margin * 2)) - author_height))
+    cover.alpha_composite(author_image, (math.floor(margin * 1.5), full_height - (half_margin + author_height)))
     # Create the text for the title
-    text_height = (full_height - (margin * 4)) - author_height
-    title_text = title
+    text_height = full_height - ((margin*3) + author_height)
+    title_text = str(title)
     if uppercase:
         title_text = title_text.upper()
-    title_image = etti.text_image_fit_box(title_text, font, image_width=text_width, image_height=text_height,
-            foreground=text, background="#00000000", justified="c", vertical="t")
-    cover.alpha_composite(title_image, (margin * 2, margin * 2))
+    title_image = etti.text_image_fit_box(title_text, italic_font, image_width=text_width, image_height=text_height,
+            foreground=text, background="#00000000", justified="l", vertical="t", space=1)
+    # Create the title framing
+    left, top, right, bottom = etti.get_bounds(title_image, "#00000000")
+    frame_bottom = (bottom - top) + (margin * 1.5)
+    draw = ImageDraw.Draw(cover)
+    draw.rounded_rectangle([(0, half_margin), (full_width-half_margin, frame_bottom)],
+            fill=background, radius=half_margin)
+    cover.alpha_composite(title_image, (math.floor(margin*1.5), margin))
     # Return the image
     return cover
 
