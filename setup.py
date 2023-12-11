@@ -25,13 +25,11 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/Drakovek/MetadataMagic",
     packages=setuptools.find_packages(),
-    install_requires=["chardet", "Easy-Text-To-Image", "lxml", "tqdm",
-            "HTML-String-Tools", "Pillow", "Python-Print-Tools"],
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-        "Operating System :: OS Independent"
-    ],
+    install_requires=["chardet", "Easy-Text-To-Image", "HTML-String-Tools", "lxml",
+            "Pillow", "Python-Print-Tools", "tqdm"],
+    classifiers=["Programming Language :: Python :: 3",
+            "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+            "Operating System :: OS Independent"],
     python_requires='>=3.9',
     entry_points={"console_scripts": console_scripts}
 )

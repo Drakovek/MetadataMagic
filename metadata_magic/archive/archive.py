@@ -392,7 +392,7 @@ def main():
     # Set up argument parser
     parser = argparse.ArgumentParser()
     parser.add_argument(
-            "path",
+            "directory",
             help="Directory to encapsulate in a media archive.",
             nargs="?",
             type=str,
@@ -439,9 +439,9 @@ def main():
             action="store_true")
     args = parser.parse_args()
     # Check that directory is valid
-    path = abspath(args.path)
+    path = abspath(args.directory)
     if not exists(path) or not isdir(path):
-        python_print_tools.printer.color_print("Invalid path.", "red")
+        python_print_tools.printer.color_print("Invalid directory.", "red")
     else:
         # Discover the type of archive to create
         archive_type = get_directory_archive_type(path)

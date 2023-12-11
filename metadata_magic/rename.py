@@ -346,12 +346,12 @@ def main():
     parser.add_argument(
             "-m",
             "--metadata-rename",
-            help="Find JSON files with no associated media",
+            help="Renames files based on their metadata.",
             action="store_true")
     parser.add_argument(
             "-s",
             "--sort-rename",
-            help="Find media files with no associated JSON metadata",
+            help="Renames files to a template name with index numbers.",
             action="store_true")
     args = parser.parse_args()
     # Check that directory is valid

@@ -78,16 +78,16 @@ def main():
     # Set up argument parser
     parser = argparse.ArgumentParser()
     parser.add_argument(
-            "path",
+            "directory",
             help="Directory or archive file to update with metadata.",
             nargs="?",
             type=str,
             default=str(os.getcwd()))
     args = parser.parse_args()
     # Check that directory is valid
-    path = abspath(args.path)
+    path = abspath(args.directory)
     if not exists(path):
-        python_print_tools.printer.color_print("Invalid path.", "red")
+        python_print_tools.printer.color_print("Invalid directory.", "red")
     elif isdir(path):
         user_mass_update(path)
     else:

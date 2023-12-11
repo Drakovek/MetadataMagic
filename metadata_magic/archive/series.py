@@ -149,7 +149,7 @@ def get_series_string(files:List[dict]) -> str:
     # Set the header for the series labels
     total_length = entry_length + file_length
     series_string = "-" * total_length
-    series_string = f"{{:<{file_length}}}\n{series_string}".format("FILES")
+    series_string = f"{{:<{file_length}}}\n{series_string}".format("FILE")
     series_string = f"{{:<{entry_length}}}{series_string}".format("ENTRY")
     # Get a string for each archive file
     for file in files:
@@ -224,7 +224,7 @@ def main():
             default=str(os.getcwd()))
     parser.add_argument(
             "-s",
-            "--single",
+            "--standalone",
             help="Set media series as being one of one",
             action="store_true")
     args = parser.parse_args()
@@ -234,9 +234,10 @@ def main():
         python_print_tools.printer.color_print("Invalid directory.", "red")
     else:
         # Check whether to add as full series or as one-shots
-        if args.single:
+        if not args.single:
+            set_series_from_user(directory)
+        elif input().lower("Mark all archives in this directory as standalone entries? (Y/[N])") == "y":
             archive_files = mm_file_tools.find_files_of_type(directory, [".cbz", ".epub"], include_subdirectories=False)
             for archive_file in tqdm.tqdm(archive_files):
                 write_series_single(archive_file)
-        else:
-            set_series_from_user(directory)
+        

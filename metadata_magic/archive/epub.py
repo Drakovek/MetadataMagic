@@ -417,7 +417,7 @@ def get_chapters_from_user(directory:str, metadata:dict) -> List[dict]:
                 chapters = group_chapters(chapters, entry_nums)
             except ValueError:pass
     # Ask whether to add a cover image
-    if input("Generate Cover Image? (Y/N): ").lower() == "y":
+    if input("Generate Cover Image? (Y/[N]): ").lower() == "y":
         chapters = add_cover_to_chapters(chapters, metadata)
     # Return the chapters
     return chapters

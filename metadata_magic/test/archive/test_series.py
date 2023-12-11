@@ -220,7 +220,7 @@ def test_get_series_string():
     labeled_files.append({"file":"/another.cbz", "label":"3.0"})
     series_string = mm_series.get_series_string(labeled_files)
     compare = ""
-    compare = f"{compare}ENTRY    FILES        \n"
+    compare = f"{compare}ENTRY    FILE         \n"
     compare = f"{compare}----------------------\n"
     compare = f"{compare}1.0      test_file.cbz\n"
     compare = f"{compare}2.0      something.cbz\n"
@@ -236,7 +236,7 @@ def test_get_series_string():
     labeled_files.append({"file":"/Final File.epub", "label":"1000004.5"})
     series_string = mm_series.get_series_string(labeled_files)
     compare = ""
-    compare = f"{compare}ENTRY        FILES               \n"
+    compare = f"{compare}ENTRY        FILE                \n"
     compare = f"{compare}---------------------------------\n"
     compare = f"{compare}1000000.0    a_long_file_name.cbz\n"
     compare = f"{compare}1000001.0    something_else.epub \n"
