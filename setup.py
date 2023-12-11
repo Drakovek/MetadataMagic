@@ -10,14 +10,14 @@ console_scripts = [
     "mm-update = metadata_magic.archive.update:main",
     "mm-error = metadata_magic.error:main",
     "mm-rename = metadata_magic.rename:main",
-    "archive-series = metadata_magic.archive.series_info:main"]
+    "mm-series = metadata_magic.archive.series:main"]
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="Metadata-Magic",
-    version="0.8.8",
+    version="0.8.9",
     author="Drakovek",
     author_email="DrakovekMail@gmail.com",
     description="Utility for managing metadata.",
