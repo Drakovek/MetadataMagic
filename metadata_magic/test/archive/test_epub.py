@@ -88,6 +88,64 @@ def test_format_xhtml():
     compare = f"{compare}\n    </body>"
     compare = f"{compare}\n</html>"
     assert xhtml == compare
+    # Test altering head with a single image file
+    html = "<p><img src=\"../images/thing.jpg\" alt=\"thing\" width=\"600\" height=\"800\"/></p>"
+    xhtml = mm_epub.format_xhtml(html, "Single Image")
+    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
+    compare = f"{compare}\n    <head>"
+    compare = f"{compare}\n        <title>Single Image</title>"
+    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+    compare = f"{compare}\n        <meta content=\"width=600, height=800\" name=\"viewport\" />"
+    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
+    compare = f"{compare}\n    </head>"
+    compare = f"{compare}\n    <body>"
+    compare = f"{compare}\n        <p>"
+    compare = f"{compare}\n            <img src=\"../images/thing.jpg\" alt=\"thing\" width=\"600\" height=\"800\" />"
+    compare = f"{compare}\n        </p>"
+    compare = f"{compare}\n    </body>"
+    compare = f"{compare}\n</html>"
+    assert xhtml == compare
+    # Test that head is not altered if there is text alongside the image
+    html = f"<p>Some words!</p>{html}<p>And such</p>"
+    xhtml = mm_epub.format_xhtml(html, "Single Image")
+    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
+    compare = f"{compare}\n    <head>"
+    compare = f"{compare}\n        <title>Single Image</title>"
+    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
+    compare = f"{compare}\n    </head>"
+    compare = f"{compare}\n    <body>"
+    compare = f"{compare}\n        <p>Some words!</p>"
+    compare = f"{compare}\n        <p>"
+    compare = f"{compare}\n            <img src=\"../images/thing.jpg\" alt=\"thing\" width=\"600\" height=\"800\" />"
+    compare = f"{compare}\n        </p>"
+    compare = f"{compare}\n        <p>And such</p>"
+    compare = f"{compare}\n    </body>"
+    compare = f"{compare}\n</html>"
+    assert xhtml == compare
+    # Test that head is not altered with multiple image files
+    html = "<p><img src=\"../images/thing.jpg\" alt=\"thing\" width=\"600\" height=\"800\"/></p>"
+    html = f"{html}<p><img src=\"../images/other.jpg\" alt=\"other\" width=\"1200\" height=\"750\"/></p>"
+    xhtml = mm_epub.format_xhtml(html, "Single Image")
+    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
+    compare = f"{compare}\n    <head>"
+    compare = f"{compare}\n        <title>Single Image</title>"
+    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
+    compare = f"{compare}\n    </head>"
+    compare = f"{compare}\n    <body>"
+    compare = f"{compare}\n        <p>"
+    compare = f"{compare}\n            <img src=\"../images/thing.jpg\" alt=\"thing\" width=\"600\" height=\"800\" />"
+    compare = f"{compare}\n        </p>"
+    compare = f"{compare}\n        <p>"
+    compare = f"{compare}\n            <img src=\"../images/other.jpg\" alt=\"other\" width=\"1200\" height=\"750\" />"
+    compare = f"{compare}\n        </p>"
+    compare = f"{compare}\n    </body>"
+    compare = f"{compare}\n</html>"
+    assert xhtml == compare
 
 def test_txt_to_xml():
     """
@@ -166,16 +224,22 @@ def test_image_to_xml():
     # Test getting image as XML
     temp_dir = mm_file_tools.get_temp_dir()
     image_file = abspath(join(temp_dir, "image.png"))
-    mm_file_tools.write_text_file(image_file, "BLAH")
+    image = Image.new("RGB", size=(600, 800), color="#ff0000")
+    image.save(image_file)
     assert exists(image_file)
     xml = mm_epub.image_to_xml(image_file)
-    assert xml == "<img src=\"../images/image.png\" alt=\"image\" />"
-    # Different dimensions
+    assert xml == "<p><img src=\"../images/image.png\" alt=\"image\" width=\"600\" height=\"800\" /></p>"
+    # Different dimensions and an alt tag
     image_file = abspath(join(temp_dir, "[01] Other.jpg"))
-    mm_file_tools.write_text_file(image_file, "BLAH")
+    image = Image.new("RGB", size=(350, 200), color="#ff0000")
+    image.save(image_file)
     assert exists(image_file)
-    xml = mm_epub.image_to_xml(image_file)
-    assert xml == "<img src=\"../images/[01] Other.jpg\" alt=\"Other\" />"
+    xml = mm_epub.image_to_xml(image_file, "Some Name")
+    assert xml == "<p><img src=\"../images/[01] Other.jpg\" alt=\"Some Name\" width=\"350\" height=\"200\" /></p>"
+    # Test with a non-image file
+    image_file = abspath(join(temp_dir, "notimage.jpg"))
+    mm_file_tools.write_text_file(image_file, "not an image")
+    assert mm_epub.image_to_xml(image_file) == ""
 
 def test_get_title_from_file():
     """
@@ -254,7 +318,7 @@ def test_add_cover_to_chapters():
     assert basename(chapters[0]["files"][0]["file"]) == "mm_cover_image.jpg"
     assert exists(chapters[0]["files"][0]["file"])
     image = Image.open(chapters[0]["files"][0]["file"])
-    assert image.size == (600, 800)
+    assert image.size == (900, 1200)
     assert chapters[1]["include"]
     assert chapters[1]["title"] == "1"
     assert len(chapters[1]["files"]) == 1
@@ -476,9 +540,11 @@ def test_create_content_files():
     # Create the default chapters list
     temp_dir = mm_file_tools.get_temp_dir()
     output_dir = mm_file_tools.get_temp_dir("dvk-epub-output")
-    mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "Here's some text!")
-    mm_file_tools.write_text_file(abspath(join(temp_dir, "2.html")), "<html><body><p>Word<p><p>Things!</p></body></html>")
-    mm_file_tools.write_text_file(abspath(join(temp_dir, "3.jpg")), "IMAGE")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "[01] 1.txt")), "Here's some text!")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "[02] 2.html")), "<html><body><p>Word<p><p>Things!</p></body></html>")
+    image_file = abspath(join(temp_dir, "[03] 3.jpg"))
+    image = Image.new("RGB", size=(500, 500), color="#ff0000")
+    image.save(image_file)
     chapters = mm_epub.get_default_chapters(temp_dir)
     # Test creating the content files from the given chapters
     chapters = mm_epub.create_content_files(chapters, output_dir)
@@ -486,15 +552,15 @@ def test_create_content_files():
     assert chapters[0]["include"]
     assert chapters[0]["id"] == "item0"
     assert chapters[0]["title"] == "1"
-    assert chapters[0]["file"] == "content/1.xhtml"
-    assert chapters[1]["file"] == "content/2.xhtml"
-    assert chapters[2]["file"] == "content/3.xhtml"
+    assert chapters[0]["file"] == "content/[01] 1.xhtml"
+    assert chapters[1]["file"] == "content/[02] 2.xhtml"
+    assert chapters[2]["file"] == "content/[03] 3.xhtml"
     assert sorted(os.listdir(output_dir)) == ["content", "images"]
     image_dir = abspath(join(output_dir, "images"))
-    assert sorted(os.listdir(image_dir)) == ["3.jpg"]
+    assert sorted(os.listdir(image_dir)) == ["image1.jpg"]
     content_dir = abspath(join(output_dir, "content"))
-    assert sorted(os.listdir(content_dir)) == ["1.xhtml", "2.xhtml", "3.xhtml"]
-    text = mm_file_tools.read_text_file(abspath(join(content_dir, "1.xhtml")))
+    assert sorted(os.listdir(content_dir)) == ["[01] 1.xhtml", "[02] 2.xhtml", "[03] 3.xhtml"]
+    text = mm_file_tools.read_text_file(abspath(join(content_dir, "[01] 1.xhtml")))
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
     compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
     compare = f"{compare}\n    <head>"
@@ -508,7 +574,7 @@ def test_create_content_files():
     compare = f"{compare}\n</html>"
     assert text == compare
     # Test that HTML based XHTML was created correctly
-    text = mm_file_tools.read_text_file(abspath(join(content_dir, "2.xhtml")))
+    text = mm_file_tools.read_text_file(abspath(join(content_dir, "[02] 2.xhtml")))
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
     compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
     compare = f"{compare}\n    <head>"
@@ -521,17 +587,21 @@ def test_create_content_files():
     compare = f"{compare}\n        <p>Things!</p>"
     compare = f"{compare}\n    </body>"
     compare = f"{compare}\n</html>"
+    assert text == compare
     # Test that image XHTML was created correctly
-    text = mm_file_tools.read_text_file(abspath(join(content_dir, "3.xhtml")))    
+    text = mm_file_tools.read_text_file(abspath(join(content_dir, "[03] 3.xhtml"))) 
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
     compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
     compare = f"{compare}\n    <head>"
     compare = f"{compare}\n        <title>3</title>"
     compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+    compare = f"{compare}\n        <meta content=\"width=500, height=500\" name=\"viewport\" />"
     compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
     compare = f"{compare}\n    </head>"
     compare = f"{compare}\n    <body>"
-    compare = f"{compare}\n        <img src=\"../images/3.jpg\" alt=\"3\" />"
+    compare = f"{compare}\n        <p>"
+    compare = f"{compare}\n            <img src=\"../images/image1.jpg\" alt=\"3\" width=\"500\" height=\"500\" />"
+    compare = f"{compare}\n        </p>"
     compare = f"{compare}\n    </body>"
     compare = f"{compare}\n</html>"
     assert text == compare
@@ -544,7 +614,8 @@ def test_create_content_files():
     image_file = abspath(join(temp_dir, "C.jpg"))
     mm_file_tools.write_text_file(text_file, "Some text here!")
     mm_file_tools.write_text_file(html_file, "<html><body><p>Different</p><p>Thing</p></body></html>")
-    mm_file_tools.write_text_file(image_file, "thing")
+    image = Image.new("RGB", size=(100, 300), color="#ff0000")
+    image.save(image_file)
     assert exists(text_file)
     assert exists(html_file)
     assert exists(image_file)
@@ -568,7 +639,9 @@ def test_create_content_files():
     compare = f"{compare}\n    </head>"
     compare = f"{compare}\n    <body>"
     compare = f"{compare}\n        <p>Some text here!</p>"
-    compare = f"{compare}\n        <img src=\"../images/C.jpg\" alt=\"C\" />"
+    compare = f"{compare}\n        <p>"
+    compare = f"{compare}\n            <img src=\"../images/image1.jpg\" alt=\"C\" width=\"100\" height=\"300\" />"
+    compare = f"{compare}\n        </p>"
     compare = f"{compare}\n        <p>Different</p>"
     compare = f"{compare}\n        <p>Thing</p>"
     compare = f"{compare}\n    </body>"
@@ -807,7 +880,7 @@ def test_get_metadata_xml():
     compare = f"{compare}\n    <dc:title>This's a title!\\'</dc:title>"
     compare = f"{compare}\n</metadata>"
     assert xml == compare
-    # Test identifier metadata
+    # Test url metadata
     metadata["title"] = "Title."
     metadata["url"] = "this/is/a/test"
     xml = mm_epub.get_metadata_xml(metadata)
@@ -817,6 +890,7 @@ def test_get_metadata_xml():
     compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
     compare = f"{compare}\n    <dc:date>0000-00-00T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
+    compare = f"{compare}\n    <dc:source>this/is/a/test</dc:source>"
     compare = f"{compare}\n</metadata>"
     assert xml == compare
     # Test date metadata
@@ -828,6 +902,7 @@ def test_get_metadata_xml():
     compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
     compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
+    compare = f"{compare}\n    <dc:source>this/is/a/test</dc:source>"
     compare = f"{compare}\n</metadata>"
     assert xml == compare
     # Test description metadata
@@ -839,6 +914,7 @@ def test_get_metadata_xml():
     compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
     compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
+    compare = f"{compare}\n    <dc:source>this/is/a/test</dc:source>"
     compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
     compare = f"{compare}\n</metadata>"
     assert xml == compare
@@ -851,17 +927,19 @@ def test_get_metadata_xml():
     compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
     compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
+    compare = f"{compare}\n    <dc:source>this/is/a/test</dc:source>"
     compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
     compare = f"{compare}\n    <dc:creator id=\"author-0\">Person!</dc:creator>"
     compare = f"{compare}\n    <meta refines=\"author-0\" property=\"role\" scheme=\"marc:relators\">aut</meta>"
     compare = f"{compare}\n</metadata>"
     assert xml == compare
+    metadata["url"] = None
     metadata["writer"] = "Multiple,People"
     xml = mm_epub.get_metadata_xml(metadata)
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
     compare = f"{compare}\n    <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
-    compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
+    compare = f"{compare}\n    <dc:identifier id=\"id\">Title.</dc:identifier>"
     compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
     compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
@@ -878,7 +956,7 @@ def test_get_metadata_xml():
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
     compare = f"{compare}\n    <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
-    compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
+    compare = f"{compare}\n    <dc:identifier id=\"id\">Title.</dc:identifier>"
     compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
     compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
@@ -892,7 +970,7 @@ def test_get_metadata_xml():
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
     compare = f"{compare}\n    <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
-    compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
+    compare = f"{compare}\n    <dc:identifier id=\"id\">Title.</dc:identifier>"
     compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
     compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
@@ -909,7 +987,7 @@ def test_get_metadata_xml():
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
     compare = f"{compare}\n    <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
-    compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
+    compare = f"{compare}\n    <dc:identifier id=\"id\">Title.</dc:identifier>"
     compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
     compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
@@ -922,7 +1000,7 @@ def test_get_metadata_xml():
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
     compare = f"{compare}\n    <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
-    compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
+    compare = f"{compare}\n    <dc:identifier id=\"id\">Title.</dc:identifier>"
     compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
     compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
@@ -939,7 +1017,7 @@ def test_get_metadata_xml():
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
     compare = f"{compare}\n    <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
-    compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
+    compare = f"{compare}\n    <dc:identifier id=\"id\">Title.</dc:identifier>"
     compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
     compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
@@ -954,7 +1032,7 @@ def test_get_metadata_xml():
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
     compare = f"{compare}\n    <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
-    compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
+    compare = f"{compare}\n    <dc:identifier id=\"id\">Title.</dc:identifier>"
     compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
     compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
@@ -970,7 +1048,7 @@ def test_get_metadata_xml():
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
     compare = f"{compare}\n    <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
-    compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
+    compare = f"{compare}\n    <dc:identifier id=\"id\">Title.</dc:identifier>"
     compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
     compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
@@ -987,7 +1065,7 @@ def test_get_metadata_xml():
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
     compare = f"{compare}\n    <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
-    compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
+    compare = f"{compare}\n    <dc:identifier id=\"id\">Title.</dc:identifier>"
     compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
     compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
@@ -1005,7 +1083,7 @@ def test_get_metadata_xml():
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
     compare = f"{compare}\n    <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
-    compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
+    compare = f"{compare}\n    <dc:identifier id=\"id\">Title.</dc:identifier>"
     compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
     compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
@@ -1020,7 +1098,7 @@ def test_get_metadata_xml():
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
     compare = f"{compare}\n    <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
-    compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
+    compare = f"{compare}\n    <dc:identifier id=\"id\">Title.</dc:identifier>"
     compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
     compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
@@ -1033,7 +1111,7 @@ def test_get_metadata_xml():
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
     compare = f"{compare}\n    <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
-    compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
+    compare = f"{compare}\n    <dc:identifier id=\"id\">Title.</dc:identifier>"
     compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
     compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
@@ -1046,7 +1124,7 @@ def test_get_metadata_xml():
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
     compare = f"{compare}\n    <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
-    compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
+    compare = f"{compare}\n    <dc:identifier id=\"id\">Title.</dc:identifier>"
     compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
     compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
@@ -1060,7 +1138,7 @@ def test_get_metadata_xml():
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
     compare = f"{compare}\n    <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
-    compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
+    compare = f"{compare}\n    <dc:identifier id=\"id\">Title.</dc:identifier>"
     compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
     compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
@@ -1072,7 +1150,7 @@ def test_get_metadata_xml():
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
     compare = f"{compare}\n    <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
-    compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
+    compare = f"{compare}\n    <dc:identifier id=\"id\">Title.</dc:identifier>"
     compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
     compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
@@ -1084,11 +1162,24 @@ def test_get_metadata_xml():
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
     compare = f"{compare}\n    <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
-    compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
+    compare = f"{compare}\n    <dc:identifier id=\"id\">Title.</dc:identifier>"
     compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
     compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
     compare = f"{compare}\n    <dc:publisher>Company</dc:publisher>"
+    compare = f"{compare}\n</metadata>"
+    assert xml == compare
+    # Test adding metadata for a cover image
+    xml = mm_epub.get_metadata_xml(metadata, "image1")
+    compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
+    compare = f"{compare}\n    <dc:language>en</dc:language>"
+    compare = f"{compare}\n    <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
+    compare = f"{compare}\n    <dc:identifier id=\"id\">Title.</dc:identifier>"
+    compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
+    compare = f"{compare}\n    <dc:title>Title.</dc:title>"
+    compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
+    compare = f"{compare}\n    <dc:publisher>Company</dc:publisher>"
+    compare = f"{compare}\n    <meta name=\"cover\" content=\"image1\" />"
     compare = f"{compare}\n</metadata>"
     assert xml == compare
 
@@ -1115,8 +1206,8 @@ def test_get_manifest_xml():
     compare = f"{compare}\n    <item href=\"content/3.xhtml\" id=\"item2\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n    <item href=\"content/4.xhtml\" id=\"item3\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n    <item href=\"content/5.xhtml\" id=\"item4\" media-type=\"application/xhtml+xml\" />"
-    compare = f"{compare}\n    <item href=\"images/4.png\" id=\"image0\" media-type=\"image/png\" />"
-    compare = f"{compare}\n    <item href=\"images/5.jpeg\" id=\"image1\" media-type=\"image/jpeg\" />"
+    compare = f"{compare}\n    <item href=\"images/image1.png\" id=\"image1\" media-type=\"image/png\" properties=\"cover-image\" />"
+    compare = f"{compare}\n    <item href=\"images/image2.jpeg\" id=\"image2\" media-type=\"image/jpeg\" />"
     compare = f"{compare}\n    <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
     compare = f"{compare}\n    <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
     compare = f"{compare}\n    <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"
@@ -1152,12 +1243,13 @@ def test_create_content_opf():
     compare = f"{compare}\n        <dc:identifier id=\"id\">Thing!</dc:identifier>"
     compare = f"{compare}\n        <dc:date>0000-00-00T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n        <dc:title>Thing!</dc:title>"
+    compare = f"{compare}\n        <meta name=\"cover\" content=\"image1\" />"
     compare = f"{compare}\n    </metadata>"
     compare = f"{compare}\n    <manifest>"
     compare = f"{compare}\n        <item href=\"content/1.xhtml\" id=\"item0\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n        <item href=\"content/2.xhtml\" id=\"item1\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n        <item href=\"content/3.xhtml\" id=\"item2\" media-type=\"application/xhtml+xml\" />"
-    compare = f"{compare}\n        <item href=\"images/3.jpg\" id=\"image0\" media-type=\"image/jpeg\" />"
+    compare = f"{compare}\n        <item href=\"images/image1.jpg\" id=\"image1\" media-type=\"image/jpeg\" properties=\"cover-image\" />"
     compare = f"{compare}\n        <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
     compare = f"{compare}\n        <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
     compare = f"{compare}\n        <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"
@@ -1220,7 +1312,7 @@ def test_create_epub():
     assert sorted(os.listdir(style_directory)) == ["epubstyle.css"]
     # Check the contents of the images directory
     style_directory = abspath(join(epub_directory, "images"))
-    assert sorted(os.listdir(style_directory)) == ["a.png"]
+    assert sorted(os.listdir(style_directory)) == ["image1.png"]
     # Check the contents of the content.opf file
     content = mm_file_tools.read_text_file(abspath(join(epub_directory, "content.opf")))
     compare = ""
@@ -1234,12 +1326,13 @@ def test_create_epub():
     compare = f"{compare}\n        <dc:identifier id=\"id\">Name</dc:identifier>"
     compare = f"{compare}\n        <dc:date>0000-00-00T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n        <dc:title>Name</dc:title>"
+    compare = f"{compare}\n        <meta name=\"cover\" content=\"image1\" />"
     compare = f"{compare}\n    </metadata>"
     compare = f"{compare}\n    <manifest>"
     compare = f"{compare}\n        <item href=\"content/1.xhtml\" id=\"item0\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n        <item href=\"content/2.xhtml\" id=\"item1\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n        <item href=\"content/a.xhtml\" id=\"item2\" media-type=\"application/xhtml+xml\" />"
-    compare = f"{compare}\n        <item href=\"images/a.png\" id=\"image0\" media-type=\"image/png\" />"
+    compare = f"{compare}\n        <item href=\"images/image1.png\" id=\"image1\" media-type=\"image/png\" properties=\"cover-image\" />"
     compare = f"{compare}\n        <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
     compare = f"{compare}\n        <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
     compare = f"{compare}\n        <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"

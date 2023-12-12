@@ -421,6 +421,6 @@ def test_get_cover_image():
     Tests the get_cover_image function.
     """
     image = mm_archive.get_cover_image("This is something different", "Drakovek, Other Person")
-    assert image.size == (600, 800)
+    assert image.size == (900, 1200)
     image = mm_archive.get_cover_image("This is a title", None, portrait=False)
-    assert image.size == (800, 600)
+    assert image.size == (1200, 900)

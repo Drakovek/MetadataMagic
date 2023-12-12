@@ -207,11 +207,11 @@ def get_cover_image(title:str, authors:str, portrait:bool=True, uppercase:bool=T
     :rtype: PIL.Image
     """
     # Get the dimensions of the full cover image
-    full_width = 600
-    full_height = 800
+    full_width = 900
+    full_height = 1200
     if portrait is False:
-        full_width = 800
-        full_height = 600
+        full_width = 1200
+        full_height = 900
     # Get the colors for the image
     foreground, background, text = etti.get_color_palette()
     # Create the base image
@@ -242,7 +242,7 @@ def get_cover_image(title:str, authors:str, portrait:bool=True, uppercase:bool=T
     title_image = etti.text_image_fit_box(title_text, italic_font, image_width=text_width, image_height=text_height,
             foreground=text, background="#00000000", justified="l", vertical="t", space=1)
     # Create the title framing
-    left, top, right, bottom = etti.get_bounds(title_image, "#00000000")
+    top, bottom = etti.get_vertical_bounds(title_image, "#00000000")
     frame_bottom = (bottom - top) + (margin * 1.5)
     draw = ImageDraw.Draw(cover)
     draw.rounded_rectangle([(0, half_margin), (full_width-half_margin, frame_bottom)],

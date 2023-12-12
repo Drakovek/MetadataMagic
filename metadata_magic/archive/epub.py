@@ -11,6 +11,7 @@ import metadata_magic.rename as mm_rename
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.comic_xml as mm_comic_xml
+from PIL import Image, UnidentifiedImageError
 from xml.etree import ElementTree
 from os.path import abspath, basename, exists, isdir, join
 from typing import List
@@ -49,9 +50,6 @@ def format_xhtml(html:str, title:str) -> str:
     title_element.text = title
     meta = ElementTree.SubElement(head, "meta")
     meta.attrib = {"charset":"utf-8"}
-    # Add the CSS stylesheet to the head
-    link = ElementTree.SubElement(head, "link")
-    link.attrib = {"rel":"stylesheet", "href":"../style/epubstyle.css", "type":"text/css"}
     # Format the given HTML text
     formatted_html = html.replace("\n", "").strip()
     formatted_html = re.sub(r"\s*<p>\s*", "<p>", formatted_html)
@@ -75,6 +73,18 @@ def format_xhtml(html:str, title:str) -> str:
         character = ord(formatted_html[parse_error.position[0]])
         print(f"XML Parse Error: Character {character}")
         return None
+    # Add head element for the viewport size if there is a single image present
+    regex = "<img[^>]+width=['\"][0-9]+['\"][^>]+height=['\"][0-9]+['\"][^>]*>|"
+    regex = f"{regex}<img[^>]+height=['\"][0-9]+['\"][^>]+width=['\"][0-9]+['\"][^>]*>"
+    images = re.findall(regex, formatted_html)
+    if len(images) == 1 and len(re.findall(r"<p>(?!.*<img).+<\/p>", formatted_html)) == 0:
+        width = re.findall("(?<=width=[\"'])[0-9]+(?=[\"'])", images[0])[0]
+        height = re.findall("(?<=height=[\"'])[0-9]+(?=[\"'])", images[0])[0]
+        viewport_meta = ElementTree.SubElement(head, "meta")
+        viewport_meta.attrib = {"content":f"width={width}, height={height}", "name":"viewport"}
+    # Add the CSS stylesheet to the head
+    link = ElementTree.SubElement(head, "link")
+    link.attrib = {"rel":"stylesheet", "href":"../style/epubstyle.css", "type":"text/css"}
     # Set indents to make the XML more readable
     ElementTree.indent(base, space="    ")
     # Get xml as string
@@ -159,12 +169,14 @@ def html_to_xml(html_file:str) -> str:
     # Return in XML format
     return content.strip().replace("\n", "")
 
-def image_to_xml(image_file:str) -> str:
+def image_to_xml(image_file:str, alt_string:str=None) -> str:
     """
     Creates an XML svg and img container to reference a given image for use in an EPUB file.
     
     :param image_file: Image file to reference
     :type image_file: str, required
+    :param alt_string: Text to use for the alt value for the image tag, defaults to None
+    :type alt_string:, str, optional
     :return: XML formatted text
     :rtype: str
     """
@@ -172,9 +184,17 @@ def image_to_xml(image_file:str) -> str:
     image_path = basename(image_file)
     image_path = f"../images/{image_path}"
     # Get the alt tag
-    title = get_title_from_file(image_file)
+    title = alt_string
+    if alt_string is None:
+        title = get_title_from_file(image_file)
+    # Get the size of the image
+    try:
+        image = Image.open(image_file)
+        width, height = image.size
+    except UnidentifiedImageError:
+        return ""
     # Construct the xml
-    return f"<img src=\"{image_path}\" alt=\"{title}\" />"
+    return f"<p><img src=\"{image_path}\" alt=\"{title}\" width=\"{width}\" height=\"{height}\" /></p>"
 
 def get_default_chapters(directory:str, title:str=None) -> List[dict]:
     """
@@ -442,6 +462,7 @@ def create_content_files(chapters:List[dict], output_directory:str) -> List[dict
     # Convert files to XHTML
     updated_chapters = []
     updated_chapters.extend(chapters)
+    image_num = 1
     for i in range(0, len(updated_chapters)):
         # Get the filename for the XHTML file
         title = chapters[i]["title"]
@@ -459,8 +480,13 @@ def create_content_files(chapters:List[dict], output_directory:str) -> List[dict
             elif extension == ".html" or extension == ".htm":
                 xml = html_to_xml(file["file"])
             else:
-                xml = image_to_xml(file["file"])
-                shutil.copy(file["file"], image_dir)
+                # Copy image to the image folder with new name
+                extension = html_string_tools.html.get_extension(file["file"])
+                new_image = abspath(join(image_dir, f"image{image_num}{extension}"))
+                shutil.copy(file["file"], new_image)
+                image_num += 1
+                # Get the image xml file
+                xml = image_to_xml(new_image, get_title_from_file(file["file"]))
             # Append to the chapter xml
             chapter_xml = f"{chapter_xml}{xml}"
         # Write with proper XHTML formatting
@@ -632,12 +658,14 @@ def create_ncx_file(chapters:List[dict], title:str, uid:str, output_directory:st
     nav_file = abspath(join(output_directory, "toc.ncx"))
     mm_file_tools.write_text_file(nav_file, xml)
 
-def get_metadata_xml(metadata:dict) -> str:
+def get_metadata_xml(metadata:dict, cover_id:str=None) -> str:
     """
     Returns the metadata XML tag for a .opf EPUB contents file based on given metadata.
     
     :param metadata: Metadata dict as returned by meta_reader.py's get_empty_metadata function.
     :type metadata: dict, required
+    :param cover_id: ID for a cover image, defaults to None
+    :type cover_id: str, optional
     :return: Metadata in XML format for EPUB
     :rtype: str
     """
@@ -653,12 +681,9 @@ def get_metadata_xml(metadata:dict) -> str:
     modified_tag = ElementTree.SubElement(base, "meta")
     modified_tag.attrib = {"property":"dcterms:modified"}
     modified_tag.text = "0000-00-00T00:30:00Z"
-    # Set the metadata identifier
+    # Create the metadata identifier
     identifier_tag = ElementTree.SubElement(base, "dc:identifier")
     identifier_tag.attrib = {"id":"id"}
-    identifier_tag.text = metadata["title"]
-    if metadata["url"] is not None:
-        identifier_tag.text = metadata["url"]
     # Set the metadata date
     date_tag = ElementTree.SubElement(base, "dc:date")
     date_tag.text = "0000-00-00T00:00:00+00:00"
@@ -667,6 +692,12 @@ def get_metadata_xml(metadata:dict) -> str:
     # Set the metadata title
     title_tag = ElementTree.SubElement(base, "dc:title")
     title_tag.text = metadata["title"]
+    identifier_tag.text = metadata["title"]
+    # Set the metadata source url
+    if metadata["url"] is not None:
+        url_tag = ElementTree.SubElement(base, "dc:source")
+        url_tag.text = metadata["url"]
+        identifier_tag.text = metadata["url"]
     # Set the metadata description
     if metadata["description"] is not None:
         description_tag = ElementTree.SubElement(base, "dc:description")
@@ -751,6 +782,10 @@ def get_metadata_xml(metadata:dict) -> str:
             score_element.attrib = {"property":"calibre:rating"}
             score_element.text = str(float(score * 2))
     except (TypeError, ValueError): pass
+    # Set the cover image, if applicable
+    if cover_id is not None:
+        cover_tag = ElementTree.SubElement(base, "meta")
+        cover_tag.attrib = {"name":"cover", "content":cover_id}
     # Set indents to make the XML more readable
     ElementTree.indent(base, space="    ")
     # Return xml as string
@@ -783,7 +818,7 @@ def get_manifest_xml(chapters:List[dict], output_directory:str) -> str:
     for i in range(0, len(images)):
         attributes = dict()
         attributes["href"] = f"images/{images[i]}"
-        attributes["id"] = f"image{i}"
+        attributes["id"] = re.sub(r"\..+$", "", basename(images[i]))
         # Set the mimetype
         extension = html_string_tools.html.get_extension(images[i])
         mimetype = "application/xhtml+xml"
@@ -796,6 +831,9 @@ def get_manifest_xml(chapters:List[dict], output_directory:str) -> str:
         elif extension == ".tiff":
             mimetype = "image/tiff"
         attributes["media-type"] = mimetype
+        # Set cover image, if appropriate
+        if i == 0:
+            attributes["properties"] = "cover-image"
         # Add the item to the manifest
         chapter_item = ElementTree.SubElement(base, "item")
         chapter_item.attrib = attributes
@@ -831,11 +869,18 @@ def create_content_opf(chapters:List[dict], metadata:dict, output_directory:str)
     package_attributes["version"] = "3.0"
     package_attributes["prefix"] = "http://www.idpf.org/vocab/rendition/#"
     base.attrib = package_attributes
+    # Check images directory for cover image
+    try:
+        image_directory = abspath(join(output_directory, "images"))
+        image = mm_sort.sort_alphanum(os.listdir(image_directory))[0]
+        cover_id = re.sub(r"\..+$", "", basename(image))
+    except IndexError:
+        cover_id = None
     # Create the metadata tags
     metadata_attributes = dict()
     metadata_attributes["xmlns:dc"] = "http://purl.org/dc/elements/1.1/"
     metadata_attributes["xmlns:opf"] = "http://www.idpf.org/2007/opf"
-    metadata_xml = get_metadata_xml(metadata)
+    metadata_xml = get_metadata_xml(metadata, cover_id)
     metadata_element = ElementTree.fromstring(metadata_xml)
     metadata_element.attrib = metadata_attributes
     base.append(metadata_element)
@@ -952,9 +997,7 @@ def get_info_from_epub(epub_file:str) -> dict:
     # Extract the publisher from the XML
     metadata["publisher"] = meta_xml.findtext("dc:publisher", namespaces=ns)
     # Get the URL from the xml
-    identifier = meta_xml.findtext("dc:identifier", namespaces=ns)
-    if len(re.findall(r"^https?:\/\/|^www\.", identifier)) > 0:
-        metadata["url"] = identifier
+    metadata["url"] = meta_xml.findtext("dc:source", namespaces=ns)
     # Extract the score from the xml
     try:
         score = float(meta_xml.find(f".//{{{ns['0']}}}meta[@property='calibre:rating']").text)
