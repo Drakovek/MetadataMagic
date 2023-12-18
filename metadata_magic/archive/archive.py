@@ -175,7 +175,7 @@ def remove_page_number(text:str) -> dict:
     # Return the original text if altered text is empty
     return text
 
-def update_archive_info(archive_file:str, metadata:dict):
+def update_archive_info(archive_file:str, metadata:dict, update_cover:bool=False):
     """
     Replaces the metadata in a given archive file with the given metadata.
     Supports CBZ and EPUB files.
@@ -184,10 +184,12 @@ def update_archive_info(archive_file:str, metadata:dict):
     :type archive_file: str, required
     :param metadata: Metadata to use for the new metadata
     :type metadata: dict
+    :param update_cover: Whether to regenerate cover images, defaults to False
+    :type update_cover: bool, optional
     """
     extension = html_string_tools.html.get_extension(archive_file).lower()
     if extension == ".epub":
-        mm_epub.update_epub_info(archive_file, metadata)
+        mm_epub.update_epub_info(archive_file, metadata, update_cover=update_cover)
     if extension == ".cbz":
         mm_comic_archive.update_cbz_info(archive_file, metadata)
 
@@ -207,11 +209,11 @@ def get_cover_image(title:str, authors:str, portrait:bool=True, uppercase:bool=T
     :rtype: PIL.Image
     """
     # Get the dimensions of the full cover image
-    full_width = 900
-    full_height = 1200
+    full_width = 600
+    full_height = 800
     if portrait is False:
-        full_width = 1200
-        full_height = 900
+        full_width = 800
+        full_height = 600
     # Get the colors for the image
     foreground, background, text = etti.get_color_palette()
     # Create the base image

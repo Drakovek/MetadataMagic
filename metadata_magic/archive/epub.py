@@ -65,6 +65,33 @@ def format_xhtml(html:str, title:str) -> str:
     formatted_html = lxml.etree.tostring(root).decode("UTF-8")
     formatted_html = re.sub(r"^\s*<\s*html\s*>|<\s*\/\s*html\s*>\s*$", "", formatted_html)
     formatted_html = re.sub(r"^\s*<\s*body\s*>|<\s*\/\s*body\s*>\s*$", "", formatted_html)
+    # Add head element for the viewport size and image id if there is a single image present
+    regex = "<div>\\s*<img[^>]+width=['\"][0-9]+['\"][^>]+height=['\"][0-9]+['\"][^>]*>\\s*<\\/div>|"
+    regex = f"{regex}<div>\\s*<img[^>]+height=['\"][0-9]+['\"][^>]+width=['\"][0-9]+['\"][^>]*>\\s*<\\/div>"
+    images = re.findall(regex, formatted_html)
+    if len(images) == 1 and len(re.findall(r"<div>(?!.*<img).+<\/div>|<p>", formatted_html)) == 0:
+        # Get the image size
+        width = re.findall("(?<=width=[\"'])[0-9]+(?=[\"'])", images[0])[0]
+        height = re.findall("(?<=height=[\"'])[0-9]+(?=[\"'])", images[0])[0]
+        # Add the image-page id
+        modified_image_tag = re.sub(r"^<div>|</div>$", "", images[0])
+        modified_image_tag = re.sub(r"^<img\s+", "<image ", modified_image_tag)
+        modified_image_tag = re.sub(r"src=", "xlink:href=", modified_image_tag)
+        modified_image_tag = re.sub("\\s*alt=[\"'][^\"']*[\"']\\s*", " ", modified_image_tag)
+        # Create the svg wrapper
+        svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" "
+        svg = f"{svg}width=\"100%\" height=\"100%\" viewBox=\"0 0 {width} {height}\" "
+        svg = f"{svg}preserveAspectRatio=\"xMidYMid meet\" version=\"1.1\">"
+        modified_image_tag = f"{svg}{modified_image_tag}</svg>"
+        # Create the div wrapper
+        modified_image_tag = f"<div id=\"full-image-container\">{modified_image_tag}</div>"
+        formatted_html = formatted_html.replace(images[0], modified_image_tag)
+        # Register the namespaces
+        ElementTree.register_namespace("svgns", "http://www.w3.org/2000/svg")
+        ElementTree.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+    # Add the CSS stylesheet to the head
+    link = ElementTree.SubElement(head, "link")
+    link.attrib = {"rel":"stylesheet", "href":"../style/epubstyle.css", "type":"text/css"}
     # Add as body to the main XML tree
     try:
         body = ElementTree.fromstring(f"<body>{formatted_html}</body>")
@@ -73,18 +100,6 @@ def format_xhtml(html:str, title:str) -> str:
         character = ord(formatted_html[parse_error.position[0]])
         print(f"XML Parse Error: Character {character}")
         return None
-    # Add head element for the viewport size if there is a single image present
-    regex = "<img[^>]+width=['\"][0-9]+['\"][^>]+height=['\"][0-9]+['\"][^>]*>|"
-    regex = f"{regex}<img[^>]+height=['\"][0-9]+['\"][^>]+width=['\"][0-9]+['\"][^>]*>"
-    images = re.findall(regex, formatted_html)
-    if len(images) == 1 and len(re.findall(r"<p>(?!.*<img).+<\/p>", formatted_html)) == 0:
-        width = re.findall("(?<=width=[\"'])[0-9]+(?=[\"'])", images[0])[0]
-        height = re.findall("(?<=height=[\"'])[0-9]+(?=[\"'])", images[0])[0]
-        viewport_meta = ElementTree.SubElement(head, "meta")
-        viewport_meta.attrib = {"content":f"width={width}, height={height}", "name":"viewport"}
-    # Add the CSS stylesheet to the head
-    link = ElementTree.SubElement(head, "link")
-    link.attrib = {"rel":"stylesheet", "href":"../style/epubstyle.css", "type":"text/css"}
     # Set indents to make the XML more readable
     ElementTree.indent(base, space="    ")
     # Get xml as string
@@ -194,7 +209,7 @@ def image_to_xml(image_file:str, alt_string:str=None) -> str:
     except UnidentifiedImageError:
         return ""
     # Construct the xml
-    return f"<p><img src=\"{image_path}\" alt=\"{title}\" width=\"{width}\" height=\"{height}\" /></p>"
+    return f"<div><img src=\"{image_path}\" alt=\"{title}\" width=\"{width}\" height=\"{height}\" /></div>"
 
 def get_default_chapters(directory:str, title:str=None) -> List[dict]:
     """
@@ -548,6 +563,13 @@ def create_style_file(output_directory:str):
     style = f"{style}\n    text-align: center;"
     style = f"{style}\n    margin-left: auto;"
     style = f"{style}\n    margin-right: auto;"
+    style = f"{style}\n}}\n\n"
+    style = f"{style}#full-image-container {{"
+    style = f"{style}\n    width: 100%;"
+    style = f"{style}\n    height: 100%;"
+    style = f"{style}\n    margin: 0;"
+    style = f"{style}\n    padding: 0;"
+    style = f"{style}\n    page-break-after: always;"
     style = f"{style}\n}}"
     # Write style to a CSS file
     style_file = abspath(join(style_dir, "epubstyle.css"))
@@ -831,9 +853,6 @@ def get_manifest_xml(chapters:List[dict], output_directory:str) -> str:
         elif extension == ".tiff":
             mimetype = "image/tiff"
         attributes["media-type"] = mimetype
-        # Set cover image, if appropriate
-        if i == 0:
-            attributes["properties"] = "cover-image"
         # Add the item to the manifest
         chapter_item = ElementTree.SubElement(base, "item")
         chapter_item.attrib = attributes
@@ -1039,6 +1058,10 @@ def get_info_from_epub(epub_file:str) -> dict:
     except AttributeError:
         metadata["series"] = None
         metadata["series_number"] = None
+    # Get the cover ID
+    try:
+        metadata["cover_id"] = meta_xml.find(f".//{{{ns['0']}}}meta[@name='cover']").attrib["content"]
+    except AttributeError: metadata["cover_id"] = None
     # Extract tags from the XML
     tags = []
     tag_elements = meta_xml.findall("dc:subject", namespaces=ns)
@@ -1049,16 +1072,17 @@ def get_info_from_epub(epub_file:str) -> dict:
     # Return the extracted metadata
     return metadata
 
-def update_epub_info(epub_file:str, metadata:dict):
+def update_epub_info(epub_file:str, metadata:dict, update_cover:bool=False):
     """
     Replaces the content.opf file in a given .epub file to reflect the given metadata.
     
     :param epub_file: Path of the .epub file to update
     :type epub_file: str, required
+    :param update_cover: Whether to regenerate the cover image for the epub, defaults to False
+    :type update_cover: bool, optional
     :param metadata: Metadata to use for the new content.opf file
     :type metadata: dict
     """
-    
     # Extract epub into temp file
     full_epub_file = abspath(epub_file)
     temp_dir = mm_file_tools.get_temp_dir("dvk_epub_info")
@@ -1070,7 +1094,7 @@ def update_epub_info(epub_file:str, metadata:dict):
         # Get the tab value
         tab = re.findall(".+(?=<metadata)", opf_text)[0]
         # Replace the metadata XML
-        metadata_xml = get_metadata_xml(metadata)
+        metadata_xml = get_metadata_xml(metadata, metadata["cover_id"])
         opf_text = re.sub(r"\s*<metadata[\S\s]+<\/metadata>\s*", metadata_xml, opf_text)
         # Create element from the read xml
         base = ElementTree.fromstring(opf_text)
@@ -1085,6 +1109,19 @@ def update_epub_info(epub_file:str, metadata:dict):
         mimetype = abspath(join(temp_dir, "mimetype"))
         if exists(mimetype):
             os.remove(mimetype)
+        # Update the cover, if applicable
+        epub_dir = abspath(join(temp_dir, "EPUB"))
+        image_dir = abspath(join(epub_dir, "images"))
+        cover_file = abspath(join(image_dir, "image1.jpg"))
+        content_dir = abspath(join(epub_dir, "content"))
+        cover_xml = abspath(join(content_dir, "mm_cover_image.xhtml"))
+        if update_cover and exists(cover_xml) and exists(cover_file):
+            # Delete the existing cover image
+            os.remove(cover_file)
+            # Create a cover image
+            cover_image = mm_archive.get_cover_image(metadata["title"], metadata["writer"], uppercase=True)
+            cover_image = cover_image.convert("RGB")
+            cover_image.save(cover_file, quality=95)
         # Repack the epub file
         new_epub_file = abspath(join(temp_dir, "AAAA.epub"))
         assert mm_file_tools.create_zip(temp_dir, new_epub_file, 8, "application/epub+zip")

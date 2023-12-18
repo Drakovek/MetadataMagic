@@ -42,6 +42,7 @@ def test_get_default_labels():
     assert files[3]["label"] == "4.0"
     # Test getting default labels with existing sequence information
     metadata = mm_archive.get_empty_metadata()
+    metadata["cover_id"] = None
     metadata["series"] = "Thing"
     metadata["series_number"] = "1.0"
     mm_archive.update_archive_info(abspath(join(temp_dir, "A Text.epub")), metadata)

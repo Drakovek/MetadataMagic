@@ -1,4 +1,5 @@
 import os
+import shutil
 import metadata_magic.archive.epub as mm_epub
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.archive as mm_archive
@@ -88,26 +89,29 @@ def test_format_xhtml():
     compare = f"{compare}\n    </body>"
     compare = f"{compare}\n</html>"
     assert xhtml == compare
-    # Test altering head with a single image file
-    html = "<p><img src=\"../images/thing.jpg\" alt=\"thing\" width=\"600\" height=\"800\"/></p>"
+    # Test altering image wrapper for a single image
+    html = "<div><img src=\"../images/thing.jpg\" alt=\"thing\" width=\"600\" height=\"800\"/></div>"
     xhtml = mm_epub.format_xhtml(html, "Single Image")
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
+    compare = f"{compare}\n<html xmlns:svgns=\"http://www.w3.org/2000/svg\" "
+    compare = f"{compare}xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns=\"http://www.w3.org/1999/xhtml\">"
     compare = f"{compare}\n    <head>"
     compare = f"{compare}\n        <title>Single Image</title>"
     compare = f"{compare}\n        <meta charset=\"utf-8\" />"
-    compare = f"{compare}\n        <meta content=\"width=600, height=800\" name=\"viewport\" />"
     compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
     compare = f"{compare}\n    </head>"
     compare = f"{compare}\n    <body>"
-    compare = f"{compare}\n        <p>"
-    compare = f"{compare}\n            <img src=\"../images/thing.jpg\" alt=\"thing\" width=\"600\" height=\"800\" />"
-    compare = f"{compare}\n        </p>"
+    compare = f"{compare}\n        <div id=\"full-image-container\">"
+    compare = f"{compare}\n            <svgns:svg width=\"100%\" height=\"100%\" "
+    compare = f"{compare}viewBox=\"0 0 600 800\" preserveAspectRatio=\"xMidYMid meet\" version=\"1.1\">"
+    compare = f"{compare}\n                <svgns:image xlink:href=\"../images/thing.jpg\" width=\"600\" height=\"800\" />"
+    compare = f"{compare}\n            </svgns:svg>"
+    compare = f"{compare}\n        </div>"
     compare = f"{compare}\n    </body>"
     compare = f"{compare}\n</html>"
     assert xhtml == compare
-    # Test that head is not altered if there is text alongside the image
-    html = f"<p>Some words!</p>{html}<p>And such</p>"
+    # Test that the image wrapper is not altered if there is text alongside the image
+    html = f"<div>Some words!</div>{html}<div>And such</div>"
     xhtml = mm_epub.format_xhtml(html, "Single Image")
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
     compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
@@ -117,17 +121,35 @@ def test_format_xhtml():
     compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
     compare = f"{compare}\n    </head>"
     compare = f"{compare}\n    <body>"
-    compare = f"{compare}\n        <p>Some words!</p>"
-    compare = f"{compare}\n        <p>"
+    compare = f"{compare}\n        <div>Some words!</div>"
+    compare = f"{compare}\n        <div>"
     compare = f"{compare}\n            <img src=\"../images/thing.jpg\" alt=\"thing\" width=\"600\" height=\"800\" />"
-    compare = f"{compare}\n        </p>"
-    compare = f"{compare}\n        <p>And such</p>"
+    compare = f"{compare}\n        </div>"
+    compare = f"{compare}\n        <div>And such</div>"
+    compare = f"{compare}\n    </body>"
+    compare = f"{compare}\n</html>"    
+    assert xhtml == compare
+    html = "<div><img src=\"../images/thing.jpg\" alt=\"thing\" width=\"600\" height=\"800\"/></div>"
+    html = f"{html}<p>Something Else</p>"
+    xhtml = mm_epub.format_xhtml(html, "Single Image")
+    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
+    compare = f"{compare}\n    <head>"
+    compare = f"{compare}\n        <title>Single Image</title>"
+    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
+    compare = f"{compare}\n    </head>"
+    compare = f"{compare}\n    <body>"
+    compare = f"{compare}\n        <div>"
+    compare = f"{compare}\n            <img src=\"../images/thing.jpg\" alt=\"thing\" width=\"600\" height=\"800\" />"
+    compare = f"{compare}\n        </div>"
+    compare = f"{compare}\n        <p>Something Else</p>"
     compare = f"{compare}\n    </body>"
     compare = f"{compare}\n</html>"
     assert xhtml == compare
     # Test that head is not altered with multiple image files
-    html = "<p><img src=\"../images/thing.jpg\" alt=\"thing\" width=\"600\" height=\"800\"/></p>"
-    html = f"{html}<p><img src=\"../images/other.jpg\" alt=\"other\" width=\"1200\" height=\"750\"/></p>"
+    html = "<div><img src=\"../images/thing.jpg\" alt=\"thing\" width=\"600\" height=\"800\"/></div>"
+    html = f"{html}<div><img src=\"../images/other.jpg\" alt=\"other\" width=\"1200\" height=\"750\"/></div>"
     xhtml = mm_epub.format_xhtml(html, "Single Image")
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
     compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
@@ -137,12 +159,12 @@ def test_format_xhtml():
     compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
     compare = f"{compare}\n    </head>"
     compare = f"{compare}\n    <body>"
-    compare = f"{compare}\n        <p>"
+    compare = f"{compare}\n        <div>"
     compare = f"{compare}\n            <img src=\"../images/thing.jpg\" alt=\"thing\" width=\"600\" height=\"800\" />"
-    compare = f"{compare}\n        </p>"
-    compare = f"{compare}\n        <p>"
+    compare = f"{compare}\n        </div>"
+    compare = f"{compare}\n        <div>"
     compare = f"{compare}\n            <img src=\"../images/other.jpg\" alt=\"other\" width=\"1200\" height=\"750\" />"
-    compare = f"{compare}\n        </p>"
+    compare = f"{compare}\n        </div>"
     compare = f"{compare}\n    </body>"
     compare = f"{compare}\n</html>"
     assert xhtml == compare
@@ -228,14 +250,14 @@ def test_image_to_xml():
     image.save(image_file)
     assert exists(image_file)
     xml = mm_epub.image_to_xml(image_file)
-    assert xml == "<p><img src=\"../images/image.png\" alt=\"image\" width=\"600\" height=\"800\" /></p>"
+    assert xml == "<div><img src=\"../images/image.png\" alt=\"image\" width=\"600\" height=\"800\" /></div>"
     # Different dimensions and an alt tag
     image_file = abspath(join(temp_dir, "[01] Other.jpg"))
     image = Image.new("RGB", size=(350, 200), color="#ff0000")
     image.save(image_file)
     assert exists(image_file)
     xml = mm_epub.image_to_xml(image_file, "Some Name")
-    assert xml == "<p><img src=\"../images/[01] Other.jpg\" alt=\"Some Name\" width=\"350\" height=\"200\" /></p>"
+    assert xml == "<div><img src=\"../images/[01] Other.jpg\" alt=\"Some Name\" width=\"350\" height=\"200\" /></div>"
     # Test with a non-image file
     image_file = abspath(join(temp_dir, "notimage.jpg"))
     mm_file_tools.write_text_file(image_file, "not an image")
@@ -318,7 +340,7 @@ def test_add_cover_to_chapters():
     assert basename(chapters[0]["files"][0]["file"]) == "mm_cover_image.jpg"
     assert exists(chapters[0]["files"][0]["file"])
     image = Image.open(chapters[0]["files"][0]["file"])
-    assert image.size == (900, 1200)
+    assert image.size == (600, 800)
     assert chapters[1]["include"]
     assert chapters[1]["title"] == "1"
     assert len(chapters[1]["files"]) == 1
@@ -591,17 +613,20 @@ def test_create_content_files():
     # Test that image XHTML was created correctly
     text = mm_file_tools.read_text_file(abspath(join(content_dir, "[03] 3.xhtml"))) 
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
+    compare = f"{compare}\n<html xmlns:svgns=\"http://www.w3.org/2000/svg\" "
+    compare = f"{compare}xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns=\"http://www.w3.org/1999/xhtml\">"
     compare = f"{compare}\n    <head>"
     compare = f"{compare}\n        <title>3</title>"
     compare = f"{compare}\n        <meta charset=\"utf-8\" />"
-    compare = f"{compare}\n        <meta content=\"width=500, height=500\" name=\"viewport\" />"
     compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
     compare = f"{compare}\n    </head>"
     compare = f"{compare}\n    <body>"
-    compare = f"{compare}\n        <p>"
-    compare = f"{compare}\n            <img src=\"../images/image1.jpg\" alt=\"3\" width=\"500\" height=\"500\" />"
-    compare = f"{compare}\n        </p>"
+    compare = f"{compare}\n        <div id=\"full-image-container\">"
+    compare = f"{compare}\n            <svgns:svg width=\"100%\" height=\"100%\" "
+    compare = f"{compare}viewBox=\"0 0 500 500\" preserveAspectRatio=\"xMidYMid meet\" version=\"1.1\">"
+    compare = f"{compare}\n                <svgns:image xlink:href=\"../images/image1.jpg\" width=\"500\" height=\"500\" />"
+    compare = f"{compare}\n            </svgns:svg>"
+    compare = f"{compare}\n        </div>"
     compare = f"{compare}\n    </body>"
     compare = f"{compare}\n</html>"
     assert text == compare
@@ -639,9 +664,9 @@ def test_create_content_files():
     compare = f"{compare}\n    </head>"
     compare = f"{compare}\n    <body>"
     compare = f"{compare}\n        <p>Some text here!</p>"
-    compare = f"{compare}\n        <p>"
+    compare = f"{compare}\n        <div>"
     compare = f"{compare}\n            <img src=\"../images/image1.jpg\" alt=\"C\" width=\"100\" height=\"300\" />"
-    compare = f"{compare}\n        </p>"
+    compare = f"{compare}\n        </div>"
     compare = f"{compare}\n        <p>Different</p>"
     compare = f"{compare}\n        <p>Thing</p>"
     compare = f"{compare}\n    </body>"
@@ -704,6 +729,13 @@ def test_create_style_file():
     compare = f"{compare}\n    text-align: center;"
     compare = f"{compare}\n    margin-left: auto;"
     compare = f"{compare}\n    margin-right: auto;"
+    compare = f"{compare}\n}}\n\n"
+    compare = f"{compare}#full-image-container {{"
+    compare = f"{compare}\n    width: 100%;"
+    compare = f"{compare}\n    height: 100%;"
+    compare = f"{compare}\n    margin: 0;"
+    compare = f"{compare}\n    padding: 0;"
+    compare = f"{compare}\n    page-break-after: always;"
     compare = f"{compare}\n}}"
     assert style == compare
 
@@ -1206,7 +1238,7 @@ def test_get_manifest_xml():
     compare = f"{compare}\n    <item href=\"content/3.xhtml\" id=\"item2\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n    <item href=\"content/4.xhtml\" id=\"item3\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n    <item href=\"content/5.xhtml\" id=\"item4\" media-type=\"application/xhtml+xml\" />"
-    compare = f"{compare}\n    <item href=\"images/image1.png\" id=\"image1\" media-type=\"image/png\" properties=\"cover-image\" />"
+    compare = f"{compare}\n    <item href=\"images/image1.png\" id=\"image1\" media-type=\"image/png\" />"
     compare = f"{compare}\n    <item href=\"images/image2.jpeg\" id=\"image2\" media-type=\"image/jpeg\" />"
     compare = f"{compare}\n    <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
     compare = f"{compare}\n    <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
@@ -1249,7 +1281,7 @@ def test_create_content_opf():
     compare = f"{compare}\n        <item href=\"content/1.xhtml\" id=\"item0\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n        <item href=\"content/2.xhtml\" id=\"item1\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n        <item href=\"content/3.xhtml\" id=\"item2\" media-type=\"application/xhtml+xml\" />"
-    compare = f"{compare}\n        <item href=\"images/image1.jpg\" id=\"image1\" media-type=\"image/jpeg\" properties=\"cover-image\" />"
+    compare = f"{compare}\n        <item href=\"images/image1.jpg\" id=\"image1\" media-type=\"image/jpeg\" />"
     compare = f"{compare}\n        <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
     compare = f"{compare}\n        <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
     compare = f"{compare}\n        <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"
@@ -1332,7 +1364,7 @@ def test_create_epub():
     compare = f"{compare}\n        <item href=\"content/1.xhtml\" id=\"item0\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n        <item href=\"content/2.xhtml\" id=\"item1\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n        <item href=\"content/a.xhtml\" id=\"item2\" media-type=\"application/xhtml+xml\" />"
-    compare = f"{compare}\n        <item href=\"images/image1.png\" id=\"image1\" media-type=\"image/png\" properties=\"cover-image\" />"
+    compare = f"{compare}\n        <item href=\"images/image1.png\" id=\"image1\" media-type=\"image/png\" />"
     compare = f"{compare}\n        <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
     compare = f"{compare}\n        <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
     compare = f"{compare}\n        <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"
@@ -1509,6 +1541,17 @@ def test_get_info_from_epub():
     assert read_meta["tags"] == "Some,Tags,&,Stuff"
     assert read_meta["age_rating"] == "Teen"
     assert read_meta["score"] is None
+    assert read_meta["cover_id"] is None
+    # Test getting the cover id from the epub file
+    chapters = mm_epub.add_cover_to_chapters(mm_epub.get_default_chapters(temp_dir), metadata)
+    epub_file = mm_epub.create_epub(chapters, metadata, temp_dir)
+    assert exists(epub_file)
+    read_meta = mm_epub.get_info_from_epub(epub_file)
+    assert read_meta["title"] == "New Title"
+    assert read_meta["tags"] == "Some,Tags,&,Stuff"
+    assert read_meta["age_rating"] == "Teen"
+    assert read_meta["score"] is None
+    assert read_meta["cover_id"] == "image1"
     # Test getting info from a non-epub file
     temp_dir = mm_file_tools.get_temp_dir()
     text_file = abspath(join(temp_dir, "text.txt"))
@@ -1527,7 +1570,8 @@ def test_update_epub_info():
     # Create content files
     temp_dir = mm_file_tools.get_temp_dir()
     mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "Here's some text!")
-    mm_file_tools.write_text_file(abspath(join(temp_dir, "2.txt")), "More Text!")
+    image = Image.new("RGB", size=(100, 100), color="#ff0000")
+    image.save(abspath(join(temp_dir, "2.png")))
     chapters = mm_epub.get_default_chapters(temp_dir)
     # Create the epub file
     metadata = mm_archive.get_empty_metadata()
@@ -1541,11 +1585,12 @@ def test_update_epub_info():
     assert read_meta["artist"] is None
     assert read_meta["description"] is None
     # Update the epub info
+    metadata["cover_id"] = None
     metadata["title"] = "New Name!"
     metadata["writer"] = "Person"
     metadata["artist"] = "Another"
     metadata["description"] = "Some text!!"
-    mm_epub.update_epub_info(epub_file, metadata)
+    mm_epub.update_epub_info(epub_file, metadata, update_cover=True)
     read_meta = mm_epub.get_info_from_epub(epub_file)
     assert read_meta["title"] == "New Name!"
     assert read_meta["writer"] == "Person"
@@ -1562,8 +1607,98 @@ def test_update_epub_info():
     contents = ["content", "content.opf", "images", "nav.xhtml", "original", "style", "toc.ncx"]
     assert sorted(os.listdir(epub_directory)) == contents
     assert sorted(os.listdir(abspath(join(epub_directory, "content")))) == ["1.xhtml", "2.xhtml"]
-    assert sorted(os.listdir(abspath(join(epub_directory, "original")))) == ["1.txt", "2.txt"]
+    assert sorted(os.listdir(abspath(join(epub_directory, "original")))) == ["1.txt", "2.png"]
     assert sorted(os.listdir(abspath(join(epub_directory, "style")))) == ["epubstyle.css"]
+    image_dir = abspath(join(epub_directory, "images"))
+    assert sorted(os.listdir(image_dir)) == ["image1.png"]
+    # Test than non-cover_image is unaltered
+    extracted_image = Image.open(abspath(join(image_dir, "image1.png")))
+    assert extracted_image.size == (100, 100)
+    # Create an epub file
+    os.remove(epub_file)
+    shutil.rmtree(extracted)
+    metadata = mm_archive.get_empty_metadata()
+    metadata["title"] = "N"
+    metadata["writer"] = "N"
+    chapters = mm_epub.get_default_chapters(temp_dir)
+    chapters = mm_epub.add_cover_to_chapters(chapters, metadata)
+    epub_file = mm_epub.create_epub(chapters, metadata, temp_dir)
+    extracted = abspath(join(temp_dir, "extracted"))
+    os.mkdir(extracted)
+    assert mm_file_tools.extract_zip(epub_file, extracted)
+    epub_dir = abspath(join(extracted, "EPUB"))
+    image_dir = abspath(join(epub_dir, "images"))
+    assert sorted(os.listdir(image_dir)) == ["image1.jpg", "image2.png"]
+    extracted_image = Image.open(abspath(join(image_dir, "image2.png")))
+    assert extracted_image.size == (100, 100)
+    cover_image = Image.open(abspath(join(image_dir, "image1.jpg")))
+    assert cover_image.size == (600, 800)
+    cover_size = os.stat(abspath(join(image_dir, "image1.jpg"))).st_size
+    # Test that cover image is not altered if not specified
+    shutil.rmtree(extracted)
+    metadata["cover_id"] = "image1"
+    metadata["title"] = "Something else!"
+    metadata["writer"] = "Something"
+    mm_epub.update_epub_info(epub_file, metadata, update_cover=False)
+    assert mm_epub.get_info_from_epub(epub_file)["title"] == "Something else!"
+    extracted = abspath(join(temp_dir, "extracted"))
+    os.mkdir(extracted)
+    assert mm_file_tools.extract_zip(epub_file, extracted)
+    epub_dir = abspath(join(extracted, "EPUB"))
+    image_dir = abspath(join(epub_dir, "images"))
+    assert sorted(os.listdir(image_dir)) == ["image1.jpg", "image2.png"]
+    extracted_image = Image.open(abspath(join(image_dir, "image2.png")))
+    assert extracted_image.size == (100, 100)
+    cover_image = Image.open(abspath(join(image_dir, "image1.jpg")))
+    assert cover_image.size == (600, 800)
+    assert os.stat(abspath(join(image_dir, "image1.jpg"))).st_size == cover_size
+    content = mm_file_tools.read_text_file(abspath(join(epub_dir, "content.opf")))
+    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+    compare = f"{compare}\n<package xmlns=\"http://www.idpf.org/2007/opf\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" unique-identifier=\"id\" version=\"3.0\" prefix=\"http://www.idpf.org/vocab/rendition/#\">"
+    compare = f"{compare}\n    <metadata>"
+    compare = f"{compare}\n        <dc:language>en</dc:language>"
+    compare = f"{compare}\n        <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
+    compare = f"{compare}\n        <dc:identifier id=\"id\">Something else!</dc:identifier>"
+    compare = f"{compare}\n        <dc:date>0000-00-00T00:00:00+00:00</dc:date>"
+    compare = f"{compare}\n        <dc:title>Something else!</dc:title>"
+    compare = f"{compare}\n        <dc:creator id=\"author-0\">Something</dc:creator>"
+    compare = f"{compare}\n        <meta refines=\"author-0\" property=\"role\" scheme=\"marc:relators\">aut</meta>"
+    compare = f"{compare}\n        <meta name=\"cover\" content=\"image1\" />"
+    compare = f"{compare}\n    </metadata>"
+    compare = f"{compare}\n    <manifest>"
+    compare = f"{compare}\n        <item href=\"content/mm_cover_image.xhtml\" id=\"cover\" media-type=\"application/xhtml+xml\" />"
+    compare = f"{compare}\n        <item href=\"content/1.xhtml\" id=\"item0\" media-type=\"application/xhtml+xml\" />"
+    compare = f"{compare}\n        <item href=\"content/2.xhtml\" id=\"item1\" media-type=\"application/xhtml+xml\" />"
+    compare = f"{compare}\n        <item href=\"images/image1.jpg\" id=\"image1\" media-type=\"image/jpeg\" />"
+    compare = f"{compare}\n        <item href=\"images/image2.png\" id=\"image2\" media-type=\"image/png\" />"
+    compare = f"{compare}\n        <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
+    compare = f"{compare}\n        <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
+    compare = f"{compare}\n        <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"
+    compare = f"{compare}\n    </manifest>"
+    compare = f"{compare}\n    <spine toc=\"ncx\">"
+    compare = f"{compare}\n        <itemref idref=\"cover\" />"
+    compare = f"{compare}\n        <itemref idref=\"item0\" />"
+    compare = f"{compare}\n        <itemref idref=\"item1\" />"
+    compare = f"{compare}\n    </spine>"
+    compare = f"{compare}\n</package>"
+    assert content == compare
+    # Test updating the epub
+    shutil.rmtree(extracted)
+    metadata["title"] = "Another Title of Sorts"
+    metadata["writer"] = "Something"
+    mm_epub.update_epub_info(epub_file, metadata, update_cover=True)
+    assert mm_epub.get_info_from_epub(epub_file)["title"] == "Another Title of Sorts"
+    extracted = abspath(join(temp_dir, "extracted"))
+    os.mkdir(extracted)
+    assert mm_file_tools.extract_zip(epub_file, extracted)
+    image_dir = abspath(join(extracted, "EPUB"))
+    image_dir = abspath(join(image_dir, "images"))
+    assert sorted(os.listdir(image_dir)) == ["image1.jpg", "image2.png"]
+    extracted_image = Image.open(abspath(join(image_dir, "image2.png")))
+    assert extracted_image.size == (100, 100)
+    cover_image = Image.open(abspath(join(image_dir, "image1.jpg")))
+    assert cover_image.size == (600, 800)
+    assert not os.stat(abspath(join(image_dir, "image1.jpg"))).st_size == cover_size
     # Test updating a non-epub file
     temp_dir = mm_file_tools.get_temp_dir()
     text_file = abspath(join(temp_dir, "text.txt"))

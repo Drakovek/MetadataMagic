@@ -315,6 +315,7 @@ def test_update_archive_info():
     metadata["title"] = "This is an epub!!"
     metadata["artist"] = "Art Person"
     metadata["description"] = "Some Words"
+    chapters = mm_epub.add_cover_to_chapters(chapters, metadata)
     epub_file = mm_epub.create_epub(chapters, metadata, temp_dir)
     assert exists(epub_file)
     read_meta = mm_archive.get_info_from_archive(epub_file)
@@ -322,6 +323,7 @@ def test_update_archive_info():
     assert read_meta["artist"] == "Art Person"
     assert read_meta["description"] == "Some Words"
     assert read_meta["writer"] is None
+    metadata["cover_id"] = None
     metadata["title"] = "Different Title"
     metadata["writer"] = "Author"
     mm_archive.update_archive_info(epub_file, metadata)
@@ -334,6 +336,17 @@ def test_update_archive_info():
     os.mkdir(extract_dir)
     mm_file_tools.extract_zip(epub_file, extract_dir)
     assert sorted(os.listdir(extract_dir)) == ["EPUB", "META-INF", 'mimetype']
+    # Test updating cover image
+    epub_size = os.stat(epub_file).st_size
+    mm_archive.update_archive_info(epub_file, metadata, update_cover=False)
+    assert os.stat(epub_file).st_size == epub_size
+    cover_updated = False
+    for i in range(0, 20):
+        mm_archive.update_archive_info(epub_file, metadata, update_cover=True)
+        if not os.stat(epub_file).st_size == epub_size:
+            cover_updated = True
+            break
+    assert cover_updated    
     # Test updating a non-archive file
     temp_dir = mm_file_tools.get_temp_dir()
     text_file = abspath(join(temp_dir, "text.txt"))
@@ -348,6 +361,7 @@ def test_update_archive_info():
     assert mm_file_tools.extract_zip(zip_file, extract_dir)
     assert sorted(os.listdir(extract_dir)) == ["text.txt"]
     assert mm_file_tools.read_text_file(abspath(join(extract_dir, "text.txt"))) == "This is text!"
+   
 
 def test_remove_page_number():
     """
@@ -421,6 +435,6 @@ def test_get_cover_image():
     Tests the get_cover_image function.
     """
     image = mm_archive.get_cover_image("This is something different", "Drakovek, Other Person")
-    assert image.size == (900, 1200)
+    assert image.size == (600, 800)
     image = mm_archive.get_cover_image("This is a title", None, portrait=False)
-    assert image.size == (1200, 900)
+    assert image.size == (800, 600)
