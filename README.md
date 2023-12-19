@@ -236,7 +236,7 @@ The `--missing-media` option allows you to search a given directory and subdirec
 
     mm-error --missing-json [directory]
 
-The `--missing-json` option allows you to search for the opposite of the [missing-media](#Missing Media) option, searching for media files that do not have an associated `.json` metadata files. This will NOT list media files in directories that contain no `.json` files at all, as the command will assume that this is a directory containing files with embedded metadata or no metadata to begin with. This will only list media files with missing `.json` metadata in directories where otherwise, all other files DO have `.json` metadata.
+The `--missing-json` option allows you to search for the opposite of the `--missing-media` option, searching for media files that do not have an associated `.json` metadata files. This will NOT list media files in directories that contain no `.json` files at all, as the command will assume that this is a directory containing files with embedded metadata or no metadata to begin with. This will only list media files with missing `.json` metadata in directories where otherwise, all other files DO have `.json` metadata.
 
 ### Missing Fields
 
