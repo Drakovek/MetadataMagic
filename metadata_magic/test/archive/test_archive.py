@@ -361,7 +361,6 @@ def test_update_archive_info():
     assert mm_file_tools.extract_zip(zip_file, extract_dir)
     assert sorted(os.listdir(extract_dir)) == ["text.txt"]
     assert mm_file_tools.read_text_file(abspath(join(extract_dir, "text.txt"))) == "This is text!"
-   
 
 def test_remove_page_number():
     """
@@ -435,6 +434,6 @@ def test_get_cover_image():
     Tests the get_cover_image function.
     """
     image = mm_archive.get_cover_image("This is something different", "Drakovek, Other Person")
-    assert image.size == (600, 800)
+    assert image.size == (900, 1200)
     image = mm_archive.get_cover_image("This is a title", None, portrait=False)
-    assert image.size == (800, 600)
+    assert image.size == (1200, 900)

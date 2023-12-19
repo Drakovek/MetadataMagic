@@ -6,6 +6,7 @@ import math
 import argparse
 import html_string_tools.html
 import python_print_tools.printer
+import easy_text_to_image.color as etti_color
 import easy_text_to_image.text_to_image as etti
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
@@ -209,18 +210,18 @@ def get_cover_image(title:str, authors:str, portrait:bool=True, uppercase:bool=T
     :rtype: PIL.Image
     """
     # Get the dimensions of the full cover image
-    full_width = 600
-    full_height = 800
+    full_width = 900
+    full_height = 1200
     if portrait is False:
-        full_width = 800
-        full_height = 600
+        full_width = 1200
+        full_height = 900
     # Get the colors for the image
-    foreground, background, text = etti.get_color_palette()
+    palette = etti_color.get_random_color_palette()
     # Create the base image
-    margin = 60
+    margin = 90
     half_margin = math.floor(margin/2)
-    cover = Image.new("RGBA", size=(full_width, full_height), color=background)
-    inner = Image.new("RGBA", size=(full_width - margin, full_height), color=foreground)
+    cover = Image.new("RGBA", size=(full_width, full_height), color=palette["secondary-saturated"])
+    inner = Image.new("RGBA", size=(full_width - margin, full_height), color=palette["primary-saturated"])
     cover.alpha_composite(inner, (margin, 0))
     # Get the font for the image
     system_fonts = etti.get_system_fonts()
@@ -233,7 +234,7 @@ def get_cover_image(title:str, authors:str, portrait:bool=True, uppercase:bool=T
     if uppercase:
         author_text = author_text.upper()
     author_image = etti.text_image_fit_width(author_text, bold_font, image_width=text_width,
-            foreground=background, background="#00000000", justified="l", minimum_characters=200)
+            foreground=palette["secondary-desaturated"], background="#00000000", justified="l", minimum_characters=200)
     author_height = author_image.size[1]
     cover.alpha_composite(author_image, (math.floor(margin * 1.5), full_height - (half_margin + author_height)))
     # Create the text for the title
@@ -242,13 +243,13 @@ def get_cover_image(title:str, authors:str, portrait:bool=True, uppercase:bool=T
     if uppercase:
         title_text = title_text.upper()
     title_image = etti.text_image_fit_box(title_text, italic_font, image_width=text_width, image_height=text_height,
-            foreground=text, background="#00000000", justified="l", vertical="t", space=1)
+            foreground=palette["primary-desaturated"], background="#00000000", justified="l", vertical="t", space=1)
     # Create the title framing
     top, bottom = etti.get_vertical_bounds(title_image, "#00000000")
     frame_bottom = (bottom - top) + (margin * 1.5)
     draw = ImageDraw.Draw(cover)
     draw.rounded_rectangle([(0, half_margin), (full_width-half_margin, frame_bottom)],
-            fill=background, radius=half_margin)
+            fill=palette["secondary-saturated"], radius=half_margin)
     cover.alpha_composite(title_image, (math.floor(margin*1.5), margin))
     # Return the image
     return cover

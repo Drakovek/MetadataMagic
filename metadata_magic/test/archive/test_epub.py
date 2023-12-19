@@ -340,7 +340,7 @@ def test_add_cover_to_chapters():
     assert basename(chapters[0]["files"][0]["file"]) == "mm_cover_image.jpg"
     assert exists(chapters[0]["files"][0]["file"])
     image = Image.open(chapters[0]["files"][0]["file"])
-    assert image.size == (600, 800)
+    assert image.size == (900, 1200)
     assert chapters[1]["include"]
     assert chapters[1]["title"] == "1"
     assert len(chapters[1]["files"]) == 1
@@ -1632,7 +1632,7 @@ def test_update_epub_info():
     extracted_image = Image.open(abspath(join(image_dir, "image2.png")))
     assert extracted_image.size == (100, 100)
     cover_image = Image.open(abspath(join(image_dir, "image1.jpg")))
-    assert cover_image.size == (600, 800)
+    assert cover_image.size == (900, 1200)
     cover_size = os.stat(abspath(join(image_dir, "image1.jpg"))).st_size
     # Test that cover image is not altered if not specified
     shutil.rmtree(extracted)
@@ -1650,7 +1650,7 @@ def test_update_epub_info():
     extracted_image = Image.open(abspath(join(image_dir, "image2.png")))
     assert extracted_image.size == (100, 100)
     cover_image = Image.open(abspath(join(image_dir, "image1.jpg")))
-    assert cover_image.size == (600, 800)
+    assert cover_image.size == (900, 1200)
     assert os.stat(abspath(join(image_dir, "image1.jpg"))).st_size == cover_size
     content = mm_file_tools.read_text_file(abspath(join(epub_dir, "content.opf")))
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -1697,7 +1697,7 @@ def test_update_epub_info():
     extracted_image = Image.open(abspath(join(image_dir, "image2.png")))
     assert extracted_image.size == (100, 100)
     cover_image = Image.open(abspath(join(image_dir, "image1.jpg")))
-    assert cover_image.size == (600, 800)
+    assert cover_image.size == (900, 1200)
     assert not os.stat(abspath(join(image_dir, "image1.jpg"))).st_size == cover_size
     # Test updating a non-epub file
     temp_dir = mm_file_tools.get_temp_dir()
