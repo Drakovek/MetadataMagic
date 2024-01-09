@@ -152,7 +152,8 @@ def get_description(json:dict) -> str:
     :return: Extracted value for the description
     :rtype: str
     """
-    keylist = [["description"], ["caption"], ["content"], ["info", "description"], ["webtoon_summary"]]
+    keylist = [["description"], ["caption"], ["content"], ["info", "description"],
+            ["chapter_description"], ["post_content"], ["webtoon_summary"]]
     return get_value_from_keylist(json, keylist, str)
 
 def get_publisher(json:dict) -> str:

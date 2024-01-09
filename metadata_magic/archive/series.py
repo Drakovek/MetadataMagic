@@ -234,10 +234,10 @@ def main():
         python_print_tools.printer.color_print("Invalid directory.", "red")
     else:
         # Check whether to add as full series or as one-shots
-        if not args.single:
+        if not args.standalone:
             set_series_from_user(directory)
-        elif input().lower("Mark all archives in this directory as standalone entries? (Y/[N])") == "y":
-            archive_files = mm_file_tools.find_files_of_type(directory, [".cbz", ".epub"], include_subdirectories=False)
+        elif input("Mark all archives in this directory as standalone entries? (Y/[N]): ").lower() == "y":
+            archive_files = mm_file_tools.find_files_of_type(directory, [".cbz", ".epub"])
             for archive_file in tqdm.tqdm(archive_files):
                 write_series_single(archive_file)
         
