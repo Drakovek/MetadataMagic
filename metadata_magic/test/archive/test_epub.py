@@ -58,7 +58,9 @@ def test_format_xhtml():
     compare = f"{compare}\n</html>"
     assert xhtml == compare
     # Test with spaces and newlines
-    html = "  <p>  This is a thing!  </p>\n  <div> Another </div> "
+    html = "  <p>  This is a thing!  </p>\n  <div> Another </div>"
+    html = f"{html}<p class='thing'>  Next  < / p> <div id='1'> Final < / div>  "
+    html = f"{html}<p> thing <a href='a'> other </a> </p>"
     xhtml = mm_epub.format_xhtml(html, "Next Title")
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
     compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
@@ -70,11 +72,32 @@ def test_format_xhtml():
     compare = f"{compare}\n    <body>"
     compare = f"{compare}\n        <p>This is a thing!</p>"
     compare = f"{compare}\n        <div>Another</div>"
+    compare = f"{compare}\n        <p class=\"thing\">Next</p>"
+    compare = f"{compare}\n        <div id=\"1\">Final</div>"
+    compare = f"{compare}\n        <p>thing <a href=\"a\"> other </a>"
+    compare = f"{compare}\n        </p>"
+    compare = f"{compare}\n    </body>"
+    compare = f"{compare}\n</html>"
+    assert xhtml == compare
+    # Test Removing non-breaking space characters
+    html = "  <p> &nbsp; Thing &nbsp;&nbsp; </p>\n  &nbsp;<div id='blah'> Another &nbsp;</div> "
+    xhtml = mm_epub.format_xhtml(html, "Non-breaking")
+    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
+    compare = f"{compare}\n    <head>"
+    compare = f"{compare}\n        <title>Non-breaking</title>"
+    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
+    compare = f"{compare}\n    </head>"
+    compare = f"{compare}\n    <body>"
+    compare = f"{compare}\n        <p>Thing</p>"
+    compare = f"{compare}\n        <div id=\"blah\">Another</div>"
     compare = f"{compare}\n    </body>"
     compare = f"{compare}\n</html>"
     assert xhtml == compare
     # Test removing extraneous paragraph and div tags
-    html = "<p/><div/><p/><p>This is fine</p> <p> </p> <div> </div> <div>Blah</div>"
+    html = "<p/><div/><p/><p>This is fine</p> <p> </p> <div> </div> <div>Blah</div> <p class='thing'>\n"
+    html = f"{html}</p> <div id='other'> </div> <p /> <div /> <p class='a' /> <div id='final' />"
     xhtml = mm_epub.format_xhtml(html, "Remove Space")
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
     compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
@@ -86,6 +109,32 @@ def test_format_xhtml():
     compare = f"{compare}\n    <body>"
     compare = f"{compare}\n        <p>This is fine</p>"
     compare = f"{compare}\n        <div>Blah</div>"
+    compare = f"{compare}\n    </body>"
+    compare = f"{compare}\n</html>"
+    assert xhtml == compare
+    # Test centering lines consisting entirely of hyphens or astericks
+    html = "<p>A-Z</p><p> ---- </p><div>*SNAP*</div><div> **** </div><div>*-- -- --*</div><p>****</p>"
+    xhtml = mm_epub.format_xhtml(html, "Lines")
+    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
+    compare = f"{compare}\n    <head>"
+    compare = f"{compare}\n        <title>Lines</title>"
+    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
+    compare = f"{compare}\n    </head>"
+    compare = f"{compare}\n    <body>"
+    compare = f"{compare}\n        <p>A-Z</p>"
+    compare = f"{compare}\n        <p />"
+    compare = f"{compare}\n        <center>----</center>"
+    compare = f"{compare}\n        <div>*SNAP*</div>"
+    compare = f"{compare}\n        <div>"
+    compare = f"{compare}\n            <center>****</center>"
+    compare = f"{compare}\n        </div>"
+    compare = f"{compare}\n        <div>"
+    compare = f"{compare}\n            <center>*-- -- --*</center>"
+    compare = f"{compare}\n        </div>"
+    compare = f"{compare}\n        <p />"
+    compare = f"{compare}\n        <center>****</center>"
     compare = f"{compare}\n    </body>"
     compare = f"{compare}\n</html>"
     assert xhtml == compare
@@ -147,7 +196,7 @@ def test_format_xhtml():
     compare = f"{compare}\n    </body>"
     compare = f"{compare}\n</html>"
     assert xhtml == compare
-    # Test that head is not altered with multiple image files
+    # Test that image wrapper is not altered with multiple image files
     html = "<div><img src=\"../images/thing.jpg\" alt=\"thing\" width=\"600\" height=\"800\"/></div>"
     html = f"{html}<div><img src=\"../images/other.jpg\" alt=\"other\" width=\"1200\" height=\"750\"/></div>"
     xhtml = mm_epub.format_xhtml(html, "Single Image")
@@ -736,6 +785,9 @@ def test_create_style_file():
     compare = f"{compare}\n    margin: 0;"
     compare = f"{compare}\n    padding: 0;"
     compare = f"{compare}\n    page-break-after: always;"
+    compare = f"{compare}\n}}\n\n"
+    compare = f"{compare}center {{"
+    compare = f"{compare}\n    text-align: center;"
     compare = f"{compare}\n}}"
     assert style == compare
 

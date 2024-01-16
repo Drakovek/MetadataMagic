@@ -50,14 +50,26 @@ def format_xhtml(html:str, title:str) -> str:
     title_element.text = title
     meta = ElementTree.SubElement(head, "meta")
     meta.attrib = {"charset":"utf-8"}
-    # Format the given HTML text
-    formatted_html = html.replace("\n", "").strip()
-    formatted_html = re.sub(r"\s*<p>\s*", "<p>", formatted_html)
-    formatted_html = re.sub(r"\s*</p>\s*", "</p>", formatted_html)
-    formatted_html = re.sub(r"\s*<div>\s*", "<div>", formatted_html)
-    formatted_html = re.sub(r"\s*</div>\s*", "</div>", formatted_html)
-    formatted_html = re.sub(r"\s*<p></p>\s*|\s*<p\s*/>\s*", "", formatted_html)
-    formatted_html = re.sub(r"\s*<div></div>\s*|\s*<div\s*/>\s*", "", formatted_html)
+    # Remove all unnecessary HTML escape entities
+    formatted_html = html_string_tools.html.replace_reserved_in_html(html)
+    # Remove newlines
+    formatted_html = formatted_html.replace("\n", "").strip()
+    # Remove whitespace before closing paragraph and div elenments
+    formatted_html = re.sub(r"\s+<\s*\/\s*p\s*>", "</p>", formatted_html)
+    formatted_html = re.sub(r"\s+<\s*\/\s*div\s*>", "</div>", formatted_html)
+    # Remove whitespace after opening paragraph and div elenments
+    formatted_html = "".join(reversed(formatted_html))
+    formatted_html = re.sub(r"\s+(?=>[^<]*p\s*<)|\s+(?=>[^<]*vid\s*<)", "", formatted_html)
+    # Add centering element to page break lines
+    formatted_html = re.sub(r"<\s*(?=[\-*][\s\-*]+>)", "<>retnec/<", formatted_html)
+    formatted_html = "".join(reversed(formatted_html))
+    formatted_html = re.sub(r">\s*(?=[\-*][\s\-*]+<)", "><center>", formatted_html)
+    # Remove paragraph and div elements containing nothing
+    formatted_html = re.sub(r"<\s*p[^>]*>\s*<\s*\/\s*p\s*>", "", formatted_html)
+    formatted_html = re.sub(r"<\s*div[^>]*>\s*<\s*\/\s*div\s*>", "", formatted_html)
+    formatted_html = re.sub(r"<\s*p[^>]*\/\s*>|<\s*div[^>]*\/\s*>", "", formatted_html)
+    formatted_html = formatted_html.strip()
+    # Add paragraph elements if necessary
     if not formatted_html.startswith("<") and not formatted_html.endswith(">"):
         formatted_html = f"<p>{formatted_html}</p>"
     # Use LXML to clean up tags
@@ -65,7 +77,7 @@ def format_xhtml(html:str, title:str) -> str:
     formatted_html = lxml.etree.tostring(root).decode("UTF-8")
     formatted_html = re.sub(r"^\s*<\s*html\s*>|<\s*\/\s*html\s*>\s*$", "", formatted_html)
     formatted_html = re.sub(r"^\s*<\s*body\s*>|<\s*\/\s*body\s*>\s*$", "", formatted_html)
-    # Add head element for the viewport size and image id if there is a single image present
+    # Convert image to full page SVG element if there is a single image present
     regex = "<div>\\s*<img[^>]+width=['\"][0-9]+['\"][^>]+height=['\"][0-9]+['\"][^>]*>\\s*<\\/div>|"
     regex = f"{regex}<div>\\s*<img[^>]+height=['\"][0-9]+['\"][^>]+width=['\"][0-9]+['\"][^>]*>\\s*<\\/div>"
     images = re.findall(regex, formatted_html)
@@ -570,6 +582,9 @@ def create_style_file(output_directory:str):
     style = f"{style}\n    margin: 0;"
     style = f"{style}\n    padding: 0;"
     style = f"{style}\n    page-break-after: always;"
+    style = f"{style}\n}}\n\n"
+    style = f"{style}center {{"
+    style = f"{style}\n    text-align: center;"
     style = f"{style}\n}}"
     # Write style to a CSS file
     style_file = abspath(join(style_dir, "epubstyle.css"))
