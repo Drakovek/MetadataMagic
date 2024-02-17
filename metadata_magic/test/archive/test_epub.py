@@ -139,13 +139,13 @@ def test_format_xhtml():
     compare = f"{compare}\n</html>"
     assert xhtml == compare
     # Test altering image wrapper for a single image
-    html = "<div><img src=\"../images/thing.jpg\" alt=\"thing\" width=\"600\" height=\"800\"/></div>"
-    xhtml = mm_epub.format_xhtml(html, "Single Image")
+    html = "<div><img src=\"../images/thing's.jpg\" alt=\"thing's\" width=\"600\" height=\"800\"/></div>"
+    xhtml = mm_epub.format_xhtml(html, "Single's Image")
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
     compare = f"{compare}\n<html xmlns:svgns=\"http://www.w3.org/2000/svg\" "
     compare = f"{compare}xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns=\"http://www.w3.org/1999/xhtml\">"
     compare = f"{compare}\n    <head>"
-    compare = f"{compare}\n        <title>Single Image</title>"
+    compare = f"{compare}\n        <title>Single's Image</title>"
     compare = f"{compare}\n        <meta charset=\"utf-8\" />"
     compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
     compare = f"{compare}\n    </head>"
@@ -153,38 +153,46 @@ def test_format_xhtml():
     compare = f"{compare}\n        <div id=\"full-image-container\">"
     compare = f"{compare}\n            <svgns:svg width=\"100%\" height=\"100%\" "
     compare = f"{compare}viewBox=\"0 0 600 800\" preserveAspectRatio=\"xMidYMid meet\" version=\"1.1\">"
-    compare = f"{compare}\n                <svgns:image xlink:href=\"../images/thing.jpg\" width=\"600\" height=\"800\" />"
+    compare = f"{compare}\n                <svgns:title>thing's</svgns:title>"
+    compare = f"{compare}\n                <svgns:image xlink:href=\"../images/thing's.jpg\" width=\"600\" height=\"800\" />"
     compare = f"{compare}\n            </svgns:svg>"
     compare = f"{compare}\n        </div>"
     compare = f"{compare}\n    </body>"
     compare = f"{compare}\n</html>"
     assert xhtml == compare
     # Test that the image wrapper is not altered if there is text alongside the image
-    html = f"<div>Some words!</div>{html}<div>And such</div>"
-    xhtml = mm_epub.format_xhtml(html, "Single Image")
+    html = f"<div class='blah'>Some words!</div>{html}<div id='A'>And such</div>"
+    xhtml = mm_epub.format_xhtml(html, "Single's Image")
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
     compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
     compare = f"{compare}\n    <head>"
-    compare = f"{compare}\n        <title>Single Image</title>"
+    compare = f"{compare}\n        <title>Single's Image</title>"
     compare = f"{compare}\n        <meta charset=\"utf-8\" />"
     compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
     compare = f"{compare}\n    </head>"
     compare = f"{compare}\n    <body>"
-    compare = f"{compare}\n        <div>Some words!</div>"
+    compare = f"{compare}\n        <div class=\"blah\">Some words!</div>"
     compare = f"{compare}\n        <div>"
-    compare = f"{compare}\n            <img src=\"../images/thing.jpg\" alt=\"thing\" width=\"600\" height=\"800\" />"
+    compare = f"{compare}\n            <img src=\"../images/thing's.jpg\" alt=\"thing's\" width=\"600\" height=\"800\" />"
     compare = f"{compare}\n        </div>"
-    compare = f"{compare}\n        <div>And such</div>"
+    compare = f"{compare}\n        <div id=\"A\">And such</div>"
     compare = f"{compare}\n    </body>"
     compare = f"{compare}\n</html>"    
     assert xhtml == compare
+    html = "<div><img src=\"../images/new.png\" alt=\"New\" width=\"200\" height=\"200\"/></div>"
+    html = f"<p>Some words!</p>{html}<p>And such</p>"
+    xhtml = mm_epub.format_xhtml(html, "Single's Image")
+    print(xhtml)
+    assert xhtml == compare
+    assert 1 == 0
+    
     html = "<div><img src=\"../images/thing.jpg\" alt=\"thing\" width=\"600\" height=\"800\"/></div>"
-    html = f"{html}<p>Something Else</p>"
-    xhtml = mm_epub.format_xhtml(html, "Single Image")
+    html = f"{html}<p id='other'>Something Else</p>"
+    xhtml = mm_epub.format_xhtml(html, "Single's")
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
     compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
     compare = f"{compare}\n    <head>"
-    compare = f"{compare}\n        <title>Single Image</title>"
+    compare = f"{compare}\n        <title>Single's</title>"
     compare = f"{compare}\n        <meta charset=\"utf-8\" />"
     compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
     compare = f"{compare}\n    </head>"
@@ -192,7 +200,7 @@ def test_format_xhtml():
     compare = f"{compare}\n        <div>"
     compare = f"{compare}\n            <img src=\"../images/thing.jpg\" alt=\"thing\" width=\"600\" height=\"800\" />"
     compare = f"{compare}\n        </div>"
-    compare = f"{compare}\n        <p>Something Else</p>"
+    compare = f"{compare}\n        <p id=\"other\">Something Else</p>"
     compare = f"{compare}\n    </body>"
     compare = f"{compare}\n</html>"
     assert xhtml == compare
@@ -301,12 +309,12 @@ def test_image_to_xml():
     xml = mm_epub.image_to_xml(image_file)
     assert xml == "<div><img src=\"../images/image.png\" alt=\"image\" width=\"600\" height=\"800\" /></div>"
     # Different dimensions and an alt tag
-    image_file = abspath(join(temp_dir, "[01] Other.jpg"))
+    image_file = abspath(join(temp_dir, "[01] Other's.jpg"))
     image = Image.new("RGB", size=(350, 200), color="#ff0000")
     image.save(image_file)
     assert exists(image_file)
     xml = mm_epub.image_to_xml(image_file, "Some Name")
-    assert xml == "<div><img src=\"../images/[01] Other.jpg\" alt=\"Some Name\" width=\"350\" height=\"200\" /></div>"
+    assert xml == "<div><img src=\"../images/[01] Other's.jpg\" alt=\"Some Name\" width=\"350\" height=\"200\" /></div>"
     # Test with a non-image file
     image_file = abspath(join(temp_dir, "notimage.jpg"))
     mm_file_tools.write_text_file(image_file, "not an image")
@@ -611,13 +619,15 @@ def test_create_content_files():
     # Create the default chapters list
     temp_dir = mm_file_tools.get_temp_dir()
     output_dir = mm_file_tools.get_temp_dir("dvk-epub-output")
-    mm_file_tools.write_text_file(abspath(join(temp_dir, "[01] 1.txt")), "Here's some text!")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "[01] 1.txt")), "Here's some text!\n\nAnd More!")
     mm_file_tools.write_text_file(abspath(join(temp_dir, "[02] 2.html")), "<html><body><p>Word<p><p>Things!</p></body></html>")
-    image_file = abspath(join(temp_dir, "[03] 3.jpg"))
+    image_file = abspath(join(temp_dir, "[03] 3's.jpg"))
     image = Image.new("RGB", size=(500, 500), color="#ff0000")
     image.save(image_file)
     chapters = mm_epub.get_default_chapters(temp_dir)
     # Test creating the content files from the given chapters
+    chapters[1]["title"] = "Chapter 2"
+    chapters[2]["title"] = "Final's"
     chapters = mm_epub.create_content_files(chapters, output_dir)
     assert len(chapters) == 3
     assert chapters[0]["include"]
@@ -625,12 +635,12 @@ def test_create_content_files():
     assert chapters[0]["title"] == "1"
     assert chapters[0]["file"] == "content/[01] 1.xhtml"
     assert chapters[1]["file"] == "content/[02] 2.xhtml"
-    assert chapters[2]["file"] == "content/[03] 3.xhtml"
+    assert chapters[2]["file"] == "content/[03] 3's.xhtml"
     assert sorted(os.listdir(output_dir)) == ["content", "images"]
     image_dir = abspath(join(output_dir, "images"))
     assert sorted(os.listdir(image_dir)) == ["image1.jpg"]
     content_dir = abspath(join(output_dir, "content"))
-    assert sorted(os.listdir(content_dir)) == ["[01] 1.xhtml", "[02] 2.xhtml", "[03] 3.xhtml"]
+    assert sorted(os.listdir(content_dir)) == ["[01] 1.xhtml", "[02] 2.xhtml", "[03] 3's.xhtml"]
     text = mm_file_tools.read_text_file(abspath(join(content_dir, "[01] 1.xhtml")))
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
     compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
@@ -641,6 +651,7 @@ def test_create_content_files():
     compare = f"{compare}\n    </head>"
     compare = f"{compare}\n    <body>"
     compare = f"{compare}\n        <p>Here's some text!</p>"
+    compare = f"{compare}\n        <p>And More!</p>"
     compare = f"{compare}\n    </body>"
     compare = f"{compare}\n</html>"
     assert text == compare
@@ -649,7 +660,7 @@ def test_create_content_files():
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
     compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
     compare = f"{compare}\n    <head>"
-    compare = f"{compare}\n        <title>2</title>"
+    compare = f"{compare}\n        <title>Chapter 2</title>"
     compare = f"{compare}\n        <meta charset=\"utf-8\" />"
     compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
     compare = f"{compare}\n    </head>"
@@ -660,12 +671,12 @@ def test_create_content_files():
     compare = f"{compare}\n</html>"
     assert text == compare
     # Test that image XHTML was created correctly
-    text = mm_file_tools.read_text_file(abspath(join(content_dir, "[03] 3.xhtml"))) 
+    text = mm_file_tools.read_text_file(abspath(join(content_dir, "[03] 3's.xhtml"))) 
     compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
     compare = f"{compare}\n<html xmlns:svgns=\"http://www.w3.org/2000/svg\" "
     compare = f"{compare}xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns=\"http://www.w3.org/1999/xhtml\">"
     compare = f"{compare}\n    <head>"
-    compare = f"{compare}\n        <title>3</title>"
+    compare = f"{compare}\n        <title>Final's</title>"
     compare = f"{compare}\n        <meta charset=\"utf-8\" />"
     compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
     compare = f"{compare}\n    </head>"
@@ -673,6 +684,7 @@ def test_create_content_files():
     compare = f"{compare}\n        <div id=\"full-image-container\">"
     compare = f"{compare}\n            <svgns:svg width=\"100%\" height=\"100%\" "
     compare = f"{compare}viewBox=\"0 0 500 500\" preserveAspectRatio=\"xMidYMid meet\" version=\"1.1\">"
+    compare = f"{compare}\n                <svgns:title>Final's</svgns:title>"
     compare = f"{compare}\n                <svgns:image xlink:href=\"../images/image1.jpg\" width=\"500\" height=\"500\" />"
     compare = f"{compare}\n            </svgns:svg>"
     compare = f"{compare}\n        </div>"
@@ -684,8 +696,8 @@ def test_create_content_files():
     chapters = mm_epub.get_default_chapters(temp_dir)
     output_dir = mm_file_tools.get_temp_dir("dvk-epub-output")
     text_file = abspath(join(temp_dir, "A.txt"))
-    html_file = abspath(join(temp_dir, "B.html"))
-    image_file = abspath(join(temp_dir, "C.jpg"))
+    html_file = abspath(join(temp_dir, "C.html"))
+    image_file = abspath(join(temp_dir, "B.jpg"))
     mm_file_tools.write_text_file(text_file, "Some text here!")
     mm_file_tools.write_text_file(html_file, "<html><body><p>Different</p><p>Thing</p></body></html>")
     image = Image.new("RGB", size=(100, 300), color="#ff0000")
@@ -693,8 +705,11 @@ def test_create_content_files():
     assert exists(text_file)
     assert exists(html_file)
     assert exists(image_file)
-    files = [{"id":"item0", "file":text_file}, {"id":"item1", "file":image_file}, {"id":"item2", "file":html_file}]
-    chapters = [{"include":True, "title":"Grouped", "files":files}]
+    chapters = mm_epub.get_default_chapters(temp_dir)
+    chapters = mm_epub.group_chapters(chapters, [0,1,2])
+    chapters[0]["title"] = "Grouped"
+    
+
     chapters = mm_epub.create_content_files(chapters, output_dir)
     assert len(chapters) == 1
     assert chapters[0]["include"]
@@ -714,7 +729,7 @@ def test_create_content_files():
     compare = f"{compare}\n    <body>"
     compare = f"{compare}\n        <p>Some text here!</p>"
     compare = f"{compare}\n        <div>"
-    compare = f"{compare}\n            <img src=\"../images/image1.jpg\" alt=\"C\" width=\"100\" height=\"300\" />"
+    compare = f"{compare}\n            <img src=\"../images/image1.jpg\" alt=\"B\" width=\"100\" height=\"300\" />"
     compare = f"{compare}\n        </div>"
     compare = f"{compare}\n        <p>Different</p>"
     compare = f"{compare}\n        <p>Thing</p>"

@@ -78,23 +78,26 @@ def format_xhtml(html:str, title:str) -> str:
     formatted_html = re.sub(r"^\s*<\s*html\s*>|<\s*\/\s*html\s*>\s*$", "", formatted_html)
     formatted_html = re.sub(r"^\s*<\s*body\s*>|<\s*\/\s*body\s*>\s*$", "", formatted_html)
     # Convert image to full page SVG element if there is a single image present
-    regex = "<div>\\s*<img[^>]+width=['\"][0-9]+['\"][^>]+height=['\"][0-9]+['\"][^>]*>\\s*<\\/div>|"
-    regex = f"{regex}<div>\\s*<img[^>]+height=['\"][0-9]+['\"][^>]+width=['\"][0-9]+['\"][^>]*>\\s*<\\/div>"
+    regex = "<div>\\s*<img[^>]+width=\"[0-9]+\"[^>]+height=\"[0-9]+\"[^>]*>\\s*<\\/div>|"
+    regex = f"{regex}<div>\\s*<img[^>]+height=\"[0-9]+\"[^>]+width=\"[0-9]+\"[^>]*>\\s*<\\/div>"
     images = re.findall(regex, formatted_html)
-    if len(images) == 1 and len(re.findall(r"<div>(?!.*<img).+<\/div>|<p>", formatted_html)) == 0:
+    contains_text = len(re.findall(r"<div[^\>]*>(?!.*<img).+<\/div>|<p>|<p\s[^\>]*>", formatted_html)) == 0
+    if len(images) == 1 and contains_text:
         # Get the image size
-        width = re.findall("(?<=width=[\"'])[0-9]+(?=[\"'])", images[0])[0]
-        height = re.findall("(?<=height=[\"'])[0-9]+(?=[\"'])", images[0])[0]
+        width = re.findall("(?<=width=\")[0-9]+(?=\")", images[0])[0]
+        height = re.findall("(?<=height=\")[0-9]+(?=\")", images[0])[0]
+        # Get the image alt tag
+        alt = re.findall("(?<=alt=\")[^\"]*(?=\")", images[0])[0]
         # Add the image-page id
         modified_image_tag = re.sub(r"^<div>|</div>$", "", images[0])
         modified_image_tag = re.sub(r"^<img\s+", "<image ", modified_image_tag)
         modified_image_tag = re.sub(r"src=", "xlink:href=", modified_image_tag)
-        modified_image_tag = re.sub("\\s*alt=[\"'][^\"']*[\"']\\s*", " ", modified_image_tag)
+        modified_image_tag = re.sub("\\s*alt=\"[^\"]*\"\\s*", " ", modified_image_tag)
         # Create the svg wrapper
         svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" "
         svg = f"{svg}width=\"100%\" height=\"100%\" viewBox=\"0 0 {width} {height}\" "
         svg = f"{svg}preserveAspectRatio=\"xMidYMid meet\" version=\"1.1\">"
-        modified_image_tag = f"{svg}{modified_image_tag}</svg>"
+        modified_image_tag = f"{svg}<title>{alt}</title>{modified_image_tag}</svg>"
         # Create the div wrapper
         modified_image_tag = f"<div id=\"full-image-container\">{modified_image_tag}</div>"
         formatted_html = formatted_html.replace(images[0], modified_image_tag)
@@ -503,7 +506,7 @@ def create_content_files(chapters:List[dict], output_directory:str) -> List[dict
             extension = html_string_tools.html.get_extension(file["file"])
             # Convert based on the appropriate format
             if extension == ".txt":
-                xml = html_to_xml(file["file"])
+                xml = txt_to_xml(file["file"])
             elif extension == ".html" or extension == ".htm":
                 xml = html_to_xml(file["file"])
             else:
@@ -513,7 +516,10 @@ def create_content_files(chapters:List[dict], output_directory:str) -> List[dict
                 shutil.copy(file["file"], new_image)
                 image_num += 1
                 # Get the image xml file
-                xml = image_to_xml(new_image, get_title_from_file(file["file"]))
+                image_alt = title
+                if len(chapters[i]["files"]) > 1:
+                    image_alt = get_title_from_file(file["file"])
+                xml = image_to_xml(new_image, image_alt)
             # Append to the chapter xml
             chapter_xml = f"{chapter_xml}{xml}"
         # Write with proper XHTML formatting
