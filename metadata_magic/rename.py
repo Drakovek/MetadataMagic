@@ -269,7 +269,7 @@ def sort_rename(path:str, template:str, index:int=1):
         filename = get_file_friendly_text(filename)
         if filename == re.sub(r"\.[^\.]{0,5}$", "", basename(pairs[i]["media"])):
             continue
-        # Retname the media and JSON files
+        # Rename the media and JSON files
         filename = get_available_filename([pairs[i]["media"], "a.json"], filename, full_path)
         rename_file(pairs[i]["media"], filename)
         if pairs[i]["json"] is not None:
@@ -288,7 +288,7 @@ def user_sort_rename(path:str):
         if not isdir(abspath(join(path, file))):
             title = re.sub(r"\..{0,6}$", "", file)
             break
-    title = mm_archive.remove_page_number(title)
+    title = mm_archive.format_title(title)
     # Get the rename template
     template = mm_archive.get_string_from_user("Sort Rename Template", title)
     # Get the starting index

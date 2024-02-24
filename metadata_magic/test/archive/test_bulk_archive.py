@@ -61,7 +61,7 @@ def test_archive_all_media():
     os.mkdir(cbz_extract)
     mm_file_tools.extract_zip(abspath(join(temp_dir, "image1.cbz")), cbz_extract)
     assert sorted(os.listdir(cbz_extract)) == ["ComicInfo.xml", "First Image"]
-    assert sorted(os.listdir(abspath(join(cbz_extract, "First Image")))) == ["image1.jpg", "image1.json"]
+    assert sorted(os.listdir(abspath(join(cbz_extract, "First Image")))) == ["First Image.jpg", "First Image.json"]
     epub_extract = abspath(join(temp_dir, "epub_extract"))
     os.mkdir(epub_extract)
     mm_file_tools.extract_zip(abspath(join(temp_dir, "text1.epub")), epub_extract)
@@ -69,7 +69,21 @@ def test_archive_all_media():
     epub_extract = abspath(join(epub_extract, "EPUB"))
     assert sorted(os.listdir(epub_extract)) == ["content", "content.opf", "images", "nav.xhtml", "original", "style", "toc.ncx"]
     epub_extract = abspath(join(epub_extract, "original"))
-    assert sorted(os.listdir(epub_extract)) == ["text1.json", "text1.txt"]
+    assert sorted(os.listdir(epub_extract)) == ["Book.json", "Book.txt"]
+    # Test bulk archiving while formatting the titles
+    temp_dir = mm_file_tools.get_temp_dir()
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "image.png")), "Blah")
+    mm_file_tools.write_json_file(abspath(join(temp_dir, "image.json")), {"title": "just a test"})
+    assert sorted(os.listdir(temp_dir)) == ["image.json", "image.png"]
+    assert mm_bulk_archive.archive_all_media(temp_dir, True)    
+    assert sorted(os.listdir(temp_dir)) == ["image.cbz"]
+    assert mm_comic_archive.get_info_from_cbz(abspath(join(temp_dir, "image.cbz")))["title"] == "Just a Test"
+    cbz_extract = abspath(join(temp_dir, "cbz_extract"))
+    os.mkdir(cbz_extract)
+    mm_file_tools.extract_zip(abspath(join(temp_dir, "image.cbz")), cbz_extract)
+    assert sorted(os.listdir(cbz_extract)) == ["ComicInfo.xml", "Just a Test"]
+    internal_dir = abspath(join(cbz_extract, "Just a Test"))
+    assert sorted(os.listdir(internal_dir)) == ["Just a Test.json", "Just a Test.png"]
 
 def test_extract_cbz():
     """

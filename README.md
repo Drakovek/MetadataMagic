@@ -38,7 +38,7 @@ The `mm-archive` command can be used to archive the media files and `.json` meta
 
     mm-archive [directory] [OPTIONS]
 
-Metadata for the archive will be pulled from existing `.json` metadata contained in the given directory, and you will be prompted for any metadata fields that could not be found in the existing `.json` files. Additionally, the you can choose to override the automatic metadata generation for any field and enter metadata fields manually using the following options.
+Metadata for the archive will be pulled from existing `.json` metadata contained in the given directory, and you will be prompted for any metadata fields that could not be found in the existing `.json` files. Additionally, you can choose to override the automatic metadata generation for any field and enter metadata fields manually using the following options.
 
     -s, --summary    Manually input the media's summary/description
     -d, --date       Manually input the media's publication date
@@ -48,6 +48,8 @@ Metadata for the archive will be pulled from existing `.json` metadata contained
     -t, --tags       Manually input the media tags
     -r, --rating     Manually input the age rating for the media
     -g, --grade      Manually input the grade/user score
+
+Finally, you can add the `-x, --xxxxx` option, which will delete the original media files once the archived version is created.
 
 ### Options specific to .epub
 
@@ -107,9 +109,11 @@ The `mm-bulk-archive` command is used to bulk archive or extract a large number 
 
 ### Bulk Archiving
 
-    mm-bulk-archive [directory]
+    mm-bulk-archive [directory] [--format-titles]
 
 This will archive every eligable file in a given directory into `.cbz` comic archives for images and `.epub` ebooks for text, replacing the original files. Files will only be archived if they have a corresponding `.json` metadata file, and that metadata will be used for the metadata of the newly created archives. Each individual text and image file will be turned into its own archive file.
+
+If the `--format-titles` option is included, the titles of the archives will be automatically formatted to remove page number references and use proper capitalization.
 
 ### Bulk Extracting
 
@@ -125,7 +129,7 @@ If you choose NOT to remove the structure, all the files of the archive will be 
 
 ## mm-update
 
-    mm-update [path] --cover
+    mm-update [path] [--cover]
 
 The `mm-update` command allows you to update the metadata fields of `.cbz` and `.epub` archives. If you enter a directory as the filepath, every media archive in that directory and its subdirectories will be updated with the new metadata. Otherwise if you enter a filepath for a specific `.cbz` or `.epub` file, only that single archive will be updated. You will be prompted to give metadata for several fields, which can either be altered or left blank. The archive metadata for any field left blank will not be altered, and while fields you responded to will be updated to match your response.
 

@@ -153,11 +153,11 @@ def get_info_from_archive(file:str) -> dict:
     # Return empty metadata
     return get_empty_metadata()
 
-def remove_page_number(text:str) -> dict:
+def format_title(text:str) -> dict:
     """
-    Attempts to remove text indicating page number from a given text value.
+    Attempts to format title to add capitalization and remove page numbers from a given text value.
     
-    :param text: Text to remove the page number from
+    :param text: Text to format as title
     :type text: str, required
     :return: Text with the page number text removed
     :rtype: str
@@ -165,11 +165,21 @@ def remove_page_number(text:str) -> dict:
     # Return None if the text is None
     if text is None:
         return None
+    # Reduce spaces
+    altered = re.sub(r"\s+", " ", text)
     # Remove references to page number
     regex = r"(?:\spage\s*|\spart\s*|\sp\.\s*)?(?:#\s*)?(?:[0-9]+\s*[\/\-]\s*)?[0-9]+\s*$"
     regex = regex + r"|\(\s*(?:page\s*|part\s*|p\.\s*)?(?:#\s*)?(?:[0-9]+\s*[\/\-]\s*)?[0-9]+\s*\)\s*$"
     regex = regex + r"|\[\s*(?:page\s*|part\s*|p\.\s*)?(?:#\s*)?(?:[0-9]+\s*[\/\-]\s*)?[0-9]+\s*\]\s*$"
-    altered = re.sub(regex, "", text, flags=re.IGNORECASE).strip()
+    regex = regex + r"|^\[[^\[\]]*\]\s+"
+    altered = re.sub(regex, "", altered, flags=re.IGNORECASE).strip()
+    # Set the title case
+    regex = r"^[a-z]|\s[a-z]|[\[(][a-z]"
+    while len(re.findall(regex, altered)) > 0:
+        altered = re.sub(regex, lambda x:x[0].upper(), altered, count=1)
+    regex = r"\sOf\s|\sFor\s|\sA\s|\sAn\s|\sAnd\s|\sThe\s|\sTo\s"
+    while len(re.findall(regex, altered)) > 0:
+        altered = re.sub(regex, lambda x:x[0].lower(), altered, count=1)
     # Check if the altered text is valid
     if not altered == "":
         return altered
@@ -349,7 +359,7 @@ def get_metadata_from_user(metadata:dict, get_score:bool) -> dict:
     """
     user_metadata = metadata
     # Get the title
-    user_metadata["title"] = get_string_from_user("Title", remove_page_number(user_metadata["title"]))
+    user_metadata["title"] = get_string_from_user("Title", format_title(user_metadata["title"]))
     # Get the date
     regex = "(19[7-9][0-9]|2[0-1][0-9]{2})\\-(0[1-9]|1[0-2])\\-(0[1-9]|[1-2][0-9]|3[0-1])"
     if user_metadata["date"] is None or len(re.findall(regex, user_metadata["date"])) == 0:
@@ -440,6 +450,11 @@ def main():
             "--grade",
             help="Use user grade/score instead of score in metadata.",
             action="store_true")
+    parser.add_argument(
+            "-x",
+            "--xxxxx",
+            help="Deletes the original media after creating the archive.",
+            action="store_true")
     args = parser.parse_args()
     # Check that directory is valid
     path = abspath(args.directory)
@@ -478,7 +493,7 @@ def main():
             metadata = get_metadata_from_user(metadata, args.grade)
             # Create the archive        
             if archive_type == "cbz":
-                mm_comic_archive.create_cbz(path, metadata["title"], metadata)
+                mm_comic_archive.create_cbz(path, metadata["title"], metadata, remove_files=args.xxxxx)
             if archive_type == "epub":
                 chapters = mm_epub.get_chapters_from_user(path, metadata)
                 mm_epub.create_epub(chapters, metadata, path)

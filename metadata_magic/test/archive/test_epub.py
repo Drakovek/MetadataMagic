@@ -177,15 +177,27 @@ def test_format_xhtml():
     compare = f"{compare}\n        </div>"
     compare = f"{compare}\n        <div id=\"A\">And such</div>"
     compare = f"{compare}\n    </body>"
-    compare = f"{compare}\n</html>"    
+    compare = f"{compare}\n</html>"
     assert xhtml == compare
-    html = "<div><img src=\"../images/new.png\" alt=\"New\" width=\"200\" height=\"200\"/></div>"
+    html = "<div><img src=\"../images/new.png\" alt=\"Other\" width=\"200\" height=\"200\"/></div>"
     html = f"<p>Some words!</p>{html}<p>And such</p>"
     xhtml = mm_epub.format_xhtml(html, "Single's Image")
-    print(xhtml)
-    assert xhtml == compare
-    assert 1 == 0
-    
+    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
+    compare = f"{compare}\n    <head>"
+    compare = f"{compare}\n        <title>Single's Image</title>"
+    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
+    compare = f"{compare}\n    </head>"
+    compare = f"{compare}\n    <body>"
+    compare = f"{compare}\n        <p>Some words!</p>"
+    compare = f"{compare}\n        <div>"
+    compare = f"{compare}\n            <img src=\"../images/new.png\" alt=\"Other\" width=\"200\" height=\"200\" />"
+    compare = f"{compare}\n        </div>"
+    compare = f"{compare}\n        <p>And such</p>"
+    compare = f"{compare}\n    </body>"
+    compare = f"{compare}\n</html>"
+    assert xhtml == compare 
     html = "<div><img src=\"../images/thing.jpg\" alt=\"thing\" width=\"600\" height=\"800\"/></div>"
     html = f"{html}<p id='other'>Something Else</p>"
     xhtml = mm_epub.format_xhtml(html, "Single's")

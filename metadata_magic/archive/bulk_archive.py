@@ -15,7 +15,7 @@ import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.comic_archive as mm_comic_archive
 from os.path import abspath, basename, exists, isdir, join
 
-def archive_all_media(directory:str) -> bool:
+def archive_all_media(directory:str, format_title:bool=False) -> bool:
     """
     Takes all supported JSON-media pairs and archives them into their appropriate media archives.
     Text files are archived into EPUB files.
@@ -23,6 +23,8 @@ def archive_all_media(directory:str) -> bool:
     
     :param directory: Directory in which to search for JSON-media pairs and archive files
     :type directory: str, required
+    :param format_title: Whether to format media titles before archiving, defaults to False
+    :type format_title: bool, optional
     :return: Whether archiving files was successful
     :rtype: bool
     """
@@ -41,10 +43,18 @@ def archive_all_media(directory:str) -> bool:
                 continue
             # Copy JSON and media into temp directory
             temp_dir = abspath(mm_file_tools.get_temp_dir("dvk_archive_builder"))
-            shutil.copy(pair["json"], abspath(join(temp_dir, basename(pair["json"]))))
-            shutil.copy(pair["media"], abspath(join(temp_dir, basename(pair["media"]))))
+            new_json = abspath(join(temp_dir, basename(pair["json"])))
+            new_media = abspath(join(temp_dir, basename(pair["media"])))
+            shutil.copy(pair["json"], new_json)
+            shutil.copy(pair["media"], new_media)
             # Get metadata from the JSON
             metadata = mm_archive.get_info_from_jsons(temp_dir)
+            # Format the title if specified
+            if format_title:
+                metadata["title"] = mm_archive.format_title(metadata["title"])
+            # Rename files to fit the title
+            mm_rename.rename_file(new_json, metadata["title"])
+            mm_rename.rename_file(new_media, metadata["title"])
             # Create the archive file
             archive_file = None
             if extension in mm_archive.SUPPORTED_IMAGES:
@@ -195,6 +205,11 @@ def main():
             "--extract",
             help="Extract existing media archive files",
             action="store_true")
+    parser.add_argument(
+            "-f",
+            "--format-titles",
+            help="Formats titles when archiving media",
+            action="store_true")
     args = parser.parse_args()
     # Check that directory is valid
     directory = abspath(args.directory)
@@ -203,7 +218,7 @@ def main():
     else:
         if args.extract:
             if input("Remove archive structure? (Y/[N]): ").lower() == "y":
-                if input("Directory structure and metadata will be deleted. Are you sure? (Y/[N]: ").lower() == "y":
+                if input("Directory structure and metadata will be deleted. Are you sure? (Y/[N]): ").lower() == "y":
                     print("Extracting media archives...")
                     extract_all_archives(directory, create_folders=False, remove_structure=True)
             else:
@@ -211,4 +226,4 @@ def main():
                 extract_all_archives(directory, create_folders=True, remove_structure=False)
         else:
             print("Archiving media files...")
-            archive_all_media(directory)
+            archive_all_media(directory, args.format_titles)
