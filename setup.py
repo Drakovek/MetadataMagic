@@ -17,7 +17,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="Metadata-Magic",
-    version="0.9.6",
+    version="0.9.7",
     author="Drakovek",
     author_email="DrakovekMail@gmail.com",
     description="Utility for managing metadata.",
