@@ -55,7 +55,7 @@ def test_add_cover_to_chapters():
     chapters = mm_epub.get_default_chapters(temp_dir)
     assert len(chapters) == 2
     # Test adding a cover image to the chapter
-    metadata = {"title":"Some Title", "writer":"Artist Person"}
+    metadata = {"title":"Some Title", "writers":"Artist Person"}
     chapters = mm_epub.add_cover_to_chapters(chapters, metadata)
     assert len(chapters) == 3
     assert chapters[0]["include"]
@@ -686,7 +686,7 @@ def test_get_metadata_xml():
     compare = f"{compare}\n</metadata>"
     assert xml == compare
     # Test writer metadata
-    metadata["writer"] = "Person!"
+    metadata["writers"] = "Person!"
     xml = mm_epub.get_metadata_xml(metadata)
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
@@ -701,7 +701,7 @@ def test_get_metadata_xml():
     compare = f"{compare}\n</metadata>"
     assert xml == compare
     metadata["url"] = None
-    metadata["writer"] = "Multiple,People"
+    metadata["writers"] = "Multiple,People"
     xml = mm_epub.get_metadata_xml(metadata)
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
@@ -717,8 +717,8 @@ def test_get_metadata_xml():
     compare = f"{compare}\n</metadata>"
     assert xml == compare
     # Test cover artist metadata
-    metadata["writer"] = None
-    metadata["cover_artist"] = "Guest"
+    metadata["writers"] = None
+    metadata["cover_artists"] = "Guest"
     xml = mm_epub.get_metadata_xml(metadata)
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
@@ -732,7 +732,7 @@ def test_get_metadata_xml():
     compare = f"{compare}\n</metadata>"
     assert xml == compare
     metadata["writer"] = None
-    metadata["cover_artist"] = "Other,Folks"
+    metadata["cover_artists"] = "Other,Folks"
     xml = mm_epub.get_metadata_xml(metadata)
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
@@ -748,8 +748,8 @@ def test_get_metadata_xml():
     compare = f"{compare}\n</metadata>"
     assert xml == compare
     # Test illustrator metadata
-    metadata["cover_artist"] = None
-    metadata["artist"] = "Bleh"
+    metadata["cover_artists"] = None
+    metadata["artists"] = "Bleh"
     xml = mm_epub.get_metadata_xml(metadata)
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
@@ -762,7 +762,7 @@ def test_get_metadata_xml():
     compare = f"{compare}\n    <meta refines=\"illustrator-0\" property=\"role\" scheme=\"marc:relators\">ill</meta>"
     compare = f"{compare}\n</metadata>"
     assert xml == compare
-    metadata["artist"] = "Other,Name"
+    metadata["artists"] = "Other,Name"
     xml = mm_epub.get_metadata_xml(metadata)
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
@@ -778,7 +778,7 @@ def test_get_metadata_xml():
     compare = f"{compare}\n</metadata>"
     assert xml == compare
     # Test publisher metadata
-    metadata["artist"] = None
+    metadata["artists"] = None
     metadata["publisher"] = "Company"
     xml = mm_epub.get_metadata_xml(metadata)
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
@@ -1165,14 +1165,14 @@ def test_get_info_from_epub():
     assert read_meta["url"] == "www.alsofake"
     assert read_meta["date"] == "2012-12-21"
     assert read_meta["description"] == "This & That."
-    assert read_meta["writer"] is None
-    assert read_meta["artist"] is None
-    assert read_meta["cover_artist"] is None
+    assert read_meta["writers"] is None
+    assert read_meta["artists"] is None
+    assert read_meta["cover_artists"] is None
     # Test getting writers and artists
     os.remove(epub_file)
-    metadata["artist"] = "Some,Artist,Folks"
-    metadata["writer"] = "The,Author"
-    metadata["cover_artist"] = "Last,People"
+    metadata["artists"] = "Some,Artist,Folks"
+    metadata["writers"] = "The,Author"
+    metadata["cover_artists"] = "Last,People"
     epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
     assert exists(epub_file)
     read_meta = mm_epub.get_info_from_epub(epub_file)
@@ -1180,9 +1180,9 @@ def test_get_info_from_epub():
     assert read_meta["url"] == "www.alsofake"
     assert read_meta["date"] == "2012-12-21"
     assert read_meta["description"] == "This & That."
-    assert read_meta["writer"] == "The,Author"
-    assert read_meta["artist"] == "Some,Artist,Folks"
-    assert read_meta["cover_artist"] == "Last,People"
+    assert read_meta["writers"] == "The,Author"
+    assert read_meta["artists"] == "Some,Artist,Folks"
+    assert read_meta["cover_artists"] == "Last,People"
     assert read_meta["publisher"] is None
     # Test getting the publisher
     os.remove(epub_file)
@@ -1317,19 +1317,19 @@ def test_update_epub_info():
     # Get the epub info
     read_meta = mm_epub.get_info_from_epub(epub_file)
     assert read_meta["title"] == "Name"
-    assert read_meta["artist"] is None
+    assert read_meta["artists"] is None
     assert read_meta["description"] is None
     # Update the epub info
     metadata["cover_id"] = None
     metadata["title"] = "New Name!"
-    metadata["writer"] = "Person"
-    metadata["artist"] = "Another"
+    metadata["writers"] = "Person"
+    metadata["artists"] = "Another"
     metadata["description"] = "Some text!!"
     mm_epub.update_epub_info(epub_file, metadata, update_cover=True)
     read_meta = mm_epub.get_info_from_epub(epub_file)
     assert read_meta["title"] == "New Name!"
-    assert read_meta["writer"] == "Person"
-    assert read_meta["artist"] == "Another"
+    assert read_meta["writers"] == "Person"
+    assert read_meta["artists"] == "Another"
     assert read_meta["description"] == "Some text!!"
     # Extract the epub file to see contents
     extracted = abspath(join(temp_dir, "extracted"))
@@ -1373,7 +1373,7 @@ def test_update_epub_info():
     shutil.rmtree(extracted)
     metadata["cover_id"] = "image1"
     metadata["title"] = "Something else!"
-    metadata["writer"] = "Something"
+    metadata["writers"] = "Something"
     mm_epub.update_epub_info(epub_file, metadata, update_cover=False)
     assert mm_epub.get_info_from_epub(epub_file)["title"] == "Something else!"
     extracted = abspath(join(temp_dir, "extracted"))

@@ -33,11 +33,13 @@ def test_load_metadata():
     # Create JSON to load
     temp_dir = mm_file_tools.get_temp_dir()
     test_json = abspath(join(temp_dir, "empty.json"))
-    mm_file_tools.write_json_file(test_json, {"title":"test"})
+    mm_file_tools.write_json_file(test_json, {"title":"test", "thing":"other"})
     assert exists(test_json)
     # Attempt to load the JSON file
     meta = mm_meta_reader.load_metadata(test_json, "a.txt")
     assert meta["json_path"] == test_json
+    assert meta["title"] == "test"
+    assert meta["original"] == {"title":"test", "thing":"other"}
     # Test loading from an invalid path
     meta = mm_meta_reader.load_metadata("/not/real/directory/", "a.txt")
     assert not exists(meta["json_path"])
@@ -50,6 +52,7 @@ def test_load_metadata():
     assert meta["publisher"] is None
     assert meta["tags"] is None
     assert meta["url"] is None
+    assert meta["original"] == {}
 
 def test_get_title():
     """

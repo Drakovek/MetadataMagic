@@ -53,7 +53,7 @@ def test_archive_all_media():
     assert mm_comic_archive.get_info_from_cbz(abspath(join(sub_dir, "sub_image-2.cbz")))["title"] == "Sub Image"
     assert mm_file_tools.read_text_file(abspath(join(sub_dir, "sub_image.cbz"))) == "Duplicate CBZ"
     assert mm_epub.get_info_from_epub(abspath(join(temp_dir, "text1.epub")))["title"] == "Book"
-    assert mm_epub.get_info_from_epub(abspath(join(temp_dir, "text2.epub")))["writer"] == "Other"
+    assert mm_epub.get_info_from_epub(abspath(join(temp_dir, "text2.epub")))["writers"] == "Other"
     assert mm_epub.get_info_from_epub(abspath(join(sub_dir, "sub_text-2.epub")))["title"] == "Sub Text"
     assert mm_file_tools.read_text_file(abspath(join(sub_dir, "sub_text.epub"))) == "Duplicate EPUB"
     # Test that the internal file structure of archives are correct

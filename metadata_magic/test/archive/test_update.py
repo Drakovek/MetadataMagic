@@ -84,9 +84,9 @@ def test_mass_update_archives():
     assert exists(text_file)
     metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "CBZ Title"
-    metadata["artist"] = "Person"
-    metadata["writer"] = "New"
-    metadata["cover_artist"] = "Cover"
+    metadata["artists"] = "Person"
+    metadata["writers"] = "New"
+    metadata["cover_artists"] = "Cover"
     metadata["publisher"] = "Nobody"
     metadata["age_rating"] = "Unknown"
     metadata["score"] = 3
@@ -118,9 +118,9 @@ def test_mass_update_archives():
     mm_update.mass_update_archives(temp_dir, metadata)
     read_meta = mm_comic_archive.get_info_from_cbz(cbz_file_1)
     assert read_meta["title"] == "CBZ Title"
-    assert read_meta["artist"] == "Person"
-    assert read_meta["writer"] == "New"
-    assert read_meta["cover_artist"] == "Cover"
+    assert read_meta["artists"] == "Person"
+    assert read_meta["writers"] == "New"
+    assert read_meta["cover_artists"] == "Cover"
     assert read_meta["publisher"] == "New Publisher"
     assert read_meta["age_rating"] == "Unknown"
     assert sorted(os.listdir(temp_dir)) == ["cbzs", "epubs"]
@@ -129,15 +129,15 @@ def test_mass_update_archives():
     # Test updating artists
     metadata = mm_archive.get_empty_metadata()
     metadata["cover_id"] = None
-    metadata["artist"] = "New Guy"
-    metadata["writer"] = "Writer Lad"
-    metadata["cover_artist"] = "Other"
+    metadata["artists"] = "New Guy"
+    metadata["writers"] = "Writer Lad"
+    metadata["cover_artists"] = "Other"
     mm_update.mass_update_archives(temp_dir, metadata)
     read_meta = mm_comic_archive.get_info_from_cbz(cbz_file_2)
     assert read_meta["title"] == "CBZ Title"
-    assert read_meta["artist"] == "New Guy"
-    assert read_meta["writer"] == "Writer Lad"
-    assert read_meta["cover_artist"] == "Other"
+    assert read_meta["artists"] == "New Guy"
+    assert read_meta["writers"] == "Writer Lad"
+    assert read_meta["cover_artists"] == "Other"
     assert read_meta["publisher"] == "New Publisher"
     assert read_meta["age_rating"] == "Unknown"
     assert read_meta["score"] == "3"
@@ -151,9 +151,9 @@ def test_mass_update_archives():
     mm_update.mass_update_archives(temp_dir, metadata)
     read_meta = mm_epub.get_info_from_epub(epub_file_1)
     assert read_meta["title"] == "EPUB Title"
-    assert read_meta["artist"] == "New Guy"
-    assert read_meta["writer"] == "Writer Lad"
-    assert read_meta["cover_artist"] == "Other"
+    assert read_meta["artists"] == "New Guy"
+    assert read_meta["writers"] == "Writer Lad"
+    assert read_meta["cover_artists"] == "Other"
     assert read_meta["publisher"] == "New Publisher"
     assert read_meta["age_rating"] == "Everyone"
     assert read_meta["score"] == "3"
@@ -167,9 +167,9 @@ def test_mass_update_archives():
     mm_update.mass_update_archives(temp_dir, metadata)
     read_meta = mm_epub.get_info_from_epub(epub_file_2)
     assert read_meta["title"] == "EPUB Title"
-    assert read_meta["artist"] == "New Guy"
-    assert read_meta["writer"] == "Writer Lad"
-    assert read_meta["cover_artist"] == "Other"
+    assert read_meta["artists"] == "New Guy"
+    assert read_meta["writers"] == "Writer Lad"
+    assert read_meta["cover_artists"] == "Other"
     assert read_meta["publisher"] == "New Publisher"
     assert read_meta["age_rating"] == "Everyone"
     assert read_meta["score"] == "5"
@@ -180,16 +180,16 @@ def test_mass_update_archives():
     metadata = mm_archive.get_empty_metadata()
     metadata["cover_id"] = None
     metadata["title"] = "Blah"
-    metadata["artist"] = "Madam Anonymous"
-    metadata["writer"] = None
+    metadata["artists"] = "Madam Anonymous"
+    metadata["writers"] = None
     metadata["publisher"] = "Blah Inc."
     metadata["score"] = None
     mm_update.mass_update_archives(temp_dir, metadata)
     read_meta = mm_comic_archive.get_info_from_cbz(cbz_file_1)
     assert read_meta["title"] == "Blah"
-    assert read_meta["artist"] == "Madam Anonymous"
-    assert read_meta["writer"] == "Writer Lad"
-    assert read_meta["cover_artist"] == "Other"
+    assert read_meta["artists"] == "Madam Anonymous"
+    assert read_meta["writers"] == "Writer Lad"
+    assert read_meta["cover_artists"] == "Other"
     assert read_meta["publisher"] == "Blah Inc."
     assert read_meta["age_rating"] == "Everyone"
     assert read_meta["score"] == "5"
@@ -210,9 +210,9 @@ def test_mass_update_archives():
     assert cover_updated
     read_meta = mm_epub.get_info_from_epub(epub_file)
     assert read_meta["title"] == "Blah"
-    assert read_meta["artist"] == "Madam Anonymous"
-    assert read_meta["writer"] == "Writer Lad"
-    assert read_meta["cover_artist"] == "Other"
+    assert read_meta["artists"] == "Madam Anonymous"
+    assert read_meta["writers"] == "Writer Lad"
+    assert read_meta["cover_artists"] == "Other"
     assert read_meta["publisher"] == "Blah Inc."
     assert read_meta["age_rating"] == "Everyone"
     assert read_meta["score"] == "5"

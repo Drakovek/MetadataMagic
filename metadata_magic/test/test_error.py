@@ -107,7 +107,7 @@ def test_find_missing_fields():
     metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "This is a title."
     metadata["date"] = "2040-12-03"
-    metadata["artist"] = "Person"
+    metadata["artists"] = "Person"
     metadata["publisher"] = "New Thing LLC"
     metadata["url"] = "www.HopefullyNotReal.website"
     metadata["age_rating"] = "Everyone"
@@ -121,7 +121,7 @@ def test_find_missing_fields():
     metadata["title"] = "Book D"
     metadata["series"] = "The Series"
     metadata["series_number"] = "4"
-    metadata["writer"] = "Different Person"
+    metadata["writers"] = "Different Person"
     metadata["tags"] = "these,are,tags"
     metadata["age_rating"] = "Teen"
     chapters = mm_epub.get_default_chapters(build_dir)
@@ -151,7 +151,7 @@ def test_find_missing_fields():
     assert basename(missing[0]) == "CBZ-A.cbz"
     assert basename(missing[1]) == "EPUB-D.epub"
     # Test finding missing artist
-    missing = mm_error.find_missing_fields(temp_dir, ["artist", "writer"])
+    missing = mm_error.find_missing_fields(temp_dir, ["artists", "writers"])
     assert len(missing) == 2
     assert basename(missing[0]) == "CBZ-A.cbz"
     assert basename(missing[1]) == "CBZ-B.cbz"

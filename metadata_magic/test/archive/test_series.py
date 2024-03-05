@@ -164,19 +164,19 @@ def test_write_series():
     assert metadata["series_number"] == "1.5"
     assert metadata["series_total"] is None
     assert metadata["title"] == "Book"
-    assert metadata["writer"] == "Name"
+    assert metadata["writers"] == "Name"
     metadata = mm_archive.get_info_from_archive(comic_file)
     assert metadata["series"] == "It's a Series!"
     assert metadata["series_number"] == "1.0"
     assert metadata["series_total"] == "2"
     assert metadata["title"] == "Comic"
-    assert metadata["writer"] == "Person"
+    assert metadata["writers"] == "Person"
     metadata = mm_archive.get_info_from_archive(other_file)
     assert metadata["series"] == "It's a Series!"
     assert metadata["series_number"] == "2.0"
     assert metadata["series_total"] == "2"
     assert metadata["title"] == "Other"
-    assert metadata["artist"] == "Blah"
+    assert metadata["artists"] == "Blah"
 
 def test_write_series_single():
     """
@@ -199,7 +199,7 @@ def test_write_series_single():
     assert metadata["series_number"] == "1.0"
     assert metadata["series_total"] is None
     assert metadata["title"] == "Book"
-    assert metadata["writer"] == "Name"
+    assert metadata["writers"] == "Name"
     # Test setting the series info for cbz
     mm_series.write_series_single(comic_file)
     metadata = mm_archive.get_info_from_archive(comic_file)
@@ -207,7 +207,7 @@ def test_write_series_single():
     assert metadata["series_number"] == "1.0"
     assert metadata["series_total"] == "1"
     assert metadata["title"] == "Comic"
-    assert metadata["writer"] == "Person"
+    assert metadata["writers"] == "Person"
 
 def test_get_series_string():
     """

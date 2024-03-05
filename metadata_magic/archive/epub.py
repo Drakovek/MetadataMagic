@@ -68,7 +68,7 @@ def add_cover_to_chapters(chapters:List[dict], metadata:dict) -> List[dict]:
     # Create a cover image
     cover_directory = mm_file_tools.get_temp_dir("dvk_cover_gen")
     cover_file = abspath(join(cover_directory, "mm_cover_image.jpg"))
-    cover_image = mm_archive.get_cover_image(metadata["title"], metadata["writer"], uppercase=True)
+    cover_image = mm_archive.get_cover_image(metadata["title"], metadata["writers"], uppercase=True)
     cover_image = cover_image.convert("RGB")
     cover_image.save(cover_file, quality=95)
     # Create a cover image chapter entry
@@ -535,7 +535,7 @@ def get_metadata_xml(metadata:dict, cover_id:str=None) -> str:
         description_tag.text = metadata["description"]
     # Set the metadata writer
     try:
-        writers = metadata["writer"].split(",")
+        writers = metadata["writers"].split(",")
     except AttributeError: writers = []
     for i in range(0, len(writers)):
         # Add the creator tag
@@ -549,7 +549,7 @@ def get_metadata_xml(metadata:dict, cover_id:str=None) -> str:
         role_tag.text = "aut"
     # Set the metadata cover artist
     try:
-        cover_artists = metadata["cover_artist"].split(",")
+        cover_artists = metadata["cover_artists"].split(",")
     except AttributeError: cover_artists = []
     for i in range(0, len(cover_artists)):
         # Add the creator tag
@@ -563,7 +563,7 @@ def get_metadata_xml(metadata:dict, cover_id:str=None) -> str:
         role_tag.text = "cov"
     # Set the metadata illustrator
     try:
-        illustrators = metadata["artist"].split(",")
+        illustrators = metadata["artists"].split(",")
     except AttributeError: illustrators = []
     for i in range(0, len(illustrators)):
         # Add the creator tag
@@ -851,11 +851,11 @@ def get_info_from_epub(epub_file:str) -> dict:
             except KeyError: pass
     # Set creator metadata
     if len(writers) > 0:
-        metadata["writer"] = ",".join(writers)
+        metadata["writers"] = ",".join(writers)
     if len(artists) > 0:
-        metadata["artist"] = ",".join(artists)
+        metadata["artists"] = ",".join(artists)
     if len(cover_artists) > 0:
-        metadata["cover_artist"] = ",".join(cover_artists)
+        metadata["cover_artists"] = ",".join(cover_artists)
     # Get the age rating
     try:
         metadata["age_rating"] = meta_xml.find(f".//{{{ns['0']}}}meta[@property='dcterms:audience']").text
@@ -928,7 +928,7 @@ def update_epub_info(epub_file:str, metadata:dict, update_cover:bool=False):
             # Delete the existing cover image
             os.remove(cover_file)
             # Create a cover image
-            cover_image = mm_archive.get_cover_image(metadata["title"], metadata["writer"], uppercase=True)
+            cover_image = mm_archive.get_cover_image(metadata["title"], metadata["writers"], uppercase=True)
             cover_image = cover_image.convert("RGB")
             cover_image.save(cover_file, quality=95)
         # Repack the epub file

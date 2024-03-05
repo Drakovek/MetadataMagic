@@ -145,14 +145,30 @@ def get_string_from_metadata(metadata:dict, template:str) -> str:
     keys = re.findall(r"(?<={)[^}]+(?=})", template)
     # Replace all the keys in the string with their values
     for key in keys:
+        # Attempt to get the key
         try:
-            if metadata[key] is None:
-                return None
             value = metadata[key]
-            if isinstance(value, list):
-                value = ",".join(value)
-            filename = filename.replace(f"{{{key}}}", value)
-        except KeyError: return None
+        except KeyError:
+            try:
+                value = metadata["original"][key]
+            except KeyError: return None
+        # Check if series number is valid and needed if specified
+        if key == "series_number":
+            try:
+                # Get the padded series number
+                padded = re.findall("^[0-9]+", value)[0].zfill(2)
+                value = re.sub("^[0-9]+", padded, value)
+                # Check that the file isn't 1 of 1
+                total = metadata["series_total"]
+                assert total is None or not float(total) == 1 or not float(value) == 1
+            except (AssertionError, IndexError, KeyError, TypeError, ValueError): return None
+        # Return none if the key is empty
+        if value is None:
+            return None
+        # Convert the value to a string, if necessary
+        if isinstance(value, list):
+            value = ",".join(value)
+        filename = filename.replace(f"{{{key}}}", str(value))
     # Remove all key references that weren't found in the metadata
     filename = re.sub(r"{[^}]*}", "", filename).strip()
     # Return the filename
@@ -168,8 +184,7 @@ def rename_archives(path:str, template:str):
     :type template: str, required
     """
     # Get all media archives
-    archive_files = mm_file_tools.find_files_of_type(path, ".cbz")
-    archive_files.extend(mm_file_tools.find_files_of_type(path, ".epub"))
+    archive_files = mm_file_tools.find_files_of_type(path, [".cbz", ".epub"])
     # Run through each archive file
     for archive_file in tqdm.tqdm(archive_files):
         # Get the filename for the archive file
@@ -320,7 +335,7 @@ def user_metadata_rename(path:str):
     else:
         template = ""
         if "a" in result:
-            template = "{artist}"
+            template = "{artists}"
         if "d" in result:
             template = f"{template}_{{date}}"
         template = re.sub(r"^_*", "", template)

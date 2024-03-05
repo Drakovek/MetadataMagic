@@ -58,7 +58,7 @@ def test_create_cbz():
     os.remove(cbz_file)
     metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "What Fun!"
-    metadata["artist"] = "Person"
+    metadata["artists"] = "Person"
     cbz_file = mm_comic_archive.create_cbz(cbz_directory, "New", metadata=metadata)
     assert sorted(os.listdir(cbz_directory)) == ["AA", "BB", "New.cbz"]
     extract_directory = mm_file_tools.get_temp_dir("dvk_extract_test")
@@ -66,7 +66,7 @@ def test_create_cbz():
     assert sorted(os.listdir(extract_directory)) == ["AA", "BB", "ComicInfo.xml"]
     read_meta = mm_comic_xml.read_comic_info(abspath(join(extract_directory, "ComicInfo.xml")))
     assert read_meta["title"] == "What Fun!"
-    assert read_meta["artist"] == "Person"
+    assert read_meta["artists"] == "Person"
     # Test creating CBZ while removing remaining files
     os.remove(cbz_file)
     media_file = abspath(join(cbz_directory, "Another_one.txt"))
@@ -105,7 +105,7 @@ def test_create_cbz():
     read_meta = mm_comic_xml.read_comic_info(abspath(join(extract_directory, "ComicInfo.xml")))
     assert read_meta["title"] == "New!"
     assert read_meta["tags"] == "Some,More,Stuff"
-    assert read_meta["artist"] == "Person"
+    assert read_meta["artists"] == "Person"
     # Test extra ComicInfo.xml file is not created
     cbz_directory = mm_file_tools.get_temp_dir("dvk_cbz_test")
     text_file = abspath(join(cbz_directory, "text.txt"))
@@ -125,7 +125,7 @@ def test_create_cbz():
     assert sorted(os.listdir(sub_dir)) == ["text.txt"]    
     read_meta = mm_comic_archive.get_info_from_cbz(cbz_file)
     assert read_meta["title"] == "New Metadata"
-    assert read_meta["artist"] is None
+    assert read_meta["artists"] is None
     # Test creating a CBZ with no files
     cbz_directory = mm_file_tools.get_temp_dir("dvk_cbz_test")
     assert mm_comic_archive.create_cbz(cbz_directory) is None
@@ -177,7 +177,7 @@ def test_get_info_from_cbz():
     assert exists(cbz_file)
     read_meta = mm_comic_archive.get_info_from_cbz(cbz_file)
     assert read_meta["title"] is None
-    assert read_meta["artist"] is None
+    assert read_meta["artists"] is None
     # Test if file is not cbz
     text_file = abspath(join(temp_dir, "text.txt"))
     mm_file_tools.write_text_file(text_file, "Text")
@@ -194,7 +194,7 @@ def test_get_info_from_cbz():
     metadata_file = abspath(join(sub_dir, "ComicInfo.xml"))
     metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "Internal!"
-    metadata["artist"] = "New Person"
+    metadata["artists"] = "New Person"
     metadata["description"] = "Some words."
     os.mkdir(sub_dir)
     mm_file_tools.write_text_file(text_file, "Text")
@@ -206,7 +206,7 @@ def test_get_info_from_cbz():
     assert exists(cbz_file)
     read_meta = mm_comic_archive.get_info_from_cbz(cbz_file)
     assert read_meta["title"] == "Internal!"
-    assert read_meta["artist"] == "New Person"
+    assert read_meta["artists"] == "New Person"
     assert read_meta["description"] == "Some words."
     assert read_meta["publisher"] is None
     # Test getting metadata if instructed to not search subdirectories
@@ -228,12 +228,12 @@ def test_update_cbz_info():
     assert exists(cbz_file)
     # Update cbz with new info
     metadata["title"] = "New Title!!!"
-    metadata["artist"] = "Dude"
+    metadata["artists"] = "Dude"
     metadata["tags"] = "Something,Else"
     mm_comic_archive.update_cbz_info(cbz_file, metadata)
     read_meta = mm_comic_archive.get_info_from_cbz(cbz_file)
     assert read_meta["title"] == "New Title!!!"
-    assert read_meta["artist"] == "Dude"
+    assert read_meta["artists"] == "Dude"
     assert read_meta["tags"] == "Something,Else"
     # Test that all other archived files are still present
     extract_dir = abspath(join(temp_dir, "ext"))
@@ -256,7 +256,7 @@ def test_update_cbz_info():
     mm_comic_archive.update_cbz_info(cbz_file, metadata)
     read_meta = mm_comic_archive.get_info_from_cbz(cbz_file)
     assert read_meta["title"] == "New Title!!!"
-    assert read_meta["artist"] == "Dude"
+    assert read_meta["artists"] == "Dude"
     assert read_meta["tags"] == "Something,Else"
     # Test that files are present
     extract_dir = abspath(join(temp_dir, "ext"))
@@ -289,11 +289,11 @@ def test_update_cbz_info():
     assert exists(cbz_file)
     metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "Updated!"
-    metadata["artist"] = "New"
+    metadata["artists"] = "New,Names"
     mm_comic_archive.update_cbz_info(cbz_file, metadata)
     read_meta = mm_comic_archive.get_info_from_cbz(cbz_file)
     assert read_meta["title"] == "Updated!"
-    assert read_meta["artist"] == "New"
+    assert read_meta["artists"] == "New,Names"
     assert read_meta["description"] is None
     extract_dir = abspath(join(temp_dir, "extracted"))
     os.mkdir(extract_dir)
@@ -313,7 +313,7 @@ def test_update_cbz_info():
     mm_comic_archive.update_cbz_info(cbz_file, metadata)
     read_meta = mm_comic_archive.get_info_from_cbz(cbz_file)
     assert read_meta["title"] == "Should Reflect Inside."
-    assert read_meta["artist"] == "New"
+    assert read_meta["artists"] == "New,Names"
     assert read_meta["description"] is None
     extract_dir = abspath(join(temp_dir, "extracted"))
     os.mkdir(extract_dir)

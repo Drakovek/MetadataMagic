@@ -52,9 +52,9 @@ def get_empty_metadata() -> dict:
     meta_dict["series_total"] = None
     meta_dict["description"] = None
     meta_dict["date"] = None
-    meta_dict["writer"] = None
-    meta_dict["artist"] = None
-    meta_dict["cover_artist"] = None
+    meta_dict["writers"] = None
+    meta_dict["artists"] = None
+    meta_dict["cover_artists"] = None
     meta_dict["publisher"] = None
     meta_dict["tags"] = None
     meta_dict["url"] = None
@@ -91,13 +91,13 @@ def get_info_from_jsons(path:str) -> dict:
     metadata["publisher"] = main_meta["publisher"]
     metadata["url"] = main_meta["url"]
     # Get artists and writers
-    metadata["artist"] = None
-    metadata["writer"] = None
+    metadata["artists"] = None
+    metadata["writers"] = None
     if main_meta["artists"] is not None:
-        metadata["artist"] = ",".join(main_meta["artists"])
+        metadata["artists"] = ",".join(main_meta["artists"])
     if main_meta["writers"] is not None:
-        metadata["writer"] = ",".join(main_meta["writers"])
-    metadata["cover_artist"] = metadata["artist"]
+        metadata["writers"] = ",".join(main_meta["writers"])
+    metadata["cover_artists"] = metadata["artists"]
     # Get description metadata
     description = main_meta["description"]
     if description is not None:
@@ -168,9 +168,9 @@ def format_title(text:str) -> dict:
     # Reduce spaces
     altered = re.sub(r"\s+", " ", text)
     # Remove references to page number
-    regex = r"(?:\spage\s*|\spart\s*|\sp\.\s*)?(?:#\s*)?(?:[0-9]+\s*[\/\-]\s*)?[0-9]+\s*$"
-    regex = regex + r"|\(\s*(?:page\s*|part\s*|p\.\s*)?(?:#\s*)?(?:[0-9]+\s*[\/\-]\s*)?[0-9]+\s*\)\s*$"
-    regex = regex + r"|\[\s*(?:page\s*|part\s*|p\.\s*)?(?:#\s*)?(?:[0-9]+\s*[\/\-]\s*)?[0-9]+\s*\]\s*$"
+    regex = r"(?:\b(?:pg?\.?\s*|page\s*|part\s*))?(?:#\s*)?(?:[0-9]+\s*(?:[\/-]|of)\s*)?[0-9]+\s*$"
+    regex = regex + r"|\[\s*(?:\b(?:pg?\.?\s*|page\s*|part\s*))?(?:#\s*)?(?:[0-9]+\s*(?:[\/-]|of)\s*)?[0-9]+\s*\]\s*$"
+    regex = regex + r"|\(\s*(?:\b(?:pg?\.?\s*|page\s*|part\s*))?(?:#\s*)?(?:[0-9]+\s*(?:[\/-]|of)\s*)?[0-9]+\s*\)\s*$"
     regex = regex + r"|^\[[^\[\]]*\]\s+"
     altered = re.sub(regex, "", altered, flags=re.IGNORECASE).strip()
     # Set the title case
@@ -367,11 +367,11 @@ def get_metadata_from_user(metadata:dict, get_score:bool) -> dict:
     if user_metadata["date"] is None or len(re.findall(regex, user_metadata["date"])) == 0:
         user_metadata["date"] = None
     # Get the artists
-    user_metadata["artist"] = user_list_default("Illustrator", user_metadata["artist"])
-    if user_metadata["cover_artist"] is None:
-        user_metadata["cover_artist"] = get_list_from_user("Cover Artist", user_metadata["artist"])
-    if user_metadata["writer"] is None:
-        user_metadata["writer"] = get_list_from_user("Writer", user_metadata["artist"])
+    user_metadata["artists"] = user_list_default("Illustrator(s)", user_metadata["artists"])
+    if user_metadata["cover_artists"] is None:
+        user_metadata["cover_artists"] = get_list_from_user("Cover Artist(s)", user_metadata["artists"])
+    if user_metadata["writers"] is None:
+        user_metadata["writers"] = get_list_from_user("Writer(s)", user_metadata["artists"])
     # Get the publisher
     user_metadata["publisher"] = user_string_default("Publisher", user_metadata["publisher"])
     # Get the URL
@@ -476,9 +476,9 @@ def main():
             if args.date:
                 metadata["date"] = None
             if args.artists:
-                metadata["artist"] = None
-                metadata["cover_artist"] = None
-                metadata["writer"] = None
+                metadata["artists"] = None
+                metadata["cover_artists"] = None
+                metadata["writers"] = None
             if args.publisher:
                 metadata["publisher"] = None
             if args.url:

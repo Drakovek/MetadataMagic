@@ -112,7 +112,7 @@ def find_files_of_type(directory:str, extension:str, include_subdirectories:bool
     # Run through all directories
     while len(directories) > 0:
         # Get list of all files in the current directory
-        current_files = mm_sort.sort_alphanum(os.listdir(directories[0]))
+        current_files = os.listdir(directories[0])
         for filename in current_files:
             # Find file properties
             has_extension = False
@@ -133,7 +133,7 @@ def find_files_of_type(directory:str, extension:str, include_subdirectories:bool
         # Delete directory entry
         del directories[0]
     # Return found files
-    return files
+    return mm_sort.sort_alphanum(files)
 
 def directory_contains(directory:str, extensions:List[str], include_subdirectories:bool=True) -> bool:
     """

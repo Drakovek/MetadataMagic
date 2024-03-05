@@ -57,9 +57,9 @@ def test_get_empty_metadata():
     assert meta["series_total"] is None
     assert meta["description"] is None
     assert meta["date"] is None
-    assert meta["writer"] is None
-    assert meta["artist"] is None
-    assert meta["cover_artist"] is None
+    assert meta["writers"] is None
+    assert meta["artists"] is None
+    assert meta["cover_artists"] is None
     assert meta["publisher"] is None
     assert meta["tags"] is None
     assert meta["url"] is None
@@ -89,7 +89,7 @@ def test_get_info_from_jsons():
     assert exists(sub_json)
     meta = mm_archive.get_info_from_jsons(temp_dir)
     assert meta["title"] == "This is a title!"
-    assert meta["artist"] is None
+    assert meta["artists"] is None
     assert meta["description"] is None
     # Test getting description
     json_meta["description"] = "Some caption."
@@ -98,7 +98,7 @@ def test_get_info_from_jsons():
     assert meta["title"] == "This is a title!"
     assert meta["description"] == "Some caption."
     assert meta["date"] is None
-    assert meta["cover_artist"] is None
+    assert meta["cover_artists"] is None
     # Test simplifying description with HTML info contained
     json_meta["description"] = "Let's say there's a <a href='ajsdlf'>link</a>.<br>Other!!"
     mm_file_tools.write_json_file(main_json, json_meta)
@@ -118,16 +118,16 @@ def test_get_info_from_jsons():
     meta = mm_archive.get_info_from_jsons(temp_dir)
     assert meta["title"] == "This is a title!"
     assert meta["date"] == "2012-12-21"
-    assert meta["cover_artist"] is None
+    assert meta["cover_artists"] is None
     # Test getting artist data
     json_meta["artists"] = ["Illustrator!"]
     json_meta["writers"] = ["Story", "People"]
     mm_file_tools.write_json_file(main_json, json_meta)
     meta = mm_archive.get_info_from_jsons(temp_dir)
     assert meta["title"] == "This is a title!"
-    assert meta["writer"] == "Story,People"
-    assert meta["cover_artist"] == "Illustrator!"
-    assert meta["artist"] == "Illustrator!"
+    assert meta["writers"] == "Story,People"
+    assert meta["cover_artists"] == "Illustrator!"
+    assert meta["artists"] == "Illustrator!"
     assert meta["publisher"] is None
     # Test getting publisher
     json_meta["url"] = "youtube.com/something"
@@ -218,9 +218,9 @@ def test_get_info_from_jsons():
     assert meta["title"] is None
     assert meta["description"] is None
     assert meta["date"] is None
-    assert meta["writer"] is None
-    assert meta["artist"] is None
-    assert meta["cover_artist"] is None
+    assert meta["writers"] is None
+    assert meta["artists"] is None
+    assert meta["cover_artists"] is None
     assert meta["publisher"] is None
     assert meta["url"] is None
     # Test that only the writer field is credited to the artist if it is a text file
@@ -234,9 +234,9 @@ def test_get_info_from_jsons():
     assert exists(main_json)
     meta = mm_archive.get_info_from_jsons(temp_dir)
     assert meta["title"] == "This is a title!"
-    assert meta["writer"] == "Some Person"
-    assert meta["artist"] is None
-    assert meta["cover_artist"] is None
+    assert meta["writers"] == "Some Person"
+    assert meta["artists"] is None
+    assert meta["cover_artists"] is None
 
 def test_get_info_from_archive():
     """
@@ -263,13 +263,13 @@ def test_get_info_from_archive():
     chapters = mm_epub.get_default_chapters(temp_dir)
     metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "This is an epub!!"
-    metadata["artist"] = "Art Person"
+    metadata["artists"] = "Art Person"
     metadata["description"] = "Some Words"
     epub_file = mm_epub.create_epub(chapters, metadata, temp_dir)
     assert exists(epub_file)
     read_meta = mm_archive.get_info_from_archive(epub_file)
     assert read_meta["title"] == "This is an epub!!"
-    assert read_meta["artist"] == "Art Person"
+    assert read_meta["artists"] == "Art Person"
     assert read_meta["description"] == "Some Words"
     # Test getting info from an invalid file
     temp_dir = mm_file_tools.get_temp_dir()
@@ -313,25 +313,25 @@ def test_update_archive_info():
     chapters = mm_epub.get_default_chapters(temp_dir)
     metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "This is an epub!!"
-    metadata["artist"] = "Art Person"
+    metadata["artists"] = "Art Person"
     metadata["description"] = "Some Words"
     chapters = mm_epub.add_cover_to_chapters(chapters, metadata)
     epub_file = mm_epub.create_epub(chapters, metadata, temp_dir)
     assert exists(epub_file)
     read_meta = mm_archive.get_info_from_archive(epub_file)
     assert read_meta["title"] == "This is an epub!!"
-    assert read_meta["artist"] == "Art Person"
+    assert read_meta["artists"] == "Art Person"
     assert read_meta["description"] == "Some Words"
-    assert read_meta["writer"] is None
+    assert read_meta["writers"] is None
     metadata["cover_id"] = None
     metadata["title"] = "Different Title"
-    metadata["writer"] = "Author"
+    metadata["writers"] = "Author"
     mm_archive.update_archive_info(epub_file, metadata)
     read_meta = mm_archive.get_info_from_archive(epub_file)
     assert read_meta["title"] == "Different Title"
-    assert read_meta["artist"] == "Art Person"
+    assert read_meta["artists"] == "Art Person"
     assert read_meta["description"] == "Some Words"
-    assert read_meta["writer"] == "Author"
+    assert read_meta["writers"] == "Author"
     extract_dir = abspath(join(temp_dir, "extracted"))
     os.mkdir(extract_dir)
     mm_file_tools.extract_zip(epub_file, extract_dir)
@@ -381,6 +381,8 @@ def test_format_title():
     assert mm_archive.format_title("1/2 Name") == "1/2 Name"
     assert mm_archive.format_title("Two 1 / 2 Name") == "Two 1 / 2 Name"
     assert mm_archive.format_title("3-4 Thing") == "3-4 Thing"
+    assert mm_archive.format_title("Title 1 of 3") == "Title"
+    assert mm_archive.format_title("Name 4OF7") == "Name"
     # Test Removing number with number symbol
     assert mm_archive.format_title("4 Test #123") == "4 Test"
     assert mm_archive.format_title("Thing #1/2 ") == "Thing"
@@ -391,11 +393,12 @@ def test_format_title():
     assert mm_archive.format_title("Test Part 1") == "Test"
     assert mm_archive.format_title("Thing page2") == "Thing"
     assert mm_archive.format_title("Other P. 1/2 ") == "Other"
-    assert mm_archive.format_title("Pass Page2-3") == "Pass"
+    assert mm_archive.format_title("Name Pg. 4 ") == "Name"
+    assert mm_archive.format_title("Passof Page2-3") == "Passof"
     assert mm_archive.format_title("Test part1") == "Test"
     assert mm_archive.format_title("Thing Page 25") == "Thing"
     assert mm_archive.format_title("Other p.12 ") == "Other"
-    assert mm_archive.format_title("Part 1 of 5 ") == "Part 1 Of"
+    assert mm_archive.format_title("Part 1 of 5 ") == "Part 1 of 5 "
     assert mm_archive.format_title("Some Pages 5") == "Some Pages"
     assert mm_archive.format_title("p.3 Something") == "P.3 Something"
     assert mm_archive.format_title("stoppage 5") == "Stoppage"

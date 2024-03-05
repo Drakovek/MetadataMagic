@@ -348,5 +348,6 @@ def load_metadata(json_file:str, media_file:str) -> dict:
     meta_dict["age_rating"] = get_age_rating(json, meta_dict["publisher"])
     extension = html_string_tools.html.get_extension(media_file)
     meta_dict["artists"], meta_dict["writers"] = get_artists_and_writers(json, extension)
+    meta_dict["original"] = json
     # Return the dict with all metadata
     return meta_dict

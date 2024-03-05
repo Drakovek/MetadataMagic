@@ -57,21 +57,21 @@ def get_comic_xml(metadata:dict, indent:bool=True) -> str:
         day = ElementTree.SubElement(base, "Day")
         day.text = str(int(metadata["date"][8:10]))
     # Set the writer if applicable
-    if metadata["writer"] is not None:
+    if metadata["writers"] is not None:
         writer = ElementTree.SubElement(base, "Writer")
-        writer.text = metadata["writer"]
+        writer.text = metadata["writers"]
     # Set all other artist categories if applicable
-    if metadata["artist"] is not None:
+    if metadata["artists"] is not None:
         penciller = ElementTree.SubElement(base, "Penciller")
         inker = ElementTree.SubElement(base, "Inker")
         colorist = ElementTree.SubElement(base, "Colorist")
-        penciller.text = metadata["artist"]
-        inker.text = metadata["artist"]
-        colorist.text = metadata["artist"]
+        penciller.text = metadata["artists"]
+        inker.text = metadata["artists"]
+        colorist.text = metadata["artists"]
     # Set the cover artist if applicable
-    if metadata["cover_artist"] is not None:
+    if metadata["cover_artists"] is not None:
         cover = ElementTree.SubElement(base, "CoverArtist")
-        cover.text = metadata["cover_artist"]
+        cover.text = metadata["cover_artists"]
     # Set publisher if applicable
     if metadata["publisher"] is not None:
         publisher = ElementTree.SubElement(base, "Publisher")
@@ -139,8 +139,8 @@ def read_comic_info(xml_file:str) -> dict:
     metadata["series_number"] = base.findtext("Number")
     metadata["series_total"] = base.findtext("Count")
     metadata["description"] = base.findtext("Summary")
-    metadata["writer"] = base.findtext("Writer")
-    metadata["cover_artist"] = base.findtext("CoverArtist")
+    metadata["writers"] = base.findtext("Writer")
+    metadata["cover_artists"] = base.findtext("CoverArtist")
     metadata["publisher"] = base.findtext("Publisher")
     metadata["url"] = base.findtext("Web")
     metadata["age_rating"] = base.findtext("AgeRating")
@@ -154,11 +154,11 @@ def read_comic_info(xml_file:str) -> dict:
             metadata["tags"] = None
     except TypeError: metadata["tags"] = None
     # Get the main artist from XML
-    metadata["artist"] = base.findtext("Penciller")
-    if metadata["artist"] is None:
-        metadata["artist"] = base.findtext("Colorist")
-    if metadata["artist"] is None:
-        metadata["artist"] = base.findtext("Inker")
+    metadata["artists"] = base.findtext("Penciller")
+    if metadata["artists"] is None:
+        metadata["artists"] = base.findtext("Colorist")
+    if metadata["artists"] is None:
+        metadata["artists"] = base.findtext("Inker")
     # Get date from XML
     year = base.findtext("Year")
     month = base.findtext("Month")

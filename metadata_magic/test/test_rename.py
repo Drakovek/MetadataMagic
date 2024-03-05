@@ -146,16 +146,39 @@ def test_get_string_from_metadata():
     Tests the get_string_from_metadata function
     """
     # Test getting string with no formatting
-    assert mm_rename.get_string_from_metadata({"name":"blah"}, "Blah") == "Blah"
+    assert mm_rename.get_string_from_metadata({"name":"thing"}, "Blah") == "Blah"
     # Test getting string with some metadata keys
     metadata = {"title":"This is a title", "artist":"Person", "thing":"Other"}
     assert mm_rename.get_string_from_metadata(metadata, "{title}") == "This is a title"
     assert mm_rename.get_string_from_metadata(metadata, "{thing}_{title}") == "Other_This is a title"
-    assert mm_rename.get_string_from_metadata(metadata, "[{thing}] ({artist})") == "[Other] (Person)"
+    assert mm_rename.get_string_from_metadata(metadata, "[{thing}] ({artist})") == "[Other] (Person)"    
     # Test getting string with non-existant keys
     assert mm_rename.get_string_from_metadata(metadata, "{blah}") is None
     assert mm_rename.get_string_from_metadata(metadata, "{other} {title}  ") is None
     assert mm_rename.get_string_from_metadata(metadata, "{a}{b}{c}{thing}{e}{f}") is None
+    # Test getting string with existing JSON data
+    metadata = {"title":"Name", "original":{"number":5, "other":"Final"}}
+    assert mm_rename.get_string_from_metadata(metadata, "[{number}] {title}") == "[5] Name"
+    assert mm_rename.get_string_from_metadata(metadata, "{title} - {other}") == "Name - Final"
+    # Test with series info
+    metadata = {"series_number":"15", "series_total":"20"}
+    assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") == "[15] AAA"
+    metadata = {"series_number":"1", "series_total":"20"}
+    assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") == "[01] AAA"
+    metadata = {"series_number":"1.5", "series_total":"1.0"}
+    assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") == "[01.5] AAA"
+    metadata = {"series_number":"12", "series_total":None}
+    assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") == "[12] AAA"
+    metadata = {"series_number":"1", "series_total":"1.0"}
+    assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") is None
+    metadata = {"series_number":"1.0", "series_total":"1"}
+    assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") is None
+    metadata = {"series_number":"A", "series_total":"20"}
+    assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") is None
+    metadata = {"series_number":"20", "series_total":"A"}
+    assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") is None
+    metadata = {"series_number":"20"}
+    assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") is None
     # Test getting string with empty keys
     metadata["id"] = None
     assert mm_rename.get_string_from_metadata(metadata, "{id}") is None
@@ -174,30 +197,30 @@ def test_rename_media_archives():
     mm_file_tools.write_text_file(media_file, "AAA")
     metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "CBZ Root"
-    metadata["artist"] = "Person"
+    metadata["artists"] = "Person"
     cbz_file = mm_comic_archive.create_cbz(build_dir, "CBZ1", metadata=metadata)
     shutil.copy(cbz_file, temp_dir)
     os.remove(cbz_file)
     metadata["title"] = "Part 2"
-    metadata["artist"] = "Person"
+    metadata["artists"] = "Person"
     cbz_file = mm_comic_archive.create_cbz(build_dir, "CBZ2", metadata=metadata)
     shutil.copy(cbz_file, temp_dir)
     os.remove(cbz_file)
     metadata["title"] = "CBZ Deep"
-    metadata["artist"] = "Artist"
+    metadata["artists"] = "Artist"
     cbz_file = mm_comic_archive.create_cbz(build_dir, "CBZ3", metadata=metadata)
     shutil.copy(cbz_file, sub_dir)
     build_dir = mm_file_tools.get_temp_dir("dvk_test_builder")
     text_file = abspath(join(build_dir, "text.txt"))
     mm_file_tools.write_text_file(text_file, "Text")
     metadata["title"] = "EPUB Root"
-    metadata["artist"] = "Writer"
+    metadata["artists"] = "Writer"
     chapters = mm_epub.get_default_chapters(build_dir)
     epub_file = mm_epub.create_epub(chapters, metadata, build_dir)
     shutil.copy(epub_file, temp_dir)
     os.remove(epub_file)
     metadata["title"] = "EPUB Sub"
-    metadata["artist"] = "Final"
+    metadata["artists"] = "Final"
     chapters = mm_epub.get_default_chapters(build_dir)
     epub_file = mm_epub.create_epub(chapters, metadata, build_dir)
     shutil.copy(epub_file, sub_dir)
@@ -208,7 +231,7 @@ def test_rename_media_archives():
     assert sorted(os.listdir(temp_dir)) == ["CBZ Root.cbz", "EPUB Root.epub", "Part 2.cbz", "sub"]
     assert sorted(os.listdir(sub_dir)) == ["CBZ Deep.cbz", "EPUB Sub.epub"]
     # Test with additional keys
-    mm_rename.rename_archives(temp_dir, "[{artist}] {title}")
+    mm_rename.rename_archives(temp_dir, "[{artists}] {title}")
     assert sorted(os.listdir(temp_dir)) == ["[Person] CBZ Root.cbz", "[Person] Part 2.cbz", "[Writer] EPUB Root.epub", "sub"]
     assert sorted(os.listdir(sub_dir)) == ["[Artist] CBZ Deep.cbz", "[Final] EPUB Sub.epub"]
     # Test if archive filename already exists
@@ -219,7 +242,7 @@ def test_rename_media_archives():
     mm_rename.rename_archives(temp_dir, "{title}")
     assert sorted(os.listdir(temp_dir)) == ["CBZ Root.cbz", "EPUB Root.epub", "Part 2.cbz", "sub"]
     assert sorted(os.listdir(sub_dir)) == ["CBZ Deep-2.cbz", "CBZ Deep.cbz", "EPUB Sub-2.epub", "EPUB Sub.epub"]
-    mm_rename.rename_archives(temp_dir, "{artist}")
+    mm_rename.rename_archives(temp_dir, "{artists}")
     assert sorted(os.listdir(temp_dir)) == ["Person-2.cbz", "Person.cbz", "Writer.epub", "sub"]
     assert sorted(os.listdir(sub_dir)) == ["Artist.cbz", "CBZ Deep.cbz", "EPUB Sub.epub", "Final.epub"]
 

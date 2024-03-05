@@ -125,13 +125,13 @@ def test_find_files_of_type():
     files = mm_file_tools.find_files_of_type(temp_dir, ".txt")
     assert len(files) == 3
     assert basename(files[0]) == "new.txt"
-    assert basename(files[1]) == "text.txt"
-    assert basename(files[2]) == "sub.txt"
+    assert basename(files[1]) == "sub.txt"
+    assert basename(files[2]) == "text.txt"
     files = mm_file_tools.find_files_of_type(temp_dir, ".png", include_subdirectories=True)
     assert len(files) == 2
-    assert basename(files[0]) == "other.png"
-    assert basename(files[1]) == "deep.png"
-    assert files[1] == temp_file
+    assert basename(files[0]) == "deep.png"
+    assert basename(files[1]) == "other.png"
+    assert files[0] == temp_file
     # Test finding files, not including subdirectories
     files = mm_file_tools.find_files_of_type(temp_dir, ".txt", include_subdirectories=False)
     assert len(files) == 2
@@ -141,8 +141,8 @@ def test_find_files_of_type():
     files = mm_file_tools.find_files_of_type(temp_dir, ".txt", inverted=True)
     assert len(files) == 3
     assert basename(files[0]) == "blah.thing"
-    assert basename(files[1]) == "other.png"
-    assert basename(files[2]) == "deep.png"
+    assert basename(files[1]) == "deep.png"
+    assert basename(files[2]) == "other.png"
     # Test finding files of multiple types
     files = mm_file_tools.find_files_of_type(temp_dir, [".txt", ".png"], include_subdirectories=False)
     assert len(files) == 3
