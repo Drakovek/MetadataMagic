@@ -89,7 +89,7 @@ def get_artists_and_writers(json:dict, extension:str) -> (List[str], List[str]):
     :rtype: List[str], List[str]
     """
     # Get multiple artists and writers
-    multiple_artist_keys = [["artists"]]
+    multiple_artist_keys = [["artists"], ["info", "artists"]]
     multiple_writer_keys = [["writers"], ["authors"]]
     artists = get_value_from_keylist(json, multiple_artist_keys, list)
     writers = get_value_from_keylist(json, multiple_writer_keys, list)

@@ -157,7 +157,8 @@ def get_string_from_metadata(metadata:dict, template:str) -> str:
             try:
                 # Get the padded series number
                 padded = re.findall("^[0-9]+", value)[0].zfill(2)
-                value = re.sub("^[0-9]+", padded, value)
+                value = re.sub(r"^[0-9]+", padded, value)
+                value = re.sub(r"\.0+$", "", value)
                 # Check that the file isn't 1 of 1
                 total = metadata["series_total"]
                 assert total is None or not float(total) == 1 or not float(value) == 1

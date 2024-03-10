@@ -165,9 +165,11 @@ def test_get_string_from_metadata():
     assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") == "[15] AAA"
     metadata = {"series_number":"1", "series_total":"20"}
     assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") == "[01] AAA"
+    metadata = {"series_number":"1.00", "series_total":"15"}
+    assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") == "[01] AAA"
     metadata = {"series_number":"1.5", "series_total":"1.0"}
     assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") == "[01.5] AAA"
-    metadata = {"series_number":"12", "series_total":None}
+    metadata = {"series_number":"12.0", "series_total":None}
     assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") == "[12] AAA"
     metadata = {"series_number":"1", "series_total":"1.0"}
     assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") is None

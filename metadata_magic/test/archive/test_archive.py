@@ -372,6 +372,8 @@ def test_format_title():
     assert mm_archive.format_title("New Thing15") == "New Thing"
     assert mm_archive.format_title("1. A Thing") == "1. a Thing"
     assert mm_archive.format_title("12 13 B 14 C") == "12 13 B 14 C"
+    assert mm_archive.format_title("Thing - 05") == "Thing"
+    assert mm_archive.format_title("New - #05 ") == "New"
     # Test Removing number with total
     assert mm_archive.format_title("Something 1/2") == "Something"
     assert mm_archive.format_title("Other Name  17/43  ") == "Other Name"
@@ -400,10 +402,13 @@ def test_format_title():
     assert mm_archive.format_title("Other p.12 ") == "Other"
     assert mm_archive.format_title("Part 1 of 5 ") == "Part 1 of 5 "
     assert mm_archive.format_title("Some Pages 5") == "Some Pages"
+    assert mm_archive.format_title("New Thing Pt. 23") == "New Thing"
     assert mm_archive.format_title("p.3 Something") == "P.3 Something"
     assert mm_archive.format_title("stoppage 5") == "Stoppage"
     assert mm_archive.format_title("rampart 10") == "Rampart"
+    assert mm_archive.format_title("Tempt 12") == "Tempt"
     assert mm_archive.format_title("Stop. 5") == "Stop."
+    assert mm_archive.format_title("Thing - Part 5") == "Thing"
     # Test Removing number with brackets or parenthesis
     assert mm_archive.format_title("Test[01]") == "Test"
     assert mm_archive.format_title("Name [Part 1/3] ") == "Name"

@@ -163,7 +163,7 @@ def main():
             print("[C] Missing Chain/Series")
             response = str(input("Which Missing Metadata Field?: ")).lower()
             # Check media based on user response
-            responses = {"t":{"key":["title"], "label":"title"}, "a":{"key":["artist", "writer"], "label":"artist/writer"},
+            responses = {"t":{"key":["title"], "label":"title"}, "a":{"key":["artists", "writers"], "label":"artist/writer"},
                         "d":{"key":["date"], "label":"date"}, "s":{"key":["description"], "label":"summary"},
                         "p":{"key":["publisher"], "label":"publisher"}, "u":{"key":["url"], "label":"URL"},
                         "r":{"key":["age_rating"], "label":"age rating"}, "g":{"key":["score"], "label":"grade/score"},

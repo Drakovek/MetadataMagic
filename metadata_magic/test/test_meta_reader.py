@@ -125,6 +125,11 @@ def test_get_artists_and_writers():
     artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".txt")
     assert artists == ["Other"]
     assert writers == ["Person"]
+    # DVK style artists
+    dictionary = {"info":{"title":"thing", "artists":["Name", "Person"]}}
+    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".png")
+    assert artists == ["Name", "Person"]
+    assert writers == ["Name", "Person"]
     # Deviantart style username
     dictionary = {"author":{"username":"my dude"}, "id":"Thing"}
     artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".png")

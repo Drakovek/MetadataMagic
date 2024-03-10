@@ -168,9 +168,9 @@ def format_title(text:str) -> dict:
     # Reduce spaces
     altered = re.sub(r"\s+", " ", text)
     # Remove references to page number
-    regex = r"(?:\b(?:pg?\.?\s*|page\s*|part\s*))?(?:#\s*)?(?:[0-9]+\s*(?:[\/-]|of)\s*)?[0-9]+\s*$"
-    regex = regex + r"|\[\s*(?:\b(?:pg?\.?\s*|page\s*|part\s*))?(?:#\s*)?(?:[0-9]+\s*(?:[\/-]|of)\s*)?[0-9]+\s*\]\s*$"
-    regex = regex + r"|\(\s*(?:\b(?:pg?\.?\s*|page\s*|part\s*))?(?:#\s*)?(?:[0-9]+\s*(?:[\/-]|of)\s*)?[0-9]+\s*\)\s*$"
+    regex = r"(?:\s*-\s*)?(?:\b(?:p[gt]?\.?\s*|page\s*|part\s*))?(?:#\s*)?(?:[0-9]+\s*(?:[\/-]|of)\s*)?[0-9]+\s*$"
+    regex = regex + r"|\[\s*(?:\b(?:p[gt]?\.?\s*|page\s*|part\s*))?(?:#\s*)?(?:[0-9]+\s*(?:[\/-]|of)\s*)?[0-9]+\s*\]\s*$"
+    regex = regex + r"|\(\s*(?:\b(?:p[gt]?\.?\s*|page\s*|part\s*))?(?:#\s*)?(?:[0-9]+\s*(?:[\/-]|of)\s*)?[0-9]+\s*\)\s*$"
     regex = regex + r"|^\[[^\[\]]*\]\s+"
     altered = re.sub(regex, "", altered, flags=re.IGNORECASE).strip()
     # Set the title case
