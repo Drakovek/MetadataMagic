@@ -18,7 +18,7 @@ def test_archive_all_media():
     mm_file_tools.write_text_file(abspath(join(temp_dir, "image1.jpg")), "Blah")
     mm_file_tools.write_json_file(abspath(join(temp_dir, "image1.json")), {"title": "First Image"})
     mm_file_tools.write_text_file(abspath(join(temp_dir, "image2.png")), "Blah")
-    mm_file_tools.write_json_file(abspath(join(temp_dir, "image2.json")), {"title": "Second Image"})
+    mm_file_tools.write_json_file(abspath(join(temp_dir, "image2.json")), {"title": "Long", "caption":"A"*6000})
     mm_file_tools.write_text_file(abspath(join(temp_dir, "text1.txt")), "Stuff")
     mm_file_tools.write_json_file(abspath(join(temp_dir, "text1.json")), {"title": "Book", "writer":"Person"})
     mm_file_tools.write_text_file(abspath(join(temp_dir, "text2.html")), "<p>Thing</p>")
@@ -43,13 +43,13 @@ def test_archive_all_media():
             "sub_text.epub", "sub_text.htm", "sub_text.json"]
     # Archive all supported files
     assert mm_bulk_archive.archive_all_media(temp_dir)
-    assert sorted(os.listdir(temp_dir)) == ["image1.cbz", "image2.cbz", "sub_dir", "text1.epub", "text2.epub",
+    assert sorted(os.listdir(temp_dir)) == ["image1.cbz", "image2.epub", "sub_dir", "text1.epub", "text2.epub",
             "thing.png", "unsupported.blah", "unsupported.json"]
     assert sorted(os.listdir(sub_dir)) == ["other.txt", "sub_image-2.cbz", "sub_image.cbz",
             "sub_text-2.epub", "sub_text.epub"]
     # Test that metadata in archives is correct
     assert mm_comic_archive.get_info_from_cbz(abspath(join(temp_dir, "image1.cbz")))["title"] == "First Image"
-    assert mm_comic_archive.get_info_from_cbz(abspath(join(temp_dir, "image2.cbz")))["title"] == "Second Image"
+    assert mm_epub.get_info_from_epub(abspath(join(temp_dir, "image2.epub")))["title"] == "Long"
     assert mm_comic_archive.get_info_from_cbz(abspath(join(sub_dir, "sub_image-2.cbz")))["title"] == "Sub Image"
     assert mm_file_tools.read_text_file(abspath(join(sub_dir, "sub_image.cbz"))) == "Duplicate CBZ"
     assert mm_epub.get_info_from_epub(abspath(join(temp_dir, "text1.epub")))["title"] == "Book"

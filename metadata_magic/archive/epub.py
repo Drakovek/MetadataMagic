@@ -10,6 +10,7 @@ import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.comic_xml as mm_comic_xml
 import metadata_magic.archive.xhtml_formatting as mm_xhtml
+import metadata_magic.meta_reader as mm_meta_reader
 from xml.etree import ElementTree
 from os.path import abspath, basename, exists, isdir, join
 from typing import List
@@ -776,6 +777,51 @@ def create_epub(chapters:List[dict], metadata:dict, directory:str) -> str:
     epub_file = abspath(join(directory, f"{filename}.epub"))
     # Create the epub file
     assert mm_file_tools.create_zip(build_directory, epub_file, 8, "application/epub+zip")
+    return epub_file
+
+def create_epub_from_description(json_file:str, image_file:str, metadata:dict, directory:str) -> str:
+    """
+    Creates an EPUB file from a image+json pair with the json metadata description used as the text.
+    Image file is used as the cover image.
+    
+    :param json_file: JSON file used to get the description and use as EPUB text
+    :type json_file: str, required
+    :param image_file: Image file to use as the EPUB cover image
+    :type image_file: str, required
+    :param metadata: Metadata dict as returned by meta_reader.py's get_empty_metadata function.
+    :type metadata: dict, required
+    :param directory: Directory to get file info from and to save finished EPUB into
+    :type directory: str, required
+    :return: The path of the created EPUB file
+    :rtype: str
+    """
+    # Create a temporary directory for the generated epub contents
+    temp_directory = mm_file_tools.get_temp_dir("dvk_meta_description")
+    # Copy Files into the original directory
+    json_name = basename(json_file)
+    image_name = basename(image_file)
+    original_directory = abspath(join(temp_directory, "original"))
+    os.mkdir(original_directory)
+    shutil.copy(json_file, abspath(join(original_directory, json_name)))
+    shutil.copy(image_file, abspath(join(original_directory, image_name)))
+    # Copy the cover image
+    extension = html_string_tools.html.get_extension(image_name)
+    cover_image = abspath(join(temp_directory, f"dvk-cover{extension}"))
+    shutil.copy(image_file, cover_image)
+    # Create the html from the json description
+    html = mm_meta_reader.load_metadata(json_file, image_file)["description"]
+    html_file = abspath(join(temp_directory, json_name[:len(json_name) - 5] + ".html"))
+    mm_file_tools.write_text_file(html_file, html)
+    # Create the chapters list
+    chapters = [{"include":True, "title":"Cover", "files":[{"id":"item_cover", "file":cover_image}]},
+            {"include":True, "title":metadata["title"], "files":[{"id":"item_text", "file":html_file}]}]
+    # Create the epub file
+    generated_epub = create_epub(chapters, metadata, temp_directory)
+    # Get the final epub file path
+    filename = mm_rename.get_available_filename(["a.epub"], metadata["title"], directory)
+    epub_file = abspath(join(directory, f"{filename}.epub"))
+    # Copy the epub file to the appropriate directory
+    shutil.copy(generated_epub, epub_file)
     return epub_file
 
 def get_info_from_epub(epub_file:str) -> dict:

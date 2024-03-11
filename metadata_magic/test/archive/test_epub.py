@@ -1112,6 +1112,136 @@ def test_create_epub():
     compare = f"{compare}\n</package>"
     assert content == compare
 
+def test_create_epub_from_description():
+    """
+    Tests the create_epub_from_description function.
+    """
+    # Create base files
+    temp_dir = mm_file_tools.get_temp_dir()
+    json_file = abspath(join(temp_dir, "test.json"))
+    image_file = abspath(join(temp_dir, "test.png"))
+    image = Image.new("RGB", size=(100, 100), color="#ff0000")
+    image.save(image_file)
+    summary = "These are<br/>\n\rall lines.<br/><br/>And<br/>such."
+    mm_file_tools.write_json_file(json_file, {"title":"doesn't matter","caption":summary})
+    assert exists(json_file)
+    assert exists(image_file)
+    # Create the epub file
+    metadata = mm_archive.get_empty_metadata()
+    metadata["title"] = "This is a Title"
+    metadata["writers"] = "Person"
+    metadata["url"] = "/thing/"
+    metadata["date"] = "2021-01-01"
+    metadata["description"] = "Something Else"
+    epub_file = mm_epub.create_epub_from_description(json_file, image_file, metadata, temp_dir)
+    assert basename(epub_file) == "This is a Title.epub"
+    assert abspath(join(epub_file, os.pardir)) == temp_dir
+    assert exists(epub_file)
+    # Extract the epub file to see contents
+    extracted = abspath(join(temp_dir, "extracted"))
+    os.mkdir(extracted)
+    assert mm_file_tools.extract_zip(epub_file, extracted)
+    assert sorted(os.listdir(extracted)) == ["EPUB", "META-INF", "mimetype"]
+    # Check the mimetype contents
+    assert mm_file_tools.read_text_file(abspath(join(extracted, "mimetype"))) == "application/epub+zip"
+    # Check the contents of the meta folder
+    meta_directory = abspath(join(extracted, "META-INF"))
+    assert sorted(os.listdir(meta_directory)) == ["container.xml"]
+    container = mm_file_tools.read_text_file(abspath(join(meta_directory, "container.xml")))
+    compare = ""
+    compare = f"{compare}<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+    compare = f"{compare}\n<container xmlns=\"urn:oasis:names:tc:opendocument:xmlns:container\" version=\"1.0\">"
+    compare = f"{compare}\n    <rootfiles>"
+    compare = f"{compare}\n        <rootfile media-type=\"application/oebps-package+xml\" full-path=\"EPUB/content.opf\" />"
+    compare = f"{compare}\n    </rootfiles>"
+    compare = f"{compare}\n</container>"
+    assert container == compare
+    # Check the contents of the epub folder
+    epub_directory = abspath(join(extracted, "EPUB"))
+    assert sorted(os.listdir(epub_directory)) == ["content", "content.opf", "images", "nav.xhtml", "original", "style", "toc.ncx"]
+    # Check the contents of the content folder
+    content_directory = abspath(join(epub_directory, "content"))
+    assert sorted(os.listdir(content_directory)) == ["dvk-cover.xhtml", "test.xhtml"]
+    # Check the contents of the original directory
+    original_directory = abspath(join(epub_directory, "original"))
+    assert sorted(os.listdir(original_directory)) == ["test.json", "test.png"]
+    # Check the contents of the style directory
+    style_directory = abspath(join(epub_directory, "style"))
+    assert sorted(os.listdir(style_directory)) == ["epubstyle.css"]
+    # Check the contents of the images directory
+    style_directory = abspath(join(epub_directory, "images"))
+    assert sorted(os.listdir(style_directory)) == ["image1.png"]
+    # Check the contents of the content.opf file
+    content = mm_file_tools.read_text_file(abspath(join(epub_directory, "content.opf")))
+    compare = ""
+    compare = f"{compare}<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+    compare = f"{compare}\n<package xmlns:dc=\"http://purl.org/dc/elements/1.1/\" "
+    compare = f"{compare}xmlns=\"http://www.idpf.org/2007/opf\" unique-identifier=\"id\" "
+    compare = f"{compare}version=\"3.0\" prefix=\"http://www.idpf.org/vocab/rendition/#\">"
+    compare = f"{compare}\n    <metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
+    compare = f"{compare}\n        <dc:language>en</dc:language>"
+    compare = f"{compare}\n        <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
+    compare = f"{compare}\n        <dc:identifier id=\"id\">/thing/</dc:identifier>"
+    compare = f"{compare}\n        <dc:date>2021-01-01T00:00:00+00:00</dc:date>"
+    compare = f"{compare}\n        <dc:title>This is a Title</dc:title>"
+    compare = f"{compare}\n        <dc:source>/thing/</dc:source>"
+    compare = f"{compare}\n        <dc:description>Something Else</dc:description>"
+    compare = f"{compare}\n        <dc:creator id=\"author-0\">Person</dc:creator>"
+    compare = f"{compare}\n        <meta refines=\"author-0\" property=\"role\" scheme=\"marc:relators\">aut</meta>"
+    compare = f"{compare}\n        <meta name=\"cover\" content=\"image1\" />"
+    compare = f"{compare}\n    </metadata>"
+    compare = f"{compare}\n    <manifest>"
+    compare = f"{compare}\n        <item href=\"content/dvk-cover.xhtml\" id=\"item_cover\" media-type=\"application/xhtml+xml\" />"
+    compare = f"{compare}\n        <item href=\"content/test.xhtml\" id=\"item_text\" media-type=\"application/xhtml+xml\" />"
+    compare = f"{compare}\n        <item href=\"images/image1.png\" id=\"image1\" media-type=\"image/png\" />"
+    compare = f"{compare}\n        <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
+    compare = f"{compare}\n        <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
+    compare = f"{compare}\n        <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"
+    compare = f"{compare}\n    </manifest>"
+    compare = f"{compare}\n    <spine toc=\"ncx\">"
+    compare = f"{compare}\n        <itemref idref=\"item_cover\" />"
+    compare = f"{compare}\n        <itemref idref=\"item_text\" />"
+    compare = f"{compare}\n    </spine>"
+    compare = f"{compare}\n</package>"
+    assert content == compare
+    # Check the contents of the generated XHTML
+    content = mm_file_tools.read_text_file(abspath(join(content_directory, "test.xhtml")))
+    compare = ""
+    compare = f"{compare}<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
+    compare = f"{compare}\n    <head>"
+    compare = f"{compare}\n        <title>This is a Title</title>"
+    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
+    compare = f"{compare}\n    </head>"
+    compare = f"{compare}\n    <body>"
+    compare = f"{compare}\n        <p>These are all lines.</p>"
+    compare = f"{compare}\n        <p>And such.</p>"
+    compare = f"{compare}\n    </body>"
+    compare = f"{compare}\n</html>"
+    assert content == compare
+    # Check the contents of the cover XHTML
+    content = mm_file_tools.read_text_file(abspath(join(content_directory, "dvk-cover.xhtml")))
+    compare = ""
+    compare = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+    compare = f"{compare}\n<html xmlns:svgns=\"http://www.w3.org/2000/svg\" "
+    compare = f"{compare}xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns=\"http://www.w3.org/1999/xhtml\">"
+    compare = f"{compare}\n    <head>"
+    compare = f"{compare}\n        <title>Cover</title>"
+    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
+    compare = f"{compare}\n    </head>"
+    compare = f"{compare}\n    <body>"
+    compare = f"{compare}\n        <div id=\"full-image-container\">"
+    compare = f"{compare}\n            <svgns:svg width=\"100%\" height=\"100%\" viewBox=\"0 0 100 100\" "
+    compare = f"{compare}preserveAspectRatio=\"xMidYMid meet\" version=\"1.1\">"
+    compare = f"{compare}\n            <svgns:title>Cover</svgns:title>"
+    compare = f"{compare}\n            <svgns:image xlink:href=\"../images/image1.png\" width=\"100\" height=\"100\" />"
+    compare = f"{compare}\n            </svgns:svg>"
+    compare = f"{compare}\n        </div>"
+    compare = f"{compare}\n    </body>"
+    compare = f"{compare}\n</html>"
+
 def test_get_info_from_epub():
     """
     Tests the get_info_from_epub function.

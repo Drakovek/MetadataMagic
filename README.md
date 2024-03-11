@@ -113,6 +113,8 @@ The `mm-bulk-archive` command is used to bulk archive or extract a large number 
 
 This will archive every eligable file in a given directory into `.cbz` comic archives for images and `.epub` ebooks for text, replacing the original files. Files will only be archived if they have a corresponding `.json` metadata file, and that metadata will be used for the metadata of the newly created archives. Each individual text and image file will be turned into its own archive file.
 
+Image files whose accompanying metadata have excessively long descriptions will be assumed to have stories in the description, and will be converted into `.epub` ebook files with the image as the cover and description as the text.
+
 If the `--format-titles` option is included, the titles of the archives will be automatically formatted to remove page number references and use proper capitalization.
 
 ### Bulk Extracting
@@ -229,6 +231,12 @@ If the metadata for a file does not contain metadata for one of the fields reque
 ## mm-error
 
 The `mm-error` command allows you to search for errors and abnormalities with files and their metadata.
+
+### Long Description
+
+    mm-error --long-description [directory]
+
+The `--long-description` option allows you to search a given directory for archive and metadata files with excessively long descriptions. This is especially useful for finding files that contain entire stories in the description to accompany the associated image, as these are probably better formatted as an ebook with images.
 
 ### Missing Media
 

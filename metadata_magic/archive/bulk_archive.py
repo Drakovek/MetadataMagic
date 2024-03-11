@@ -9,6 +9,7 @@ import html_string_tools.html
 import python_print_tools.printer
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
+import metadata_magic.error as mm_error
 import metadata_magic.rename as mm_rename
 import metadata_magic.archive.epub as mm_epub
 import metadata_magic.archive.archive as mm_archive
@@ -55,10 +56,19 @@ def archive_all_media(directory:str, format_title:bool=False) -> bool:
             # Rename files to fit the title
             mm_rename.rename_file(new_json, metadata["title"])
             mm_rename.rename_file(new_media, metadata["title"])
+            
+            
             # Create the archive file
             archive_file = None
             if extension in mm_archive.SUPPORTED_IMAGES:
-                archive_file = mm_comic_archive.create_cbz(temp_dir, metadata=metadata)
+                # Create an epub if the description is too long
+                if metadata["description"] is None or len(metadata["description"]) < mm_error.LONG_DESCRIPTION:
+                    archive_file = mm_comic_archive.create_cbz(temp_dir, metadata=metadata)
+                else:
+                    new_pair = mm_meta_finder.get_pairs(temp_dir, print_info=False)[0]
+                    new_media = pair["media"]
+                    new_json = pair["json"]
+                    archive_file = mm_epub.create_epub_from_description(new_json, new_media, metadata, temp_dir)
             elif extension in mm_archive.SUPPORTED_TEXT:
                 chapters = mm_epub.get_default_chapters(temp_dir, title=metadata["title"])
                 chapters = mm_epub.add_cover_to_chapters(chapters, metadata)

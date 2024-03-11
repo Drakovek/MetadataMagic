@@ -7,9 +7,12 @@ import python_print_tools.printer
 import metadata_magic.sort as mm_sort
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
+import metadata_magic.meta_reader as mm_meta_reader
 import metadata_magic.archive.archive as mm_archive
 from os.path import abspath, exists
 from typing import List
+
+LONG_DESCRIPTION = 2000
 
 def find_missing_media(path:str) -> List[str]:
     """
@@ -55,6 +58,40 @@ def find_missing_metadata(path:str) -> List[str]:
     # Return list of media without metadata
     return media
 
+def find_long_descriptions(path:str, length:int=LONG_DESCRIPTION) -> List[str]:
+    """
+    Returns a list of archives and metadata files with overly long descriptions.
+    
+    :param path: Directory in which to search for metadata
+    :type path: str, required
+    :param length: Number of characters for a description to be considered long, defaults to 2000
+    :type length: int, optional
+    :return: List of archives and metadata files with overly long titles
+    :rtype: List[str]
+    """
+    # Get a list of all archive files
+    print("Searching archives with long descriptions...")
+    full_path = abspath(path)
+    archive_files = mm_file_tools.find_files_of_type(full_path, [".cbz", ".epub"])
+    # Run through all archive files
+    long = []
+    for archive_file in tqdm.tqdm(archive_files):
+        metadata = mm_archive.get_info_from_archive(archive_file)
+        if metadata["description"] is not None and len(metadata["description"]) > length:
+            long.append(archive_file)
+    # Get a list of all json media pairs
+    print("Searching JSONs with long descriptions...")
+    pairs = mm_meta_finder.get_pairs(full_path)
+    # Run throug all json files
+    for pair in pairs:
+        metadata = mm_meta_reader.load_metadata(pair["json"], pair["media"])
+        if metadata["description"] is not None and len(metadata["description"]) > length:
+            long.append(pair["json"])
+    # Return list of files with long descriptions
+    return mm_sort.sort_alphanum(long)
+
+    
+
 def find_missing_fields(path:str, fields:List[str]) -> List[str]:
     """
     Finds archive files with certain missing fields in their metadata.
@@ -69,8 +106,7 @@ def find_missing_fields(path:str, fields:List[str]) -> List[str]:
     """
     # Get a list of all archive files
     full_path = abspath(path)
-    archive_files = mm_file_tools.find_files_of_type(full_path, ".cbz")
-    archive_files.extend(mm_file_tools.find_files_of_type(full_path, ".epub"))
+    archive_files = mm_file_tools.find_files_of_type(full_path, [".cbz", ".epub"])
     # Run through all files
     missing = []
     for archive_file in tqdm.tqdm(archive_files):
@@ -120,6 +156,11 @@ def main():
             type=str,
             default=str(os.getcwd()))
     parser.add_argument(
+            "-l",
+            "--long-description",
+            help="Find metadata with an overly long description",
+            action="store_true")
+    parser.add_argument(
             "-m",
             "--missing-media",
             help="Find JSON files with no associated media",
@@ -144,6 +185,10 @@ def main():
         if args.missing_media:
             missing = find_missing_media(directory)
             print_errors(missing, directory, "JSONs With Missing Media")
+        # Find long descriptions
+        if args.long_description:
+            long = find_long_descriptions(directory)
+            print_errors(long, directory, "Media With Long Descriptions")
         # Find missing metadata
         if args.missing_json:
             missing = find_missing_media(directory)

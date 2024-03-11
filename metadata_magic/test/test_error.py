@@ -5,9 +5,89 @@ import shutil
 import metadata_magic.error as mm_error
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.archive as mm_archive
+import metadata_magic.archive.bulk_archive as mm_bulk_archive
 import metadata_magic.archive.comic_archive as mm_comic_archive
 import metadata_magic.archive.epub as mm_epub
 from os.path import abspath, basename, exists, join
+
+def test_find_long_descriptions():
+    """
+    Tests the find_long_descriptions function.
+    """
+    # Create test files
+    temp_dir = mm_file_tools.get_temp_dir()
+    metadata = {"title":"Text", "writer":"Person"}
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "text.txt")), "This is text!!")
+    mm_file_tools.write_json_file(abspath(join(temp_dir, "text.json")), metadata)
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "image.png")), "IMAGE")
+    mm_file_tools.write_json_file(abspath(join(temp_dir, "image.json")), metadata)
+    mm_bulk_archive.archive_all_media(temp_dir)
+    source_cbz = abspath(join(temp_dir, "image.cbz"))
+    source_epub = abspath(join(temp_dir, "text.epub"))
+    sub_dir = abspath(join(temp_dir, "sub"))
+    os.mkdir(sub_dir)
+    metadata = mm_archive.get_empty_metadata()
+    metadata["title"] = "Blah"
+    metadata["writers"] = "Blah"
+    metadata["description"] = "Blah"
+    metadata["cover_id"] = None
+    destination_archive = abspath(join(temp_dir, "short.cbz"))
+    shutil.copy(source_cbz, destination_archive)
+    mm_archive.update_archive_info(destination_archive, metadata)
+    metadata["description"] = "A" * 450
+    destination_archive = abspath(join(sub_dir, "mid.epub"))
+    shutil.copy(source_epub, destination_archive)
+    mm_archive.update_archive_info(destination_archive, metadata)
+    metadata["description"] = "B" * 6000
+    destination_archive = abspath(join(temp_dir, "longE.epub"))
+    shutil.copy(source_epub, destination_archive)
+    mm_archive.update_archive_info(destination_archive, metadata)
+    metadata["description"] = "C" * 5100
+    destination_archive = abspath(join(sub_dir, "longC.cbz"))
+    shutil.copy(source_cbz, destination_archive)
+    mm_archive.update_archive_info(destination_archive, metadata)
+    metadata["description"] = None
+    destination_archive = abspath(join(sub_dir, "other.cbz"))
+    shutil.copy(source_cbz, destination_archive)
+    mm_archive.update_archive_info(destination_archive, metadata)
+    assert sorted(os.listdir(temp_dir)) == ["image.cbz", "longE.epub", "short.cbz", "sub", "text.epub"]
+    assert sorted(os.listdir(sub_dir)) == ["longC.cbz", "mid.epub", "other.cbz"]
+    # Test finding archives with long descriptions
+    archives = mm_error.find_long_descriptions(temp_dir)
+    assert len(archives) == 2
+    assert basename(archives[0]) == "longE.epub"
+    assert basename(archives[1]) == "longC.cbz"
+    archives = mm_error.find_long_descriptions(temp_dir, 200)
+    assert len(archives) == 3
+    assert basename(archives[0]) == "longE.epub"
+    assert basename(archives[1]) == "longC.cbz"
+    assert basename(archives[2]) == "mid.epub"
+    # Create json media pairs
+    temp_dir = mm_file_tools.get_temp_dir()
+    sub_dir = abspath(join(temp_dir, "sub"))
+    os.mkdir(sub_dir)
+    metadata = {"title":"Text", "writer":"Person"}
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "text.txt")), "This is text!!")
+    mm_file_tools.write_json_file(abspath(join(temp_dir, "text.json")), metadata)
+    metadata["caption"] = "Thing"
+    mm_file_tools.write_text_file(abspath(join(sub_dir, "image.jpg")), "AAA")
+    mm_file_tools.write_json_file(abspath(join(sub_dir, "image.json")), metadata)
+    metadata["caption"] = "A" * 700
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "mid.png")), "AAA")
+    mm_file_tools.write_json_file(abspath(join(temp_dir, "mid.json")), metadata)
+    metadata["caption"] = "A" * 6000
+    mm_file_tools.write_text_file(abspath(join(sub_dir, "long.png")), "AAA")
+    mm_file_tools.write_json_file(abspath(join(sub_dir, "long.json")), metadata)
+    assert sorted(os.listdir(temp_dir)) == ["mid.json", "mid.png", "sub", "text.json", "text.txt"]
+    assert sorted(os.listdir(sub_dir)) == ["image.jpg", "image.json", "long.json", "long.png"]
+    # Test finding archives with long descriptions
+    archives = mm_error.find_long_descriptions(temp_dir)
+    assert len(archives) == 1
+    assert basename(archives[0]) == "long.json"
+    archives = mm_error.find_long_descriptions(temp_dir, 200)
+    assert len(archives) == 2
+    assert basename(archives[0]) == "mid.json"
+    assert basename(archives[1]) == "long.json"
 
 def test_find_missing_media():
     """
