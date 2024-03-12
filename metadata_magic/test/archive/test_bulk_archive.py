@@ -84,6 +84,14 @@ def test_archive_all_media():
     assert sorted(os.listdir(cbz_extract)) == ["ComicInfo.xml", "Just a Test"]
     internal_dir = abspath(join(cbz_extract, "Just a Test"))
     assert sorted(os.listdir(internal_dir)) == ["Just a Test.json", "Just a Test.png"]
+    # Test with a different description cutoff point
+    temp_dir = mm_file_tools.get_temp_dir()
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "short.png")), "BLAH")
+    mm_file_tools.write_json_file(abspath(join(temp_dir, "short.json")), {"title":"Short", "caption":"A"*200})
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "long.png")), "BLAH")
+    mm_file_tools.write_json_file(abspath(join(temp_dir, "long.json")), {"title":"Long", "caption":"A"*600})
+    assert mm_bulk_archive.archive_all_media(temp_dir, description_length=500)
+    assert sorted(os.listdir(temp_dir)) == ["long.epub", "short.cbz"]
 
 def test_extract_cbz():
     """

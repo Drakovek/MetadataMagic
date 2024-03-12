@@ -109,11 +109,11 @@ The `mm-bulk-archive` command is used to bulk archive or extract a large number 
 
 ### Bulk Archiving
 
-    mm-bulk-archive [directory] [--format-titles]
+    mm-bulk-archive [directory] [--format-titles] [--description-length LENGTH]
 
 This will archive every eligable file in a given directory into `.cbz` comic archives for images and `.epub` ebooks for text, replacing the original files. Files will only be archived if they have a corresponding `.json` metadata file, and that metadata will be used for the metadata of the newly created archives. Each individual text and image file will be turned into its own archive file.
 
-Image files whose accompanying metadata have excessively long descriptions will be assumed to have stories in the description, and will be converted into `.epub` ebook files with the image as the cover and description as the text.
+Image files whose accompanying metadata have excessively long descriptions will be assumed to have stories in the description, and will be converted into `.epub` ebook files with the image as the cover and description as the text. You can use the `--description-length` option to specify how long descriptions can be before being used as `.epub` text. The default is 1000 characters
 
 If the `--format-titles` option is included, the titles of the archives will be automatically formatted to remove page number references and use proper capitalization.
 
@@ -234,9 +234,11 @@ The `mm-error` command allows you to search for errors and abnormalities with fi
 
 ### Long Description
 
-    mm-error --long-description [directory]
+    mm-error [directory] --long-description [LENGTH]
 
 The `--long-description` option allows you to search a given directory for archive and metadata files with excessively long descriptions. This is especially useful for finding files that contain entire stories in the description to accompany the associated image, as these are probably better formatted as an ebook with images.
+
+You can optionally specify the cutoff point at which descriptions will be considered too long with the `LENGTH` option. `LENGTH` is determined by number of characters, and the default value is 1000 characters if no `LENGTH` option is given. 
 
 ### Missing Media
 

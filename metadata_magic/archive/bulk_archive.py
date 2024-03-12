@@ -16,7 +16,7 @@ import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.comic_archive as mm_comic_archive
 from os.path import abspath, basename, exists, isdir, join
 
-def archive_all_media(directory:str, format_title:bool=False) -> bool:
+def archive_all_media(directory:str, format_title:bool=False, description_length:int=1000) -> bool:
     """
     Takes all supported JSON-media pairs and archives them into their appropriate media archives.
     Text files are archived into EPUB files.
@@ -26,6 +26,8 @@ def archive_all_media(directory:str, format_title:bool=False) -> bool:
     :type directory: str, required
     :param format_title: Whether to format media titles before archiving, defaults to False
     :type format_title: bool, optional
+    :param description_length: Length that a description can be before being used as an ebook, defaults to 1000
+    :type description_length: int, optional
     :return: Whether archiving files was successful
     :rtype: bool
     """
@@ -56,13 +58,11 @@ def archive_all_media(directory:str, format_title:bool=False) -> bool:
             # Rename files to fit the title
             mm_rename.rename_file(new_json, metadata["title"])
             mm_rename.rename_file(new_media, metadata["title"])
-            
-            
             # Create the archive file
             archive_file = None
             if extension in mm_archive.SUPPORTED_IMAGES:
                 # Create an epub if the description is too long
-                if metadata["description"] is None or len(metadata["description"]) < mm_error.LONG_DESCRIPTION:
+                if metadata["description"] is None or len(metadata["description"]) < description_length:
                     archive_file = mm_comic_archive.create_cbz(temp_dir, metadata=metadata)
                 else:
                     new_pair = mm_meta_finder.get_pairs(temp_dir, print_info=False)[0]
@@ -211,6 +211,13 @@ def main():
             type=str,
             default=str(os.getcwd()))
     parser.add_argument(
+            "-d",
+            "--description-length",
+            help="Length at which descriptions will be used as ebook text.",
+            nargs="?",
+            type=int,
+            default=mm_error.LONG_DESCRIPTION)
+    parser.add_argument(
             "-e",
             "--extract",
             help="Extract existing media archive files",
@@ -236,4 +243,4 @@ def main():
                 extract_all_archives(directory, create_folders=True, remove_structure=False)
         else:
             print("Archiving media files...")
-            archive_all_media(directory, args.format_titles)
+            archive_all_media(directory, args.format_titles, args.description_length)

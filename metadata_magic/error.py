@@ -12,7 +12,7 @@ import metadata_magic.archive.archive as mm_archive
 from os.path import abspath, exists
 from typing import List
 
-LONG_DESCRIPTION = 2000
+LONG_DESCRIPTION = 1000
 
 def find_missing_media(path:str) -> List[str]:
     """
@@ -64,7 +64,7 @@ def find_long_descriptions(path:str, length:int=LONG_DESCRIPTION) -> List[str]:
     
     :param path: Directory in which to search for metadata
     :type path: str, required
-    :param length: Number of characters for a description to be considered long, defaults to 2000
+    :param length: Number of characters for a description to be considered long, defaults to LONG_DESCRIPTION value
     :type length: int, optional
     :return: List of archives and metadata files with overly long titles
     :rtype: List[str]
@@ -158,8 +158,11 @@ def main():
     parser.add_argument(
             "-l",
             "--long-description",
-            help="Find metadata with an overly long description",
-            action="store_true")
+            nargs="?",
+            const=LONG_DESCRIPTION,
+            default=None,
+            type=int,
+            help="Find metadata with an overly long description")
     parser.add_argument(
             "-m",
             "--missing-media",
@@ -186,8 +189,8 @@ def main():
             missing = find_missing_media(directory)
             print_errors(missing, directory, "JSONs With Missing Media")
         # Find long descriptions
-        if args.long_description:
-            long = find_long_descriptions(directory)
+        if args.long_description is not None:
+            long = find_long_descriptions(directory, args.long_description)
             print_errors(long, directory, "Media With Long Descriptions")
         # Find missing metadata
         if args.missing_json:
