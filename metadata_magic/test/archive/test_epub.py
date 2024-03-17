@@ -1122,7 +1122,7 @@ def test_create_epub_from_description():
     image_file = abspath(join(temp_dir, "test.png"))
     image = Image.new("RGB", size=(100, 100), color="#ff0000")
     image.save(image_file)
-    summary = "These are<br/>\n\rall lines.<br/><br/>And<br/>such."
+    summary = "<div class=\"blah\">These are<br/>\n\rall lines.<br /><br/>And<br/>such."
     mm_file_tools.write_json_file(json_file, {"title":"doesn't matter","caption":summary})
     assert exists(json_file)
     assert exists(image_file)
@@ -1193,6 +1193,7 @@ def test_create_epub_from_description():
     compare = f"{compare}\n    <manifest>"
     compare = f"{compare}\n        <item href=\"content/dvk-cover.xhtml\" id=\"item_cover\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n        <item href=\"content/test.xhtml\" id=\"item_text\" media-type=\"application/xhtml+xml\" />"
+    compare = f"{compare}\n        <item href=\"content/dvk-cover.xhtml\" id=\"back_cover\" media-type=\"application/xhtml+xml\" />"
     compare = f"{compare}\n        <item href=\"images/image1.png\" id=\"image1\" media-type=\"image/png\" />"
     compare = f"{compare}\n        <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
     compare = f"{compare}\n        <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
@@ -1201,6 +1202,7 @@ def test_create_epub_from_description():
     compare = f"{compare}\n    <spine toc=\"ncx\">"
     compare = f"{compare}\n        <itemref idref=\"item_cover\" />"
     compare = f"{compare}\n        <itemref idref=\"item_text\" />"
+    compare = f"{compare}\n        <itemref idref=\"back_cover\" />"
     compare = f"{compare}\n    </spine>"
     compare = f"{compare}\n</package>"
     assert content == compare

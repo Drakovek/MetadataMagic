@@ -194,7 +194,7 @@ def main():
             print_errors(long, directory, "Media With Long Descriptions")
         # Find missing metadata
         if args.missing_json:
-            missing = find_missing_media(directory)
+            missing = find_missing_metadata(directory)
             print_errors(missing, directory, "Media With Missing JSON Metadata")
         # Find missing fields
         if args.missing_fields:

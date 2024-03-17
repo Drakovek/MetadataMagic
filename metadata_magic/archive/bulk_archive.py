@@ -5,6 +5,7 @@ import re
 import argparse
 import shutil
 import tqdm
+import traceback
 import html_string_tools.html
 import python_print_tools.printer
 import metadata_magic.file_tools as mm_file_tools
@@ -66,8 +67,8 @@ def archive_all_media(directory:str, format_title:bool=False, description_length
                     archive_file = mm_comic_archive.create_cbz(temp_dir, metadata=metadata)
                 else:
                     new_pair = mm_meta_finder.get_pairs(temp_dir, print_info=False)[0]
-                    new_media = pair["media"]
-                    new_json = pair["json"]
+                    new_media = new_pair["media"]
+                    new_json = new_pair["json"]
                     archive_file = mm_epub.create_epub_from_description(new_json, new_media, metadata, temp_dir)
             elif extension in mm_archive.SUPPORTED_TEXT:
                 chapters = mm_epub.get_default_chapters(temp_dir, title=metadata["title"])
@@ -88,6 +89,7 @@ def archive_all_media(directory:str, format_title:bool=False, description_length
             os.remove(pair["media"])
         except:
             # Archiving failed
+            traceback.print_exc()
             python_print_tools.printer.color_print(f"Failed Archiving \"{pair['media']}\"", "red")
             return False
     return True

@@ -1,5 +1,6 @@
 import os
 import re
+import copy
 import math
 import shutil
 import html_string_tools
@@ -731,7 +732,7 @@ def create_content_opf(chapters:List[dict], metadata:dict, output_directory:str)
     opf_file = abspath(join(output_directory, "content.opf"))
     mm_file_tools.write_text_file(opf_file, xml)
 
-def create_epub(chapters:List[dict], metadata:dict, directory:str) -> str:
+def create_epub(chapters:List[dict], metadata:dict, directory:str, copy_back_cover:bool=False) -> str:
     """
     Creates an EPUB file from the files in a directory and a list of given chapters.
     
@@ -767,6 +768,12 @@ def create_epub(chapters:List[dict], metadata:dict, directory:str) -> str:
     copy_original_files(directory, epub_directory)
     # Create the content files
     updated_chapters = create_content_files(chapters, epub_directory)
+    # Copy the cover to the back cover, if specified
+    if copy_back_cover:
+        back_cover = copy.deepcopy(updated_chapters[0])
+        back_cover["title"] = "Back Cover"
+        back_cover["id"] = "back_cover"
+        updated_chapters.append(back_cover)
     # Create nav and ncx files
     create_nav_file(updated_chapters, metadata["title"], epub_directory)
     create_ncx_file(updated_chapters, metadata["title"], metadata["url"], epub_directory)
@@ -816,7 +823,7 @@ def create_epub_from_description(json_file:str, image_file:str, metadata:dict, d
     chapters = [{"include":True, "title":"Cover", "files":[{"id":"item_cover", "file":cover_image}]},
             {"include":True, "title":metadata["title"], "files":[{"id":"item_text", "file":html_file}]}]
     # Create the epub file
-    generated_epub = create_epub(chapters, metadata, temp_directory)
+    generated_epub = create_epub(chapters, metadata, temp_directory, True)
     # Get the final epub file path
     filename = mm_rename.get_available_filename(["a.epub"], metadata["title"], directory)
     epub_file = abspath(join(directory, f"{filename}.epub"))

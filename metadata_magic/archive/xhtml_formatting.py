@@ -174,6 +174,7 @@ def html_to_xhtml(html_file:str) -> str:
     # Parse the HTML text
     root = lxml.html.fromstring(text)
     # Get internal html tag
+    full_html = len(re.findall(r"<html[^>]*>", text)) > 0
     delete_encapsulation = False
     try:
         html = root.xpath("//html")[0]
@@ -203,10 +204,11 @@ def html_to_xhtml(html_file:str) -> str:
     for pre in re.findall(r"<pre>[\S\s]*<\/pre>", content):
         new_pre = text_to_xhtml(re.sub(r"^<pre>|<\/pre>$", "", pre), False)
         content = re.sub(r"<pre>[\S\s]*<\/pre>", new_pre, content, count=1)
-    # Reformat if there are no individual paragraph elements
-    if len(re.findall(r"<\/p>", content)) == 1 and len(re.findall(r"<br\s*\/>", content)) > 0:
+    # Reformat if not a fully realized HTML file
+    if not full_html:
         content = re.sub(r"\n", "", content)
-        content = re.sub(r"^<p>|<\/p>$", "", content)
+        content = re.sub(r"<p[^>]*>|<div[^>]*>", "", content)
+        content = re.sub(r"<\/p>|<\/div>", "<br/><br/>", content)
         content = re.sub(r"\s*<br\s*\/>\s*", "\n", content)
         content = text_to_xhtml(content, False)
     # Replace escape characters

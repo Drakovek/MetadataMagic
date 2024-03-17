@@ -312,7 +312,7 @@ def test_html_to_xml():
     mm_file_tools.write_text_file(html_file, text)
     assert exists(html_file)
     xml = mm_xhtml.html_to_xhtml(html_file)
-    assert xml == "<p>This is a simple sentence!</p>"
+    assert xml == "<p>This is a simple sentence!</p><p></p>"
     # Test with multiple paragraphs
     text = "<html><p>Some text.</p><p>&amp; More!</p></html>"
     mm_file_tools.write_text_file(html_file, text)
@@ -327,7 +327,7 @@ def test_html_to_xml():
     text = "This is a test.\n\r\r\n\nHopefully nothing added."
     mm_file_tools.write_text_file(html_file, text)
     xml = mm_xhtml.html_to_xhtml(html_file)
-    assert xml == "<p>This is a test.Hopefully nothing added.</p>"
+    assert xml == "<p>This is a test.Hopefully nothing added.</p><p></p>"
     # Test with DeviantArt formatting
     text = "<!DOCTYPE html><html><head>Not at all relevant</head><body>"
     text = f"{text}<div class='blah'>Random metadata and stuff.</div><span>Other things</span>"
@@ -342,11 +342,20 @@ def test_html_to_xml():
     mm_file_tools.write_text_file(html_file, text)
     xml = mm_xhtml.html_to_xhtml(html_file)
     assert xml == "<p>Thing</p><p>This &#38; that!</p><p><b>Another!</b></p>"
-    # Test if HTML contains only line breaks and no proper <p> or <div> containers
-    text = "No<br/>\r\n     Paragraphs.<br/> <br/> Just<br/>breaks."
+    # Test aggressive formatting if not a fully realized html file
+    text = "<p><div class=\"blah\" />No<br/>\r\n     Paragraphs.<br/> <br/> Just<br/>breaks.</p>"
     mm_file_tools.write_text_file(html_file, text)
     xml = mm_xhtml.html_to_xhtml(html_file)
-    assert xml == "<p>No Paragraphs.</p><p>Just breaks.</p>"
+    assert xml == "<p>No Paragraphs.</p><p>Just breaks.</p><p></p>"
+    text = "<div class=\"thing\">Word</div><p id=\"blah\">Thing</p>"
+    mm_file_tools.write_text_file(html_file, text)
+    xml = mm_xhtml.html_to_xhtml(html_file)
+    assert xml == "<p>Word</p><p>Thing</p><p></p>"
+    # Test that all formatting is preserved in a fully realized html file
+    text = "<html><body><div>Some<br/>Things</div><p>Other<br/><br/>Things</p></body></html>"
+    mm_file_tools.write_text_file(html_file, text)
+    xml = mm_xhtml.html_to_xhtml(html_file)
+    assert xml == "<div>Some<br/>Things</div><p>Other<br/><br/>Things</p>"
 
 def test_image_to_xml():
     """

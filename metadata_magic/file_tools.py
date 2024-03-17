@@ -6,6 +6,7 @@ import chardet
 import shutil
 import zipfile
 import tempfile
+import traceback
 import html_string_tools.html
 import metadata_magic.rename as mm_rename
 import metadata_magic.sort as mm_sort
@@ -59,7 +60,15 @@ def read_text_file(file:str) -> str:
             encoding = chardet.detect(data)["encoding"]
             text = data.decode(encoding)
             return text
-    except: return None
+    except:
+        try:
+            with open (file) as in_file:
+                text = in_file.read()
+                return text
+        except:
+            traceback.print_exc()
+            print(f"Error Reading: {file}")
+    return None
 
 def write_json_file(file:str, contents:dict):
     """
@@ -86,7 +95,9 @@ def read_json_file(file:str) -> dict:
         json_text = read_text_file(file)
         json_dict = json.loads(json_text)
         return json_dict
-    except(TypeError, json.JSONDecodeError): return {}
+    except(TypeError, json.JSONDecodeError):
+        traceback.print_exc()
+        return {}
 
 def find_files_of_type(directory:str, extension:str, include_subdirectories:bool=True, inverted:bool=False) -> List[str]:
     """
