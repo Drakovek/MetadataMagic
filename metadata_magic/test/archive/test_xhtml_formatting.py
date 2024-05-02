@@ -322,12 +322,12 @@ def test_html_to_xml():
     text = "<!DOCTYPE html>\n<html>\n<body>\n<p>New.</p>\n<p>Words</p>\n<body>\n</html>"
     mm_file_tools.write_text_file(html_file, text)
     xml = mm_xhtml.html_to_xhtml(html_file)
-    assert xml == "<p>New.</p><p>Words</p>"
+    assert xml == "<p>New.</p> <p>Words</p>"
     # Test with newlines and no formatting
     text = "This is a test.\n\r\r\n\nHopefully nothing added."
     mm_file_tools.write_text_file(html_file, text)
     xml = mm_xhtml.html_to_xhtml(html_file)
-    assert xml == "<p>This is a test.Hopefully nothing added.</p><p></p>"
+    assert xml == "<p>This is a test. Hopefully nothing added.</p><p></p>"
     # Test with DeviantArt formatting
     text = "<!DOCTYPE html><html><head>Not at all relevant</head><body>"
     text = f"{text}<div class='blah'>Random metadata and stuff.</div><span>Other things</span>"
@@ -338,7 +338,7 @@ def test_html_to_xml():
     xml = mm_xhtml.html_to_xhtml(html_file)
     assert xml == "<p>This is the real stuff.</p><p>Right<br/>Here.</p><p>More.</p><p/>"
     # Test with text in a <pre> element
-    text = "<html><body><p>Thing</p><pre>    This &\nthat!\n    <b>Another!</b></pre></body></html>"
+    text = "<html><body><p>Thing</p><pre>    This &\nthat!   \n\n <b>Another!</b></pre></body></html>"
     mm_file_tools.write_text_file(html_file, text)
     xml = mm_xhtml.html_to_xhtml(html_file)
     assert xml == "<p>Thing</p><p>This &#38; that!</p><p><b>Another!</b></p>"
@@ -356,6 +356,11 @@ def test_html_to_xml():
     mm_file_tools.write_text_file(html_file, text)
     xml = mm_xhtml.html_to_xhtml(html_file)
     assert xml == "<div>Some<br/>Things</div><p>Other<br/><br/>Things</p>"
+    # Test that newlines in paragraphs are converted to spaces
+    text = "<html><body><p>This  is a\ntest of things.</body></html>"
+    mm_file_tools.write_text_file(html_file, text)
+    xml = mm_xhtml.html_to_xhtml(html_file)
+    assert xml == "<p>This is a test of things.</p>"
 
 def test_image_to_xml():
     """

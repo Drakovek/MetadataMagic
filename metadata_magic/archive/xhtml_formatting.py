@@ -102,11 +102,21 @@ def format_xhtml(html:str, title:str) -> str:
     link.attrib = {"rel":"stylesheet", "href":"../style/epubstyle.css", "type":"text/css"}
     # Add as body to the main XML tree
     try:
-        body = ElementTree.fromstring(f"<body>{formatted_html}</body>")
+        formatted_html = f"<body>{formatted_html}</body>"
+        body = ElementTree.fromstring(formatted_html)
         base.append(body)
     except ElementTree.ParseError as parse_error:
-        character = ord(formatted_html[parse_error.position[0]])
-        print(f"XML Parse Error: Character {character}")
+        position = parse_error.position[1]
+        start_position = position - 10
+        end_position = position + 10
+        if start_position < 0:
+            start_position = 0
+        if end_position > (len(formatted_html)):
+            end_position = len(formatted_html)
+        section = formatted_html[start_position:end_position]
+        char_num = ord(formatted_html[position])
+        print(f"XML Parse Error: Character Value Decimal {char_num}, String")
+        print(f"Error Section: {section}")
         return None
     # Set indents to make the XML more readable
     ElementTree.indent(base, space="    ")
@@ -172,6 +182,7 @@ def html_to_xhtml(html_file:str) -> str:
         if ord(text[i]) == 13:
             text = text[:i] + text[i+1:]
     # Parse the HTML text
+    text = text.replace("\n", "\n ")
     root = lxml.html.fromstring(text)
     # Get internal html tag
     full_html = len(re.findall(r"<html[^>]*>", text)) > 0
@@ -212,6 +223,7 @@ def html_to_xhtml(html_file:str) -> str:
         content = re.sub(r"\s*<br\s*\/>\s*", "\n", content)
         content = text_to_xhtml(content, False)
     # Replace escape characters
+    content = re.sub(r"\s+", " ", content)
     content = content.strip().replace("\n", "")
     content = html_string_tools.html.replace_reserved_in_html(content, True)
     # Return in XML format

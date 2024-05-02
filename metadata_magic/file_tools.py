@@ -66,7 +66,6 @@ def read_text_file(file:str) -> str:
                 text = in_file.read()
                 return text
         except:
-            traceback.print_exc()
             print(f"Error Reading: {file}")
     return None
 
@@ -95,9 +94,7 @@ def read_json_file(file:str) -> dict:
         json_text = read_text_file(file)
         json_dict = json.loads(json_text)
         return json_dict
-    except(TypeError, json.JSONDecodeError):
-        traceback.print_exc()
-        return {}
+    except(TypeError, json.JSONDecodeError): return {}
 
 def find_files_of_type(directory:str, extension:str, include_subdirectories:bool=True, inverted:bool=False) -> List[str]:
     """
