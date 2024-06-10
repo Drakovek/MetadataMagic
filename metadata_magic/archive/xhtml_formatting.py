@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
 import re
+import html5lib
 import html_string_tools
 import metadata_magic.file_tools as mm_file_tools
-import lxml.html
-import lxml.etree
 from xml.etree import ElementTree
 from PIL import Image, UnidentifiedImageError
 from os.path import basename
@@ -53,10 +52,7 @@ def format_xhtml(html:str, title:str) -> str:
     # Remove whitespace after opening paragraph and div elenments
     formatted_html = "".join(reversed(formatted_html))
     formatted_html = re.sub(r"\s+(?=>[^<]*p\s*<)|\s+(?=>[^<]*vid\s*<)", "", formatted_html)
-    # Add centering element to page break lines
-    formatted_html = re.sub(r"<\s*(?=[\-*][\s\-*]+>)", "<>retnec/<", formatted_html)
     formatted_html = "".join(reversed(formatted_html))
-    formatted_html = re.sub(r">\s*(?=[\-*][\s\-*]+<)", "><center>", formatted_html)
     # Remove paragraph and div elements containing nothing
     formatted_html = re.sub(r"<\s*p[^>]*>\s*<\s*\/\s*p\s*>", "", formatted_html)
     formatted_html = re.sub(r"<\s*div[^>]*>\s*<\s*\/\s*div\s*>", "", formatted_html)
@@ -65,11 +61,16 @@ def format_xhtml(html:str, title:str) -> str:
     # Add paragraph elements if necessary
     if not formatted_html.startswith("<") and not formatted_html.endswith(">"):
         formatted_html = f"<p>{formatted_html}</p>"
-    # Use LXML to clean up tags
-    root = lxml.html.fromstring(f"<html><body>{formatted_html}</body></html>")
-    formatted_html = lxml.etree.tostring(root).decode("UTF-8")
-    formatted_html = re.sub(r"^\s*<\s*html\s*>|<\s*\/\s*html\s*>\s*$", "", formatted_html)
-    formatted_html = re.sub(r"^\s*<\s*body\s*>|<\s*\/\s*body\s*>\s*$", "", formatted_html)
+    # Use html5lib to clean up tags
+    ElementTree.register_namespace("", "http://www.w3.org/1999/xhtml")
+    root = html5lib.parse(f"<html><body>{formatted_html}</body></html>")
+    formatted_html = ElementTree.tostring(root).decode("UTF-8")
+    formatted_html = re.sub(r".*\<body[^\>]*\>|<\/body[^\>]*\>.*", "", formatted_html)
+    # Add centering element to page break lines
+    formatted_html = "".join(reversed(formatted_html))
+    formatted_html = re.sub(r"<\s*(?=[\-*][\s\-*]+>)", "<>retnec/<", formatted_html)
+    formatted_html = "".join(reversed(formatted_html))
+    formatted_html = re.sub(r">\s*(?=[\-*][\s\-*]+<)", "><center>", formatted_html)
     # Convert image to full page SVG element if there is a single image present
     regex = "<div>\\s*<img[^>]+width=\"[0-9]+\"[^>]+height=\"[0-9]+\"[^>]*>\\s*<\\/div>|"
     regex = f"{regex}<div>\\s*<img[^>]+height=\"[0-9]+\"[^>]+width=\"[0-9]+\"[^>]*>\\s*<\\/div>"
@@ -182,33 +183,16 @@ def html_to_xhtml(html_file:str) -> str:
         if ord(text[i]) == 13:
             text = text[:i] + text[i+1:]
     # Parse the HTML text
-    text = text.replace("\n", "\n ")
-    root = lxml.html.fromstring(text)
-    # Get internal html tag
-    full_html = len(re.findall(r"<html[^>]*>", text)) > 0
-    delete_encapsulation = False
+    ElementTree.register_namespace("", "http://www.w3.org/1999/xhtml")
+    root = html5lib.parse(text.replace("\n", "\n "))
     try:
-        html = root.xpath("//html")[0]
-        root = html
-        delete_encapsulation = True
+        # Get DeviantArt style text element if available
+        root = root.findall("*/{http://www.w3.org/1999/xhtml}div[@class='text']")[0]
     except IndexError: pass
-    # Get internal body tag
-    try:
-        body = root.xpath("//body")[0]
-        root = body
-        delete_encapsulation = True
-    except IndexError: pass
-    # Get text block (Deviantart formatted html)
-    try:
-        text_class = root.xpath("//div[@class='text']")[0]
-        root = text_class
-        delete_encapsulation = True
-    except IndexError: pass
-    # Get text from the root
-    content = lxml.etree.tostring(root).decode("UTF-8")
-    # Delete encapsulation
-    if delete_encapsulation:
-        content = re.sub(r"^<[^>]*>|<\s*\/[^>]*>$", "", content)
+    # Remove encapsulation and body elements, if applicable
+    content = ElementTree.tostring(root).decode("UTF-8")
+    content = re.sub(r"^\s*<[^\>]+\>\s*|\s*<[^\>]+\>\s*$", "", content)
+    content = re.sub(r".*\<body[^\>]*\>|<\/body[^\>]*\>.*", "", content)
     # Delete javascript tags
     content = re.sub(r"<\s*script[^>]*>[^<]*<\s*\/\s*script\s*>|<\s*script\s*\/\s*>", "", content)
     # Reformat text in <pre> elements
@@ -216,7 +200,7 @@ def html_to_xhtml(html_file:str) -> str:
         new_pre = text_to_xhtml(re.sub(r"^<pre>|<\/pre>$", "", pre), False)
         content = re.sub(r"<pre>[\S\s]*<\/pre>", new_pre, content, count=1)
     # Reformat if not a fully realized HTML file
-    if not full_html:
+    if not len(re.findall(r"<html[^>]*>", text)) > 0:
         content = re.sub(r"\n", "", content)
         content = re.sub(r"<p[^>]*>|<div[^>]*>", "", content)
         content = re.sub(r"<\/p>|<\/div>", "<br/><br/>", content)

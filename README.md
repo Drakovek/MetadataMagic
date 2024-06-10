@@ -14,8 +14,8 @@ MetadataMagic can be downloaded from it's PyPI package using pip:
 If you are installing from source, the following python packages are required:
 * [Chardet](https://github.com/chardet/chardet)
 * [Easy-Text-To-Image](https://github.com/Drakovek/EasyTextToImage)
+* [html5lib](https://github.com/html5lib/html5lib-python)
 * [HTML-String-Tools](https://github.com/Drakovek/HTML-String-Tools)
-* [lxml](https://github.com/lxml/lxml)
 * [Pillow](https://github.com/python-pillow/Pillow)
 * [Python-Print-Tools](https://github.com/Drakovek/Python-Print-Tools)
 * [tqdm](https://pypi.org/project/tqdm/)

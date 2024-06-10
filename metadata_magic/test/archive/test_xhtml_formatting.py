@@ -123,8 +123,9 @@ def test_format_xhtml():
     compare = f"{compare}\n    </head>"
     compare = f"{compare}\n    <body>"
     compare = f"{compare}\n        <p>A-Z</p>"
-    compare = f"{compare}\n        <p />"
-    compare = f"{compare}\n        <center>----</center>"
+    compare = f"{compare}\n        <p>"
+    compare = f"{compare}\n            <center>----</center>"
+    compare = f"{compare}\n        </p>"
     compare = f"{compare}\n        <div>*SNAP*</div>"
     compare = f"{compare}\n        <div>"
     compare = f"{compare}\n            <center>****</center>"
@@ -132,8 +133,9 @@ def test_format_xhtml():
     compare = f"{compare}\n        <div>"
     compare = f"{compare}\n            <center>*-- -- --*</center>"
     compare = f"{compare}\n        </div>"
-    compare = f"{compare}\n        <p />"
-    compare = f"{compare}\n        <center>****</center>"
+    compare = f"{compare}\n        <p>"
+    compare = f"{compare}\n            <center>****</center>"
+    compare = f"{compare}\n        </p>"
     compare = f"{compare}\n    </body>"
     compare = f"{compare}\n</html>"
     assert xhtml == compare
@@ -327,7 +329,7 @@ def test_html_to_xml():
     text = "This is a test.\n\r\r\n\nHopefully nothing added."
     mm_file_tools.write_text_file(html_file, text)
     xml = mm_xhtml.html_to_xhtml(html_file)
-    assert xml == "<p>This is a test. Hopefully nothing added.</p><p></p>"
+    assert xml == "<p>This is a test. Hopefully nothing added.</p>"
     # Test with DeviantArt formatting
     text = "<!DOCTYPE html><html><head>Not at all relevant</head><body>"
     text = f"{text}<div class='blah'>Random metadata and stuff.</div><span>Other things</span>"
@@ -336,7 +338,8 @@ def test_html_to_xml():
     text = f"{text}</body></html>"
     mm_file_tools.write_text_file(html_file, text)
     xml = mm_xhtml.html_to_xhtml(html_file)
-    assert xml == "<p>This is the real stuff.</p><p>Right<br/>Here.</p><p>More.</p><p/>"
+    print(xml)
+    assert xml == "<p>This is the real stuff.</p><p>Right<br />Here.</p><p>More.</p><p />"
     # Test with text in a <pre> element
     text = "<html><body><p>Thing</p><pre>    This &\nthat!   \n\n <b>Another!</b></pre></body></html>"
     mm_file_tools.write_text_file(html_file, text)
@@ -355,7 +358,7 @@ def test_html_to_xml():
     text = "<html><body><div>Some<br/>Things</div><p>Other<br/><br/>Things</p></body></html>"
     mm_file_tools.write_text_file(html_file, text)
     xml = mm_xhtml.html_to_xhtml(html_file)
-    assert xml == "<div>Some<br/>Things</div><p>Other<br/><br/>Things</p>"
+    assert xml == "<div>Some<br />Things</div><p>Other<br /><br />Things</p>"
     # Test that newlines in paragraphs are converted to spaces
     text = "<html><body><p>This  is a\ntest of things.</body></html>"
     mm_file_tools.write_text_file(html_file, text)
