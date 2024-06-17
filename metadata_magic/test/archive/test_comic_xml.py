@@ -18,6 +18,12 @@ def test_get_comic_xml():
     meta["title"] = "This's a title\\'"
     xml = mm_comic_xml.get_comic_xml(meta, False)
     assert xml == f"{start}<Title>This's a title\\'</Title>{end}"
+    # Test setting page count in the XML file
+    meta = mm_archive.get_empty_metadata()
+    meta["title"] = "Test"
+    meta["page_count"] = "23"
+    xml = mm_comic_xml.get_comic_xml(meta, False)
+    assert xml == f"{start}<Title>Test</Title><PageCount>23</PageCount>{end}"
     # Test setting series info in the XML file
     meta = mm_archive.get_empty_metadata()
     meta["series"] = "Name!!"
@@ -151,6 +157,15 @@ def test_read_comic_info():
     meta_read = mm_comic_xml.read_comic_info(xml_file)
     assert meta_read["title"] == "This is a title!"
     assert meta_read["series"] is None
+    assert meta_read["page_count"] is None
+    # Test gitting page count from ComicInfo
+    meta_write["page_count"] = "42"
+    xml = mm_comic_xml.get_comic_xml(meta_write, False)
+    mm_file_tools.write_text_file(xml_file, xml)
+    meta_read = mm_comic_xml.read_comic_info(xml_file)
+    assert meta_read["title"] == "This is a title!"
+    assert meta_read["series"] is None
+    assert meta_read["page_count"] == "42"
     # Test getting series info from ComicInfo.xml
     meta_write["series"] = "The Thing"
     meta_write["series_number"] = "3.0"
@@ -160,6 +175,7 @@ def test_read_comic_info():
     meta_read = mm_comic_xml.read_comic_info(xml_file)
     assert meta_read["title"] == "This is a title!"
     assert meta_read["series"] == "The Thing"
+    assert meta_read["page_count"] == "42"
     assert meta_read["series_number"] == "3.0"
     assert meta_read["series_total"] == "4"
     assert meta_read["description"] is None

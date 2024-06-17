@@ -848,8 +848,6 @@ def get_info_from_epub(epub_file:str) -> dict:
     xml_file = mm_file_tools.extract_file_from_zip(epub_file, extract_dir, "content.opf", True)
     if xml_file is None or not exists(xml_file):
         return mm_archive.get_empty_metadata()
-    if xml_file is None or not exists(xml_file):
-        return mm_archive.get_empty_metadata()
     # Read XML file
     try:
         # Get main namespace
@@ -931,6 +929,16 @@ def get_info_from_epub(epub_file:str) -> dict:
         tags.append(tag_element.text)
     if len(tags) > 0:
         metadata["tags"] = ",".join(tags)
+    # Extract all the content files to get the word count
+    word_count = 0
+    xml_text = mm_file_tools.read_text_file(xml_file)
+    content_files = re.findall("(?<=href=['\"]).+\\.xhtml(?=['\"])", xml_text)
+    for content_file in content_files:
+        filename = re.sub(r".+\/", "", content_file)
+        extracted = mm_file_tools.extract_file_from_zip(epub_file, extract_dir, filename, True)
+        if content_file is None or not exists(content_file):
+            word_count += mm_xhtml.get_word_count_from_html(extracted)
+    metadata["page_count"] = str(math.ceil(word_count/300))
     # Return the extracted metadata
     return metadata
 

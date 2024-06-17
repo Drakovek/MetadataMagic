@@ -21,6 +21,7 @@ def test_get_file_friendly_text():
     assert mm_rename.get_file_friendly_text("(A|||B)") == "(A-B)"
     assert mm_rename.get_file_friendly_text("...Mr. Roboto.") == "…Mr. Roboto"
     assert mm_rename.get_file_friendly_text(" This    &    That ") == "This & That"
+    assert mm_rename.get_file_friendly_text("[A] 	Thing") == "[A] Thing"
     assert mm_rename.get_file_friendly_text("thing--stuff  @*-   blah") == "thing-stuff @ blah"
     assert mm_rename.get_file_friendly_text("This..") == "This"
     assert mm_rename.get_file_friendly_text("..Dots.....") == "Dots…"

@@ -27,6 +27,10 @@ def get_comic_xml(metadata:dict, indent:bool=True) -> str:
     if metadata["title"] is not None:
         title = ElementTree.SubElement(base, "Title")
         title.text = metadata["title"]
+    # Set the page count if applicable
+    if metadata["page_count"] is not None:
+        page_count = ElementTree.SubElement(base, "PageCount")
+        page_count.text = metadata["page_count"]
     # Set the series title if applicable
     if metadata["series"] is not None:
         series = ElementTree.SubElement(base, "Series")
@@ -145,6 +149,7 @@ def read_comic_info(xml_file:str) -> dict:
     metadata["url"] = base.findtext("Web")
     metadata["age_rating"] = base.findtext("AgeRating")
     metadata["score"] = base.findtext("CommunityRating")
+    metadata["page_count"] = base.findtext("PageCount")
     # Get the tags, removing score tags if necessary
     try:
         metadata["tags"] = re.sub(r"\s*,+\s*", ",", base.findtext("Tags"))

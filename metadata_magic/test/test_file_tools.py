@@ -100,11 +100,11 @@ def test_find_files_of_type():
     mm_file_tools.write_text_file(temp_file, "Not")
     temp_file = abspath(join(temp_dir, "new.txt"))
     mm_file_tools.write_text_file(temp_file, "Important")
-    temp_file = abspath(join(temp_dir, "other.png"))
+    temp_file = abspath(join(temp_dir, "other.PNG"))
     mm_file_tools.write_text_file(temp_file, "At")
     temp_file = abspath(join(temp_dir, "blah.thing"))
     mm_file_tools.write_text_file(temp_file, "All")
-    assert sorted(os.listdir(temp_dir)) == ["blah.thing", "new.txt", "other.png", "text.txt"]
+    assert sorted(os.listdir(temp_dir)) == ["blah.thing", "new.txt", "other.PNG", "text.txt"]
     files = mm_file_tools.find_files_of_type(temp_dir, ".txt")
     assert len(files) == 2
     assert basename(files[0]) == "new.txt"
@@ -130,7 +130,7 @@ def test_find_files_of_type():
     files = mm_file_tools.find_files_of_type(temp_dir, ".png", include_subdirectories=True)
     assert len(files) == 2
     assert basename(files[0]) == "deep.png"
-    assert basename(files[1]) == "other.png"
+    assert basename(files[1]) == "other.PNG"
     assert files[0] == temp_file
     # Test finding files, not including subdirectories
     files = mm_file_tools.find_files_of_type(temp_dir, ".txt", include_subdirectories=False)
@@ -142,12 +142,12 @@ def test_find_files_of_type():
     assert len(files) == 3
     assert basename(files[0]) == "blah.thing"
     assert basename(files[1]) == "deep.png"
-    assert basename(files[2]) == "other.png"
+    assert basename(files[2]) == "other.PNG"
     # Test finding files of multiple types
     files = mm_file_tools.find_files_of_type(temp_dir, [".txt", ".png"], include_subdirectories=False)
     assert len(files) == 3
     assert basename(files[0]) == "new.txt"
-    assert basename(files[1]) == "other.png"
+    assert basename(files[1]) == "other.PNG"
     assert basename(files[2]) == "text.txt"
     # Test finding files of multiple types with inverted extension
     files = mm_file_tools.find_files_of_type(temp_dir, [".txt", ".png"], inverted=True, include_subdirectories=False)

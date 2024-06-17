@@ -25,6 +25,8 @@ def get_file_friendly_text(string:str) -> str:
     """
     # Replace colons
     new_text = string.replace(":", " - ")
+    # Replace all whitespace with spaces
+    new_text = re.sub(r"\s", " ", new_text)
     # Replace elipses
     new_text = re.sub(r"\.\s*\.\s*\.", "…", new_text)
     # Replace special latin characters

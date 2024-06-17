@@ -60,6 +60,7 @@ def get_empty_metadata() -> dict:
     meta_dict["url"] = None
     meta_dict["age_rating"] = None
     meta_dict["score"] = None
+    meta_dict["page_count"] = None
     return meta_dict
 
 def get_info_from_jsons(path:str) -> dict:

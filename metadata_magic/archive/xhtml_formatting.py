@@ -6,7 +6,7 @@ import html_string_tools
 import metadata_magic.file_tools as mm_file_tools
 from xml.etree import ElementTree
 from PIL import Image, UnidentifiedImageError
-from os.path import basename
+from os.path import abspath, basename
 
 def get_title_from_file(file:str) -> str:
     """
@@ -239,3 +239,24 @@ def image_to_xhtml(image_file:str, alt_string:str=None) -> str:
         return ""
     # Construct the xml
     return f"<div><img src=\"{image_path}\" alt=\"{title}\" width=\"{width}\" height=\"{height}\" /></div>"
+
+def get_word_count_from_html(html_file:str) -> int:
+    """
+    Returns the number of words contained in a given HTML file.
+    Only counts words found in paragraph tags.
+
+    :param html_file: Path to the HTML file to read
+    :type html_file: str, required
+    :return: Number of words in the file
+    :rtype: int
+    """
+    # Read the html file
+    html = mm_file_tools.read_text_file(abspath(html_file))
+    # Get all paragraph tags
+    paragraphs = re.findall(r"<p[^>]*>(?:[^<]*<(?!\s*\/p))*[^<]*<\/p>", html)
+    html = " ".join(paragraphs)
+    # Remove all html tags
+    html = re.sub(r"<[^>]*>", " ", html)
+    # Find the number of words in the given text
+    return len(re.findall(r"[0-9A-Za-zÀ-ÅÈ-ËÌ-ÏÒ-ÖÙ-Üà-åè-ëì-ïò-öù-üýÿ\-'＇ʼ]+", html))
+    

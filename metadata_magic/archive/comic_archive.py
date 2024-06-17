@@ -2,6 +2,7 @@
 
 import os
 import re
+import copy
 import shutil
 import html_string_tools
 import metadata_magic.sort as mm_sort
@@ -65,7 +66,12 @@ def create_cbz(directory:str, name:str=None, metadata:dict=None, remove_files:bo
     # Create metadata file, if specified
     meta_file = abspath(join(full_directory, "ComicInfo.xml"))
     if metadata is not None:
-        mm_file_tools.write_text_file(meta_file, mm_comic_xml.get_comic_xml(metadata))
+        # Set the page count
+        new_metadata = copy.deepcopy(metadata)
+        images = mm_file_tools.find_files_of_type(full_directory, [".png", ".jpg", ".jpeg"])
+        new_metadata["page_count"] = str(len(images))
+        # Write the metadata file
+        mm_file_tools.write_text_file(meta_file, mm_comic_xml.get_comic_xml(new_metadata))
     # Create cbz file
     assert mm_file_tools.create_zip(full_directory, cbz_file)
     # Remove all old files besides the CBZ, if specified.
@@ -103,7 +109,17 @@ def get_info_from_cbz(cbz_file:str, check_subdirectories:bool=True) -> dict:
     if xml_file is None or not exists(xml_file):
         return mm_archive.get_empty_metadata()
     # Read XML file
-    return mm_comic_xml.read_comic_info(xml_file)
+    metadata = mm_comic_xml.read_comic_info(xml_file)
+    # Get page count if not present
+    try:
+        assert metadata["page_count"] is not None and int(metadata["page_count"]) > 0
+    except (AssertionError, ValueError):
+        extract_dir = abspath(join(extract_dir, "images"))
+        os.mkdir(extract_dir)
+        mm_file_tools.extract_zip(cbz_file, extract_dir)
+        images = mm_file_tools.find_files_of_type(extract_dir, [".png", ".jpg", ".jpeg"])
+        metadata["page_count"] = str(len(images))
+    return metadata
 
 def update_cbz_info(cbz_file:str, metadata:dict):
     """

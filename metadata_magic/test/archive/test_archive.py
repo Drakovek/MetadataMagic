@@ -65,6 +65,7 @@ def test_get_empty_metadata():
     assert meta["url"] is None
     assert meta["age_rating"] == None
     assert meta["score"] is None
+    assert meta["page_count"] is None
 
 def test_get_info_from_jsons():
     """

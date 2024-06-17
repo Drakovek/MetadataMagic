@@ -406,3 +406,33 @@ def test_get_title_from_file():
     assert mm_xhtml.get_title_from_file(filename) == "1 [2] (3)"
     filename = abspath(join(temp_file, "none"))
     assert mm_xhtml.get_title_from_file(filename) == "none"
+
+def test_get_word_count_from_html():
+    """
+    Tests the get_word_count_from_html function.
+    """
+    # Test with low word count
+    temp_dir = mm_file_tools.get_temp_dir()
+    html_file = abspath(join(temp_dir, "text.html"))
+    mm_file_tools.write_text_file(html_file, "<p>Some words.</p>")
+    assert mm_xhtml.get_word_count_from_html(html_file) == 2
+    mm_file_tools.write_text_file(html_file, "<p>Some <i>more</i> <a href='b'>words.</a></p>")
+    assert mm_xhtml.get_word_count_from_html(html_file) == 3
+    mm_file_tools.write_text_file(html_file, "<p class='a'>Something else entirely.</p>")
+    assert mm_xhtml.get_word_count_from_html(html_file) == 3
+    mm_file_tools.write_text_file(html_file, "<p>A</p><div>blah<div><p>B C D</p>")
+    assert mm_xhtml.get_word_count_from_html(html_file) == 4
+    # Test with high word count
+    paragraph = "AAA " * 50
+    paragraph = f"<p>{paragraph}</p>"
+    html = f"<ol>Thing</ol>{paragraph}{paragraph}{paragraph}"
+    mm_file_tools.write_text_file(html_file, html)
+    assert mm_xhtml.get_word_count_from_html(html_file) == 150
+    # Test with non-ascii characters
+    mm_file_tools.write_text_file(html_file, "<p>Thís shóuldn't bréak.</p>")
+    assert mm_xhtml.get_word_count_from_html(html_file) == 3
+    # Test with no words
+    mm_file_tools.write_text_file(html_file, "<html><div>nothing here</div></html>")
+    assert mm_xhtml.get_word_count_from_html(html_file) == 0
+    mm_file_tools.write_text_file(html_file, "Not HTML text.")
+    assert mm_xhtml.get_word_count_from_html(html_file) == 0

@@ -34,14 +34,14 @@ def test_create_cbz():
     cbz_directory = mm_file_tools.get_temp_dir("dvk_cbz_test")
     directory_a = abspath(join(cbz_directory, "AA"))
     directory_b = abspath(join(cbz_directory, "BB"))
-    text_file = abspath(join(directory_a, "text.txt"))
-    media_file = abspath(join(directory_b, "media.png"))
+    imageA = abspath(join(directory_a, "imageA.png"))
+    imageB = abspath(join(directory_b, "imageB.jpg"))
     os.mkdir(directory_a)
     os.mkdir(directory_b)
-    mm_file_tools.write_text_file(text_file, "Text in A")
-    mm_file_tools.write_text_file(media_file, "Not actually png")
-    assert exists(text_file)
-    assert exists(media_file)
+    mm_file_tools.write_text_file(imageA, "AAA")
+    mm_file_tools.write_text_file(imageB, "BBB")
+    assert exists(imageA)
+    assert exists(imageB)
     cbz_file = mm_comic_archive.create_cbz(cbz_directory, "Totally Cool!")
     assert basename(cbz_file) == "Totally Cool!.cbz"
     assert exists(cbz_file)
@@ -52,13 +52,14 @@ def test_create_cbz():
     assert sorted(os.listdir(extract_directory)) == ["AA", "BB"]
     directory_a = abspath(join(extract_directory, "AA"))
     directory_b = abspath(join(extract_directory, "BB"))
-    assert os.listdir(directory_a) == ["text.txt"]
-    assert os.listdir(directory_b) == ["media.png"]
+    assert os.listdir(directory_a) == ["imageA.png"]
+    assert os.listdir(directory_b) == ["imageB.jpg"]
     # Test creating CBZ with metadata
     os.remove(cbz_file)
     metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "What Fun!"
     metadata["artists"] = "Person"
+    metadata["page_count"] = "39"
     cbz_file = mm_comic_archive.create_cbz(cbz_directory, "New", metadata=metadata)
     assert sorted(os.listdir(cbz_directory)) == ["AA", "BB", "New.cbz"]
     extract_directory = mm_file_tools.get_temp_dir("dvk_extract_test")
@@ -67,6 +68,7 @@ def test_create_cbz():
     read_meta = mm_comic_xml.read_comic_info(abspath(join(extract_directory, "ComicInfo.xml")))
     assert read_meta["title"] == "What Fun!"
     assert read_meta["artists"] == "Person"
+    assert read_meta["page_count"] == "2"
     # Test creating CBZ while removing remaining files
     os.remove(cbz_file)
     media_file = abspath(join(cbz_directory, "Another_one.txt"))
@@ -122,7 +124,7 @@ def test_create_cbz():
     assert mm_file_tools.extract_zip(cbz_file, extract_directory)
     assert sorted(os.listdir(extract_directory)) == ["ComicInfo.xml", "Meta"]
     sub_dir = abspath(join(extract_directory, "Meta"))
-    assert sorted(os.listdir(sub_dir)) == ["text.txt"]    
+    assert sorted(os.listdir(sub_dir)) == ["text.txt"]
     read_meta = mm_comic_archive.get_info_from_cbz(cbz_file)
     assert read_meta["title"] == "New Metadata"
     assert read_meta["artists"] is None
@@ -158,15 +160,34 @@ def test_get_info_from_cbz():
     metadata = mm_archive.get_empty_metadata()
     metadata["title"] = "CBZ Title!"
     metadata["tags"] = "Some,Tags"
-    text_file = abspath(join(temp_dir, "text.txt"))
-    mm_file_tools.write_text_file(text_file, "Text")
-    assert exists(text_file)
+    metadata["page_count"] = "15"
+    image1 = abspath(join(temp_dir, "text.png"))
+    image2 = abspath(join(temp_dir, "text.jpg"))
+    image3 = abspath(join(temp_dir, "text.jpeg"))
+    mm_file_tools.write_text_file(image1, "Text")
+    mm_file_tools.write_text_file(image2, "Text")
+    mm_file_tools.write_text_file(image3, "Text")
+    assert exists(image1)
+    assert exists(image2)
+    assert exists(image3)
     cbz_file = mm_comic_archive.create_cbz(temp_dir, metadata=metadata)
     assert exists(cbz_file)
     # Test extracting the ComicInfo from .cbz file
     read_meta = mm_comic_archive.get_info_from_cbz(cbz_file)
     assert read_meta["title"] == "CBZ Title!"
     assert read_meta["tags"] == "Some,Tags"
+    assert read_meta["page_count"] == "3"
+    # Test getting the page count if not already present
+    os.remove(cbz_file)
+    metadata["page_count"] = "A"
+    meta_file = abspath(join(temp_dir, "ComicInfo.xml"))
+    mm_file_tools.write_text_file(meta_file, mm_comic_xml.get_comic_xml(metadata))
+    zip_file = abspath(join(temp_dir, "test.cbz"))
+    assert mm_file_tools.create_zip(temp_dir, zip_file)
+    read_meta = mm_comic_archive.get_info_from_cbz(zip_file)
+    assert read_meta["title"] == "CBZ Title!"
+    assert read_meta["tags"] == "Some,Tags"
+    assert read_meta["page_count"] == "3"
     # Test trying to get ComicInfo when not present in .cbz file
     temp_dir = mm_file_tools.get_temp_dir()
     text_file = abspath(join(temp_dir, "text.txt"))
@@ -243,13 +264,14 @@ def test_update_cbz_info():
     assert os.listdir(abspath(join(extract_dir, "Old Title"))) == ["other.txt"]
     # Test updating cbz that had no comic info in the first place
     temp_dir = mm_file_tools.get_temp_dir()
-    text_file = abspath(join(temp_dir, "text.txt"))
-    other_file = abspath(join(temp_dir, "other.txt"))
-    mm_file_tools.write_text_file(text_file, "This is text!")
-    mm_file_tools.write_text_file(other_file, "More text!")
-    assert exists(text_file)
-    assert exists(other_file)
-    cbz_file = mm_comic_archive.create_cbz(temp_dir)
+    image1 = abspath(join(temp_dir, "thing.png"))
+    image2 = abspath(join(temp_dir, "other.jpeg"))
+    mm_file_tools.write_text_file(image1, "This is text!")
+    mm_file_tools.write_text_file(image2, "More text!")
+    assert exists(image1)
+    assert exists(image2)
+    cbz_file = abspath(join(temp_dir, "test.cbz"))
+    assert mm_file_tools.create_zip(temp_dir, cbz_file)
     assert exists(cbz_file)
     read_meta = mm_comic_archive.get_info_from_cbz(cbz_file)
     assert read_meta["title"] is None
@@ -258,12 +280,13 @@ def test_update_cbz_info():
     assert read_meta["title"] == "New Title!!!"
     assert read_meta["artists"] == "Dude"
     assert read_meta["tags"] == "Something,Else"
+    assert read_meta["page_count"] == "2"
     # Test that files are present
     extract_dir = abspath(join(temp_dir, "ext"))
     os.mkdir(extract_dir)
     assert mm_file_tools.extract_zip(cbz_file, extract_dir)
-    assert sorted(os.listdir(extract_dir)) == ["ComicInfo.xml", "other"]
-    assert sorted(os.listdir(abspath(join(extract_dir, "other")))) == ["other.txt", "text.txt"]
+    assert sorted(os.listdir(extract_dir)) == ["ComicInfo.xml", "New Title!!!"]
+    assert sorted(os.listdir(abspath(join(extract_dir, "New Title!!!")))) == ["other.jpeg", "thing.png"]
     # Test trying to update non-cbz file
     temp_dir = mm_file_tools.get_temp_dir()
     text_file = abspath(join(temp_dir, "text.txt"))

@@ -376,8 +376,6 @@ def test_create_content_files():
     chapters = mm_epub.get_default_chapters(temp_dir)
     chapters = mm_epub.group_chapters(chapters, [0,1,2])
     chapters[0]["title"] = "Grouped"
-    
-
     chapters = mm_epub.create_content_files(chapters, output_dir)
     assert len(chapters) == 1
     assert chapters[0]["include"]
@@ -646,7 +644,7 @@ def test_get_metadata_xml():
     compare = f"{compare}\n    <dc:date>0000-00-00T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>This's a title!\\'</dc:title>"
     compare = f"{compare}\n</metadata>"
-    assert xml == compare
+    assert xml == compare    
     # Test url metadata
     metadata["title"] = "Title."
     metadata["url"] = "this/is/a/test"
@@ -1250,7 +1248,7 @@ def test_get_info_from_epub():
     """
     # Create content files
     temp_dir = mm_file_tools.get_temp_dir()
-    mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "Here's some text!")
+    mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "AAA " * 2000)
     mm_file_tools.write_text_file(abspath(join(temp_dir, "2.txt")), "And")
     mm_file_tools.write_text_file(abspath(join(temp_dir, "3.pdf")), "Stuff")
     chapters = mm_epub.get_default_chapters(temp_dir)
@@ -1263,6 +1261,8 @@ def test_get_info_from_epub():
     assert read_meta["title"] == "This is a title!\\'"
     assert read_meta["url"] is None
     assert read_meta["description"] is None
+    # Test Getting the page count
+    assert read_meta["page_count"] == "7"
     # Test getting the URL
     os.remove(epub_file)
     metadata["title"] = "New Title"
