@@ -5,6 +5,7 @@ import re
 import argparse
 import shutil
 import tqdm
+import tempfile
 import traceback
 import html_string_tools.html
 import python_print_tools.printer
@@ -45,48 +46,49 @@ def archive_all_media(directory:str, format_title:bool=False, description_length
             extension = html_string_tools.html.get_extension(pair["media"]).lower()
             if extension not in media_extensions:
                 continue
-            # Copy JSON and media into temp directory
-            temp_dir = abspath(mm_file_tools.get_temp_dir("dvk_archive_builder"))
-            new_json = abspath(join(temp_dir, basename(pair["json"])))
-            new_media = abspath(join(temp_dir, basename(pair["media"])))
-            shutil.copy(pair["json"], new_json)
-            shutil.copy(pair["media"], new_media)
-            # Get metadata from the JSON
-            metadata = mm_archive.get_info_from_jsons(temp_dir)
-            # Format the title if specified
-            if format_title:
-                metadata["title"] = mm_archive.format_title(metadata["title"])
-            # Rename files to fit the title
-            mm_rename.rename_file(new_json, metadata["title"])
-            mm_rename.rename_file(new_media, metadata["title"])
-            # Create the archive file
-            archive_file = None
-            if extension in mm_archive.SUPPORTED_IMAGES:
-                # Create an epub if the description is too long
-                if metadata["description"] is None or len(metadata["description"]) < description_length:
-                    archive_file = mm_comic_archive.create_cbz(temp_dir, metadata=metadata)
-                else:
-                    new_pair = mm_meta_finder.get_pairs(temp_dir, print_info=False)[0]
-                    new_media = new_pair["media"]
-                    new_json = new_pair["json"]
-                    archive_file = mm_epub.create_epub_from_description(new_json, new_media, metadata, temp_dir)
-            elif extension in mm_archive.SUPPORTED_TEXT:
-                chapters = mm_epub.get_default_chapters(temp_dir, title=metadata["title"])
-                chapters = mm_epub.add_cover_to_chapters(chapters, metadata)
-                archive_file = mm_epub.create_epub(chapters, metadata, temp_dir)
-            assert exists(archive_file)
-            # Copy archive to the original directory
-            parent = abspath(join(pair["json"], os.pardir))
-            filename = basename(pair["json"])
-            filename = filename[:len(filename) - 5]
-            filename = mm_rename.get_available_filename([archive_file], filename, parent)
-            extension = html_string_tools.html.get_extension(archive_file).lower()
-            new_archive = join(parent, f"{filename}{extension}")
-            shutil.copy(archive_file, new_archive)
-            assert exists(new_archive)
-            # Delete the original files
-            os.remove(pair["json"])
-            os.remove(pair["media"])
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Copy JSON and media into temp directory
+                new_json = abspath(join(temp_dir, basename(pair["json"])))
+                new_media = abspath(join(temp_dir, basename(pair["media"])))
+                shutil.copy(pair["json"], new_json)
+                shutil.copy(pair["media"], new_media)
+                # Get metadata from the JSON
+                metadata = mm_archive.get_info_from_jsons(temp_dir)
+                # Format the title if specified
+                if format_title:
+                    metadata["title"] = mm_archive.format_title(metadata["title"])
+                # Rename files to fit the title
+                mm_rename.rename_file(new_json, metadata["title"])
+                mm_rename.rename_file(new_media, metadata["title"])
+                # Create the archive file
+                archive_file = None
+                if extension in mm_archive.SUPPORTED_IMAGES:
+                    # Create an epub if the description is too long
+                    if metadata["description"] is None or len(metadata["description"]) < description_length:
+                        archive_file = mm_comic_archive.create_cbz(temp_dir, metadata=metadata)
+                    else:
+                        new_pair = mm_meta_finder.get_pairs(temp_dir, print_info=False)[0]
+                        new_media = new_pair["media"]
+                        new_json = new_pair["json"]
+                        archive_file = mm_epub.create_epub_from_description(new_json, new_media, metadata, temp_dir)
+                elif extension in mm_archive.SUPPORTED_TEXT:
+                    with tempfile.TemporaryDirectory() as image_dir:
+                        chapters = mm_epub.get_default_chapters(temp_dir, title=metadata["title"])
+                        chapters = mm_epub.add_cover_to_chapters(chapters, metadata, image_dir)
+                        archive_file = mm_epub.create_epub(chapters, metadata, temp_dir)
+                assert exists(archive_file)
+                # Copy archive to the original directory
+                parent = abspath(join(pair["json"], os.pardir))
+                filename = basename(pair["json"])
+                filename = filename[:len(filename) - 5]
+                filename = mm_rename.get_available_filename([archive_file], filename, parent)
+                extension = html_string_tools.html.get_extension(archive_file).lower()
+                new_archive = join(parent, f"{filename}{extension}")
+                shutil.copy(archive_file, new_archive)
+                assert exists(new_archive)
+                # Delete the original files
+                os.remove(pair["json"])
+                os.remove(pair["media"])
         except:
             # Archiving failed
             traceback.print_exc()
@@ -135,33 +137,33 @@ def extract_epub(epub_file:str, output_directory:str, create_folder:bool=True, r
     full_directory = abspath(output_directory)
     if not remove_structure:
         return mm_file_tools.extract_zip(epub_file, full_directory, create_folder=create_folder)
-    # Extract epub to temp folder
-    temp_dir = abspath(mm_file_tools.get_temp_dir("dvk_bulk_extract"))
-    mm_file_tools.extract_zip(epub_file, temp_dir)
-    # Get the folder containing the original files
-    original_dir = abspath(join(temp_dir, "EPUB"))
-    original_dir = abspath(join(original_dir, "original"))
-    if not exists(original_dir):
-        return False
-    # Create directory to copy files into, if specified
-    copy_dir = full_directory
-    if create_folder:
-        folder_name = re.sub(r"\..{1,6}$", "", basename(epub_file))
-        folder_name = mm_rename.get_available_filename(["AAAAAAAA"], folder_name, full_directory)
-        copy_dir = abspath(join(full_directory, folder_name))
-        os.mkdir(copy_dir)
-    # Copy files from epub
-    for original_file in sorted(os.listdir(original_dir)):
-        full_file = abspath(join(original_dir, original_file))
-        filename = re.sub(r"\..{1,6}$", "", original_file)
-        filename = mm_rename.get_available_filename([original_file], filename, copy_dir)
-        filename = filename + html_string_tools.html.get_extension(full_file)
-        new_file = abspath(join(copy_dir, filename))
-        if isdir(full_file):
-            shutil.copytree(full_file, new_file)
-        else:
-            shutil.copy(full_file, new_file)
-        assert exists(new_file)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Extract epub to temp folder
+        mm_file_tools.extract_zip(epub_file, temp_dir)
+        # Get the folder containing the original files
+        original_dir = abspath(join(temp_dir, "EPUB"))
+        original_dir = abspath(join(original_dir, "original"))
+        if not exists(original_dir):
+            return False
+        # Create directory to copy files into, if specified
+        copy_dir = full_directory
+        if create_folder:
+            folder_name = re.sub(r"\..{1,6}$", "", basename(epub_file))
+            folder_name = mm_rename.get_available_filename(["AAAAAAAA"], folder_name, full_directory)
+            copy_dir = abspath(join(full_directory, folder_name))
+            os.mkdir(copy_dir)
+        # Copy files from epub
+        for original_file in sorted(os.listdir(original_dir)):
+            full_file = abspath(join(original_dir, original_file))
+            filename = re.sub(r"\..{1,6}$", "", original_file)
+            filename = mm_rename.get_available_filename([original_file], filename, copy_dir)
+            filename = filename + html_string_tools.html.get_extension(full_file)
+            new_file = abspath(join(copy_dir, filename))
+            if isdir(full_file):
+                shutil.copytree(full_file, new_file)
+            else:
+                shutil.copy(full_file, new_file)
+            assert exists(new_file)
     return True
 
 def extract_all_archives(directory:str, create_folders:bool=True, remove_structure:bool=False) -> bool:

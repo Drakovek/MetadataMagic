@@ -13,22 +13,6 @@ import metadata_magic.sort as mm_sort
 from typing import List
 from os.path import abspath, basename, exists, isdir, join, relpath
 
-def get_temp_dir(folder_name:str="dvk_meta_magic") -> str:
-    """
-    Creates and returns test directory.
-
-    :param folder_name: Name to give the temporary directory, defaults to "dvk_meta_magic"
-    :type folder_name: str, optional
-    :return: File path of the test directory
-    :rtype: str
-    """
-    base_temp_dir = abspath(tempfile.gettempdir())
-    temp_dir = abspath(join(base_temp_dir, folder_name))
-    if(exists(temp_dir)):
-        shutil.rmtree(temp_dir)
-    os.mkdir(temp_dir)
-    return temp_dir
-
 def write_text_file(file:str, text:str):
     """
     Writes a file containing the given text.
@@ -238,44 +222,44 @@ def extract_zip(zip_path:str, extract_directory:str, create_folder:bool=False,
     :rtype: bool
     """
     # Get temporary directory
-    temp_dir = get_temp_dir("dvk-unzip")
-    # Unzip files into temp directory
-    try:
-        with zipfile.ZipFile(zip_path, mode="r") as file:
-            file.extractall(path=temp_dir)
-    except zipfile.BadZipFile: return False
-    # Create new extraction subfolder if specified
-    main_dir = abspath(extract_directory)
-    new_dir = abspath(extract_directory)
-    if create_folder:
-        filename = basename(zip_path)
-        extension = html_string_tools.html.get_extension(filename)
-        filename = filename[:len(filename) - len(extension)]
-        filename = mm_rename.get_available_filename(["AAAAAAAAAA"], filename, main_dir)
-        new_dir = abspath(join(main_dir, filename))
-        os.mkdir(new_dir)
-    # Delete listed files
-    for file in delete_files:
-        full_file = abspath(join(temp_dir, file))
-        if exists(full_file):
-            os.remove(full_file)
-    # Remove internal folder if specified
-    if remove_internal and len(os.listdir(temp_dir)) == 1:
-        full_file = abspath(join(temp_dir, os.listdir(temp_dir)[0]))
-        if isdir(full_file):
-            temp_dir = full_file
-    # Copy files to new directory
-    files = os.listdir(temp_dir)
-    for file in files:
-        extension = html_string_tools.html.get_extension(file)
-        filename = file[:len(file) - len(extension)]
-        filename = mm_rename.get_available_filename([file], filename, new_dir)
-        current_file = abspath(join(temp_dir, file))
-        new_file = abspath(join(new_dir, f"{filename}{extension}"))
-        if isdir(current_file):
-            shutil.copytree(current_file, new_file)
-        else:
-            shutil.copy(current_file, new_file)
+    with tempfile.TemporaryDirectory() as unzip_dir:
+        # Unzip files into temp directory
+        try:
+            with zipfile.ZipFile(zip_path, mode="r") as file:
+                file.extractall(path=unzip_dir)
+        except zipfile.BadZipFile: return False
+        # Create new extraction subfolder if specified
+        main_dir = abspath(extract_directory)
+        new_dir = abspath(extract_directory)
+        if create_folder:
+            filename = basename(zip_path)
+            extension = html_string_tools.html.get_extension(filename)
+            filename = filename[:len(filename) - len(extension)]
+            filename = mm_rename.get_available_filename(["AAAAAAAAAA"], filename, main_dir)
+            new_dir = abspath(join(main_dir, filename))
+            os.mkdir(new_dir)
+        # Delete listed files
+        for file in delete_files:
+            full_file = abspath(join(unzip_dir, file))
+            if exists(full_file):
+                os.remove(full_file)
+        # Remove internal folder if specified
+        if remove_internal and len(os.listdir(unzip_dir)) == 1:
+            full_file = abspath(join(unzip_dir, os.listdir(unzip_dir)[0]))
+            if isdir(full_file):
+                unzip_dir = full_file
+        # Copy files to new directory
+        files = os.listdir(unzip_dir)
+        for file in files:
+            extension = html_string_tools.html.get_extension(file)
+            filename = file[:len(file) - len(extension)]
+            filename = mm_rename.get_available_filename([file], filename, new_dir)
+            current_file = abspath(join(unzip_dir, file))
+            new_file = abspath(join(new_dir, f"{filename}{extension}"))
+            if isdir(current_file):
+                shutil.copytree(current_file, new_file)
+            else:
+                shutil.copy(current_file, new_file)
     return True
 
 def extract_file_from_zip(zip_path:str, extract_directory:str, extract_file:str, check_subdirectories:bool=False) -> str:
@@ -293,28 +277,27 @@ def extract_file_from_zip(zip_path:str, extract_directory:str, extract_file:str,
     :return: Path of the extracted file, None if file couldn't be extracted
     :rtype: str
     """
-    # Get temporary directory
-    temp_dir = get_temp_dir("dvk_unzip_single")
-    # Extract into temporary directory
     try:
-        with zipfile.ZipFile(zip_path, mode="r") as zfile:
-            # Get the correct file to extract
-            internal_file = None
-            info_list = zfile.infolist()
-            for info in info_list:
-                if info.filename == extract_file or (check_subdirectories and basename(info.filename) == extract_file):
-                    internal_file = info.filename
-            # Attempt extracting the file
-            zfile.extract(internal_file, path=temp_dir)
-            extracted = abspath(join(temp_dir, internal_file))
-            new_file = abspath(join(extract_directory, extract_file))
-            # Update file if it already exists
-            if exists(new_file):
-                extension = html_string_tools.html.get_extension(extract_file)
-                filename = extract_file[:len(extract_file) - len(extension)]
-                filename = mm_rename.get_available_filename([extracted], filename, extract_directory)
-                new_file = abspath(join(extract_directory, f"{filename}{extension}"))
-            # Copy file to new location
-            shutil.copy(extracted, new_file)
-            return new_file
+        # Get temporary directory
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with zipfile.ZipFile(zip_path, mode="r") as zfile:
+                # Get the correct file to extract
+                internal_file = None
+                info_list = zfile.infolist()
+                for info in info_list:
+                    if info.filename == extract_file or (check_subdirectories and basename(info.filename) == extract_file):
+                        internal_file = info.filename
+                # Attempt extracting the file
+                zfile.extract(internal_file, path=temp_dir)
+                extracted = abspath(join(temp_dir, internal_file))
+                new_file = abspath(join(extract_directory, extract_file))
+                # Update file if it already exists
+                if exists(new_file):
+                    extension = html_string_tools.html.get_extension(extract_file)
+                    filename = extract_file[:len(extract_file) - len(extension)]
+                    filename = mm_rename.get_available_filename([extracted], filename, extract_directory)
+                    new_file = abspath(join(extract_directory, f"{filename}{extension}"))
+                # Copy file to new location
+                shutil.copy(extracted, new_file)
+                return new_file
     except (zipfile.BadZipFile, FileNotFoundError, KeyError): return None

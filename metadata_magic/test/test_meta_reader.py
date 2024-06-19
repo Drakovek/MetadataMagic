@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import tempfile
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_reader as mm_meta_reader
 from os.path import abspath, exists, join
@@ -30,29 +31,29 @@ def test_load_metadata():
     """
     Tests the load_metadata function.
     """
-    # Create JSON to load
-    temp_dir = mm_file_tools.get_temp_dir()
-    test_json = abspath(join(temp_dir, "empty.json"))
-    mm_file_tools.write_json_file(test_json, {"title":"test", "thing":"other"})
-    assert exists(test_json)
-    # Attempt to load the JSON file
-    meta = mm_meta_reader.load_metadata(test_json, "a.txt")
-    assert meta["json_path"] == test_json
-    assert meta["title"] == "test"
-    assert meta["original"] == {"title":"test", "thing":"other"}
-    # Test loading from an invalid path
-    meta = mm_meta_reader.load_metadata("/not/real/directory/", "a.txt")
-    assert not exists(meta["json_path"])
-    assert meta["id"] is None
-    assert meta["title"] is None
-    assert meta["artists"] is None
-    assert meta["writers"] is None
-    assert meta["date"] is None
-    assert meta["description"] is None
-    assert meta["publisher"] is None
-    assert meta["tags"] is None
-    assert meta["url"] is None
-    assert meta["original"] == {}
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create JSON to load
+        test_json = abspath(join(temp_dir, "empty.json"))
+        mm_file_tools.write_json_file(test_json, {"title":"test", "thing":"other"})
+        assert exists(test_json)
+        # Attempt to load the JSON file
+        meta = mm_meta_reader.load_metadata(test_json, "a.txt")
+        assert meta["json_path"] == test_json
+        assert meta["title"] == "test"
+        assert meta["original"] == {"title":"test", "thing":"other"}
+        # Test loading from an invalid path
+        meta = mm_meta_reader.load_metadata("/not/real/directory/", "a.txt")
+        assert not exists(meta["json_path"])
+        assert meta["id"] is None
+        assert meta["title"] is None
+        assert meta["artists"] is None
+        assert meta["writers"] is None
+        assert meta["date"] is None
+        assert meta["description"] is None
+        assert meta["publisher"] is None
+        assert meta["tags"] is None
+        assert meta["url"] is None
+        assert meta["original"] == {}
 
 def test_get_title():
     """
@@ -65,15 +66,15 @@ def test_get_title():
     assert mm_meta_reader.get_title(dictionary) == "New Title"
     # Test if there is no title
     assert mm_meta_reader.get_title({"no":"title"}) is None
-    # Create JSON to load
-    temp_dir = mm_file_tools.get_temp_dir()
-    test_json = abspath(join(temp_dir, "title.json"))
-    mm_file_tools.write_json_file(test_json, {"thing":"other", "title":"Loaded!"})
-    assert exists(test_json)
-    # Test getting title when read directly from JSON
-    meta = mm_meta_reader.load_metadata(test_json, "b.jpg")
-    assert meta["json_path"] == test_json
-    assert meta["title"] == "Loaded!"
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create JSON to load
+        test_json = abspath(join(temp_dir, "title.json"))
+        mm_file_tools.write_json_file(test_json, {"thing":"other", "title":"Loaded!"})
+        assert exists(test_json)
+        # Test getting title when read directly from JSON
+        meta = mm_meta_reader.load_metadata(test_json, "b.jpg")
+        assert meta["json_path"] == test_json
+        assert meta["title"] == "Loaded!"
 
 def test_get_artists_and_writers():
     """
@@ -160,15 +161,15 @@ def test_get_artists_and_writers():
     artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".jpg")
     assert artists == ["Thing"]
     assert writers == ["Thing"]
-    # Create JSON to load
-    temp_dir = mm_file_tools.get_temp_dir()
-    test_json = abspath(join(temp_dir, "date.json"))
-    mm_file_tools.write_json_file(test_json, {"artists":["Artist", "Other"], "writer":"person"})
-    assert exists(test_json)
-    # Test reading artist and writer from a JSON file
-    meta = mm_meta_reader.load_metadata(test_json, "Blah.txt")
-    assert meta["artists"] == ["Artist", "Other"]
-    assert meta["writers"] == ["person"]
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create JSON to load
+        test_json = abspath(join(temp_dir, "date.json"))
+        mm_file_tools.write_json_file(test_json, {"artists":["Artist", "Other"], "writer":"person"})
+        assert exists(test_json)
+        # Test reading artist and writer from a JSON file
+        meta = mm_meta_reader.load_metadata(test_json, "Blah.txt")
+        assert meta["artists"] == ["Artist", "Other"]
+        assert meta["writers"] == ["person"]
 
 def test_get_date():
     """
@@ -197,15 +198,15 @@ def test_get_date():
     assert mm_meta_reader.get_date(dictionary) is None
     dictionary = {"thing":"blah"}
     assert mm_meta_reader.get_date(dictionary) is None
-    # Create JSON to load
-    temp_dir = mm_file_tools.get_temp_dir()
-    test_json = abspath(join(temp_dir, "date.json"))
-    mm_file_tools.write_json_file(test_json, {"thing":"other", "date":"20230513"})
-    assert exists(test_json)
-    # Test getting date when read directly from JSON
-    meta = mm_meta_reader.load_metadata(test_json, "b.txt")
-    assert meta["json_path"] == test_json
-    assert meta["date"] == "2023-05-13"
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create JSON to load
+        test_json = abspath(join(temp_dir, "date.json"))
+        mm_file_tools.write_json_file(test_json, {"thing":"other", "date":"20230513"})
+        assert exists(test_json)
+        # Test getting date when read directly from JSON
+        meta = mm_meta_reader.load_metadata(test_json, "b.txt")
+        assert meta["json_path"] == test_json
+        assert meta["date"] == "2023-05-13"
 
 def test_get_description():
     """
@@ -225,15 +226,15 @@ def test_get_description():
     # Test if there is no description
     dictionary = {"no":"description"}
     assert mm_meta_reader.get_description(dictionary) is None
-    # Create JSON to load
-    temp_dir = mm_file_tools.get_temp_dir()
-    test_json = abspath(join(temp_dir, "description.json"))
-    mm_file_tools.write_json_file(test_json, {"thing":"other", "description":"New<br><br>Description!"})
-    assert exists(test_json)
-    # Test getting decscription when read directly from JSON
-    meta = mm_meta_reader.load_metadata(test_json, "a.png")
-    assert meta["json_path"] == test_json
-    assert meta["description"] == "New<br><br>Description!"
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create JSON to load
+        test_json = abspath(join(temp_dir, "description.json"))
+        mm_file_tools.write_json_file(test_json, {"thing":"other", "description":"New<br><br>Description!"})
+        assert exists(test_json)
+        # Test getting decscription when read directly from JSON
+        meta = mm_meta_reader.load_metadata(test_json, "a.png")
+        assert meta["json_path"] == test_json
+        assert meta["description"] == "New<br><br>Description!"
 
 def test_get_id():
     """
@@ -280,15 +281,15 @@ def test_get_id():
     # Test if there is no ID
     dictionary = {"no":"id"}
     assert mm_meta_reader.get_id(dictionary) is None
-    # Create JSON to load
-    temp_dir = mm_file_tools.get_temp_dir()
-    test_json = abspath(join(temp_dir, "id.json"))
-    mm_file_tools.write_json_file(test_json, {"thing":"other", "id":"Blah"})
-    assert exists(test_json)
-    # Test getting ID when read directly from JSON
-    meta = mm_meta_reader.load_metadata(test_json, "b.txt")
-    assert meta["json_path"] == test_json
-    assert meta["id"] == "Blah"
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create JSON to load
+        test_json = abspath(join(temp_dir, "id.json"))
+        mm_file_tools.write_json_file(test_json, {"thing":"other", "id":"Blah"})
+        assert exists(test_json)
+        # Test getting ID when read directly from JSON
+        meta = mm_meta_reader.load_metadata(test_json, "b.txt")
+        assert meta["json_path"] == test_json
+        assert meta["id"] == "Blah"
 
 def test_get_publisher():
     """
@@ -362,15 +363,15 @@ def test_get_publisher():
     assert mm_meta_reader.get_publisher(dictionary) is None
     dictionary = {"no":"URLS"}
     assert mm_meta_reader.get_publisher(dictionary) is None
-    # Create JSON to load
-    temp_dir = mm_file_tools.get_temp_dir()
-    test_json = abspath(join(temp_dir, "publisher.json"))
-    mm_file_tools.write_json_file(test_json, {"thing":"other", "url":"www.deviantart.com/art/blah"})
-    assert exists(test_json)
-    # Test getting publisher when read directly from JSON
-    meta = mm_meta_reader.load_metadata(test_json, "b.txt")
-    assert meta["json_path"] == test_json
-    assert meta["publisher"] == "DeviantArt"
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create JSON to load
+        test_json = abspath(join(temp_dir, "publisher.json"))
+        mm_file_tools.write_json_file(test_json, {"thing":"other", "url":"www.deviantart.com/art/blah"})
+        assert exists(test_json)
+        # Test getting publisher when read directly from JSON
+        meta = mm_meta_reader.load_metadata(test_json, "b.txt")
+        assert meta["json_path"] == test_json
+        assert meta["publisher"] == "DeviantArt"
 
 def test_get_url():
     """
@@ -398,18 +399,18 @@ def test_get_url():
     assert mm_meta_reader.get_url({"A":"B"}, "pixiv", "Other") == "https://www.pixiv.net/en/artworks/Other"
     # Test when there is no URL
     assert mm_meta_reader.get_url({"no":"url"}) is None
-    # Create JSON to load
-    temp_dir = mm_file_tools.get_temp_dir()
-    dictionary = {"url":"www.furaffinity.net/thing/", "id":"ID-ABC"}
-    test_json = abspath(join(temp_dir, "url.json"))
-    mm_file_tools.write_json_file(test_json, dictionary)
-    assert exists(test_json)
-    # Test getting URL when read directly from JSON
-    meta = mm_meta_reader.load_metadata(test_json, "a.png")
-    assert meta["json_path"] == test_json
-    assert meta["id"] == "ID-ABC"
-    assert meta["publisher"] == "Fur Affinity"
-    assert meta["url"] == "https://www.furaffinity.net/view/ID-ABC/"
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create JSON to load
+        dictionary = {"url":"www.furaffinity.net/thing/", "id":"ID-ABC"}
+        test_json = abspath(join(temp_dir, "url.json"))
+        mm_file_tools.write_json_file(test_json, dictionary)
+        assert exists(test_json)
+        # Test getting URL when read directly from JSON
+        meta = mm_meta_reader.load_metadata(test_json, "a.png")
+        assert meta["json_path"] == test_json
+        assert meta["id"] == "ID-ABC"
+        assert meta["publisher"] == "Fur Affinity"
+        assert meta["url"] == "https://www.furaffinity.net/view/ID-ABC/"
 
 def test_get_tags():
     """
@@ -442,16 +443,16 @@ def test_get_tags():
     # Test with no tags
     assert mm_meta_reader.get_tags({"no":"tags"}) is None
     assert mm_meta_reader.get_tags({"tags":[{"nope":"nope"}]}) is None
-    # Create JSON to load
-    temp_dir = mm_file_tools.get_temp_dir()
-    dictionary = {"tags":["These", "are", "some", "tags"]}
-    test_json = abspath(join(temp_dir, "tags.json"))
-    mm_file_tools.write_json_file(test_json, dictionary)
-    assert exists(test_json)
-    # Test getting tags when read directly from JSON
-    meta = mm_meta_reader.load_metadata(test_json, "a.jpg")
-    assert meta["json_path"] == test_json
-    assert meta["tags"] == ["These", "are", "some", "tags"]
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create JSON to load
+        dictionary = {"tags":["These", "are", "some", "tags"]}
+        test_json = abspath(join(temp_dir, "tags.json"))
+        mm_file_tools.write_json_file(test_json, dictionary)
+        assert exists(test_json)
+        # Test getting tags when read directly from JSON
+        meta = mm_meta_reader.load_metadata(test_json, "a.jpg")
+        assert meta["json_path"] == test_json
+        assert meta["tags"] == ["These", "are", "some", "tags"]
 
 def test_get_age_rating():
     """
@@ -551,13 +552,13 @@ def test_get_age_rating():
     dictionary = {"rating":"mature"}
     assert mm_meta_reader.get_age_rating(dictionary, None) == "Unknown"
     # Create JSON to load
-    temp_dir = mm_file_tools.get_temp_dir()
-    dictionary = {"url":"www.furaffinity.net/thing/", "rating":"Mature"}
-    test_json = abspath(join(temp_dir, "url.json"))
-    mm_file_tools.write_json_file(test_json, dictionary)
-    assert exists(test_json)
-    # Test getting age rating when read directly from JSON
-    meta = mm_meta_reader.load_metadata(test_json, "a.txt")
-    assert meta["json_path"] == test_json
-    assert meta["publisher"] == "Fur Affinity"
-    assert meta["age_rating"] == "Mature 17+"
+    with tempfile.TemporaryDirectory() as temp_dir:
+        dictionary = {"url":"www.furaffinity.net/thing/", "rating":"Mature"}
+        test_json = abspath(join(temp_dir, "url.json"))
+        mm_file_tools.write_json_file(test_json, dictionary)
+        assert exists(test_json)
+        # Test getting age rating when read directly from JSON
+        meta = mm_meta_reader.load_metadata(test_json, "a.txt")
+        assert meta["json_path"] == test_json
+        assert meta["publisher"] == "Fur Affinity"
+        assert meta["age_rating"] == "Mature 17+"

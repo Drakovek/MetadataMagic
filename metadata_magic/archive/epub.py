@@ -3,6 +3,7 @@ import re
 import copy
 import math
 import shutil
+import tempfile
 import html_string_tools
 import python_print_tools.printer
 import metadata_magic.sort as mm_sort
@@ -53,7 +54,7 @@ def get_default_chapters(directory:str, title:str=None) -> List[dict]:
     # Return the default chapters
     return chapters
 
-def add_cover_to_chapters(chapters:List[dict], metadata:dict) -> List[dict]:
+def add_cover_to_chapters(chapters:List[dict], metadata:dict, image_dir:str) -> List[dict]:
     """
     Adds information for a cover image to a list of chapter information.
     
@@ -61,15 +62,15 @@ def add_cover_to_chapters(chapters:List[dict], metadata:dict) -> List[dict]:
     :type chapters: List[dict], required
     :param metadata: Metadata dict as returned by meta_reader.py's get_empty_metadata function.
     :type metadata: dict, required
+    :param extract_dir: Directory in which to save the cover image file
+    :type extract_dir: str, required
     :return: List of chapter information with cover image added to the beginning
     :rtype: List[dict]
     """
     # Create new chapters list
-    new_chapters = []
-    new_chapters.extend(chapters)
+    new_chapters = copy.deepcopy(chapters)
     # Create a cover image
-    cover_directory = mm_file_tools.get_temp_dir("dvk_cover_gen")
-    cover_file = abspath(join(cover_directory, "mm_cover_image.jpg"))
+    cover_file = abspath(join(abspath(image_dir), f"cover_image.jpg"))
     cover_image = mm_archive.get_cover_image(metadata["title"], metadata["writers"], uppercase=True)
     cover_image = cover_image.convert("RGB")
     cover_image.save(cover_file, quality=95)
@@ -258,7 +259,7 @@ def get_chapters_from_user(directory:str, metadata:dict) -> List[dict]:
             except ValueError:pass
     # Ask whether to add a cover image
     if input("Generate Cover Image? (Y/[N]): ").lower() == "y":
-        chapters = add_cover_to_chapters(chapters, metadata)
+        chapters = add_cover_to_chapters(chapters, metadata, abspath(directory))
     # Return the chapters
     return chapters
 
@@ -745,46 +746,46 @@ def create_epub(chapters:List[dict], metadata:dict, directory:str, copy_back_cov
     :return: The path of the created EPUB file
     :rtype: str
     """
-    # Create temporary directories for building the epub
-    build_directory = mm_file_tools.get_temp_dir("dvk_meta_epub_builder")
-    meta_directory = abspath(join(build_directory, "META-INF"))
-    epub_directory = abspath(join(build_directory, "EPUB"))
-    os.mkdir(meta_directory)
-    os.mkdir(epub_directory)
-    # Create the meta container xml
-    base = ElementTree.Element("container")
-    base.attrib = {"xmlns":"urn:oasis:names:tc:opendocument:xmlns:container", "version":"1.0"}
-    rootfiles = ElementTree.SubElement(base, "rootfiles")
-    rootfile = ElementTree.SubElement(rootfiles, "rootfile")
-    rootfile.attrib = {"media-type":"application/oebps-package+xml", "full-path":"EPUB/content.opf"}
-    ElementTree.indent(base, space="    ")
-    xml = ElementTree.tostring(base).decode("UTF-8")
-    xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
-    container_file = abspath(join(meta_directory, "container.xml"))
-    mm_file_tools.write_text_file(container_file, xml)
-    # Create the style file
-    create_style_file(epub_directory)
-    # Copy the original to the EPUB directory
-    copy_original_files(directory, epub_directory)
-    # Create the content files
-    updated_chapters = create_content_files(chapters, epub_directory)
-    # Copy the cover to the back cover, if specified
-    if copy_back_cover:
-        back_cover = copy.deepcopy(updated_chapters[0])
-        back_cover["title"] = "Back Cover"
-        back_cover["id"] = "back_cover"
-        updated_chapters.append(back_cover)
-    # Create nav and ncx files
-    create_nav_file(updated_chapters, metadata["title"], epub_directory)
-    create_ncx_file(updated_chapters, metadata["title"], metadata["url"], epub_directory)
-    # Create the content.opf file
-    create_content_opf(updated_chapters, metadata, epub_directory)
-    # Get the epub file path
-    filename = mm_rename.get_available_filename(["a.epub"], metadata["title"], directory)
-    epub_file = abspath(join(directory, f"{filename}.epub"))
-    # Create the epub file
-    assert mm_file_tools.create_zip(build_directory, epub_file, 8, "application/epub+zip")
-    return epub_file
+    with tempfile.TemporaryDirectory() as build_directory:
+        # Create temporary directories for building the epub
+        meta_directory = abspath(join(build_directory, "META-INF"))
+        epub_directory = abspath(join(build_directory, "EPUB"))
+        os.mkdir(meta_directory)
+        os.mkdir(epub_directory)
+        # Create the meta container xml
+        base = ElementTree.Element("container")
+        base.attrib = {"xmlns":"urn:oasis:names:tc:opendocument:xmlns:container", "version":"1.0"}
+        rootfiles = ElementTree.SubElement(base, "rootfiles")
+        rootfile = ElementTree.SubElement(rootfiles, "rootfile")
+        rootfile.attrib = {"media-type":"application/oebps-package+xml", "full-path":"EPUB/content.opf"}
+        ElementTree.indent(base, space="    ")
+        xml = ElementTree.tostring(base).decode("UTF-8")
+        xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
+        container_file = abspath(join(meta_directory, "container.xml"))
+        mm_file_tools.write_text_file(container_file, xml)
+        # Create the style file
+        create_style_file(epub_directory)
+        # Copy the original to the EPUB directory
+        copy_original_files(directory, epub_directory)
+        # Create the content files
+        updated_chapters = create_content_files(chapters, epub_directory)
+        # Copy the cover to the back cover, if specified
+        if copy_back_cover:
+            back_cover = copy.deepcopy(updated_chapters[0])
+            back_cover["title"] = "Back Cover"
+            back_cover["id"] = "back_cover"
+            updated_chapters.append(back_cover)
+        # Create nav and ncx files
+        create_nav_file(updated_chapters, metadata["title"], epub_directory)
+        create_ncx_file(updated_chapters, metadata["title"], metadata["url"], epub_directory)
+        # Create the content.opf file
+        create_content_opf(updated_chapters, metadata, epub_directory)
+        # Get the epub file path
+        filename = mm_rename.get_available_filename(["a.epub"], metadata["title"], directory)
+        epub_file = abspath(join(directory, f"{filename}.epub"))
+        # Create the epub file
+        assert mm_file_tools.create_zip(build_directory, epub_file, 8, "application/epub+zip")
+        return epub_file
 
 def create_epub_from_description(json_file:str, image_file:str, metadata:dict, directory:str) -> str:
     """
@@ -803,33 +804,33 @@ def create_epub_from_description(json_file:str, image_file:str, metadata:dict, d
     :rtype: str
     """
     # Create a temporary directory for the generated epub contents
-    temp_directory = mm_file_tools.get_temp_dir("dvk_meta_description")
-    # Copy Files into the original directory
-    json_name = basename(json_file)
-    image_name = basename(image_file)
-    original_directory = abspath(join(temp_directory, "original"))
-    os.mkdir(original_directory)
-    shutil.copy(json_file, abspath(join(original_directory, json_name)))
-    shutil.copy(image_file, abspath(join(original_directory, image_name)))
-    # Copy the cover image
-    extension = html_string_tools.html.get_extension(image_name)
-    cover_image = abspath(join(temp_directory, f"dvk-cover{extension}"))
-    shutil.copy(image_file, cover_image)
-    # Create the html from the json description
-    html = mm_meta_reader.load_metadata(json_file, image_file)["description"]
-    html_file = abspath(join(temp_directory, json_name[:len(json_name) - 5] + ".html"))
-    mm_file_tools.write_text_file(html_file, html)
-    # Create the chapters list
-    chapters = [{"include":True, "title":"Cover", "files":[{"id":"item_cover", "file":cover_image}]},
-            {"include":True, "title":metadata["title"], "files":[{"id":"item_text", "file":html_file}]}]
-    # Create the epub file
-    generated_epub = create_epub(chapters, metadata, temp_directory, True)
-    # Get the final epub file path
-    filename = mm_rename.get_available_filename(["a.epub"], metadata["title"], directory)
-    epub_file = abspath(join(directory, f"{filename}.epub"))
-    # Copy the epub file to the appropriate directory
-    shutil.copy(generated_epub, epub_file)
-    return epub_file
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Copy Files into the original directory
+        json_name = basename(json_file)
+        image_name = basename(image_file)
+        original_directory = abspath(join(temp_dir, "original"))
+        os.mkdir(original_directory)
+        shutil.copy(json_file, abspath(join(original_directory, json_name)))
+        shutil.copy(image_file, abspath(join(original_directory, image_name)))
+        # Copy the cover image
+        extension = html_string_tools.html.get_extension(image_name)
+        cover_image = abspath(join(temp_dir, f"dvk-cover{extension}"))
+        shutil.copy(image_file, cover_image)
+        # Create the html from the json description
+        html = mm_meta_reader.load_metadata(json_file, image_file)["description"]
+        html_file = abspath(join(temp_dir, json_name[:len(json_name) - 5] + ".html"))
+        mm_file_tools.write_text_file(html_file, html)
+        # Create the chapters list
+        chapters = [{"include":True, "title":"Cover", "files":[{"id":"item_cover", "file":cover_image}]},
+                {"include":True, "title":metadata["title"], "files":[{"id":"item_text", "file":html_file}]}]
+        # Create the epub file
+        generated_epub = create_epub(chapters, metadata, temp_dir, True)
+        # Get the final epub file path
+        filename = mm_rename.get_available_filename(["a.epub"], metadata["title"], directory)
+        epub_file = abspath(join(directory, f"{filename}.epub"))
+        # Copy the epub file to the appropriate directory
+        shutil.copy(generated_epub, epub_file)
+        return epub_file
 
 def get_info_from_epub(epub_file:str) -> dict:
     """
@@ -840,107 +841,104 @@ def get_info_from_epub(epub_file:str) -> dict:
     :return: Dictionary containing metadata from the .epub file
     :rtype: dict
     """
-    # Create temporary directory
-    file = abspath(epub_file)
-    extract_dir = mm_file_tools.get_temp_dir("dvk_meta_extract")
-    assert exists(extract_dir)
-    # Extract content.opf from given file
-    xml_file = mm_file_tools.extract_file_from_zip(epub_file, extract_dir, "content.opf", True)
-    if xml_file is None or not exists(xml_file):
-        return mm_archive.get_empty_metadata()
-    # Read XML file
-    try:
-        # Get main namespace
-        tree = ElementTree.parse(xml_file)
-        base = tree.getroot()
-        ns = {"0": re.findall("(?<=^{)[^}]+(?=}[^{}]+$)", str(base.tag))[0]}
-        ElementTree.register_namespace("0", ns["0"])    
-        meta_xml = base.find("0:metadata", ns)
-    except (IndexError, ElementTree.ParseError): return mm_archive.get_empty_metadata()
-    # Get DC namespace
-    ns["dc"] = ""
-    for tag in base.iter():
+    with tempfile.TemporaryDirectory() as extract_dir:
+        # Extract content.opf from given file
+        xml_file = mm_file_tools.extract_file_from_zip(epub_file, extract_dir, "content.opf", True)
+        if xml_file is None or not exists(xml_file):
+            return mm_archive.get_empty_metadata()
+        # Read XML file
         try:
-            ns["dc"] = re.findall(r"(?<=^{)[^}]*\/dc\/[^}]*(?=}[^{}]+$)", str(tag.tag))[0]
-            break
-        except IndexError:pass
-    metadata = mm_archive.get_empty_metadata()
-    # Extract title from the XML
-    metadata["title"] = meta_xml.findtext("dc:title", namespaces=ns)
-    # Extract date from the XML
-    metadata["date"] = meta_xml.findtext("dc:date", namespaces=ns)[:10]
-    if metadata["date"] == "0000-00-00":
-        metadata["date"] = None
-    # Extract the description from the XML
-    metadata["description"] = meta_xml.findtext("dc:description", namespaces=ns)
-    # Extract the publisher from the XML
-    metadata["publisher"] = meta_xml.findtext("dc:publisher", namespaces=ns)
-    # Get the URL from the xml
-    metadata["url"] = meta_xml.findtext("dc:source", namespaces=ns)
-    # Extract the score from the xml
-    try:
-        score = float(meta_xml.find(f".//{{{ns['0']}}}meta[@property='calibre:rating']").text)
-        score = int(math.floor(score/2))
-        metadata["score"] = str(score)
-    except (AttributeError, ValueError): metadata["score"] = None
-    # Get all writers and artists
-    writers = []
-    artists = []
-    cover_artists = []
-    meta_tags = meta_xml.findall("0:meta", namespaces=ns)
-    for creator in meta_xml.findall("dc:creator", namespaces=ns):
-        for meta_tag in meta_tags:
+            # Get main namespace
+            tree = ElementTree.parse(xml_file)
+            base = tree.getroot()
+            ns = {"0": re.findall("(?<=^{)[^}]+(?=}[^{}]+$)", str(base.tag))[0]}
+            ElementTree.register_namespace("0", ns["0"])    
+            meta_xml = base.find("0:metadata", ns)
+        except (IndexError, ElementTree.ParseError): return mm_archive.get_empty_metadata()
+        # Get DC namespace
+        ns["dc"] = ""
+        for tag in base.iter():
             try:
-                if meta_tag.attrib["refines"] == creator.attrib["id"]:
-                    if meta_tag.text == "aut":
-                        writers.append(creator.text)
-                    elif meta_tag.text == "ill":
-                        artists.append(creator.text)
-                    elif meta_tag.text == "cov":
-                        cover_artists.append(creator.text)
-                    break
-            except KeyError: pass
-    # Set creator metadata
-    if len(writers) > 0:
-        metadata["writers"] = ",".join(writers)
-    if len(artists) > 0:
-        metadata["artists"] = ",".join(artists)
-    if len(cover_artists) > 0:
-        metadata["cover_artists"] = ",".join(cover_artists)
-    # Get the age rating
-    try:
-        metadata["age_rating"] = meta_xml.find(f".//{{{ns['0']}}}meta[@property='dcterms:audience']").text
-    except AttributeError: metadata["age_rating"] = None
-    # Get series name and position
-    try:
-        metadata["series"] = meta_xml.find(f".//{{{ns['0']}}}meta[@property='belongs-to-collection'][@id='series-title']").text
-        metadata["series_number"] = meta_xml.find(f".//{{{ns['0']}}}meta[@property='group-position'][@refines='series-title']").text
-    except AttributeError:
-        metadata["series"] = None
-        metadata["series_number"] = None
-    # Get the cover ID
-    try:
-        metadata["cover_id"] = meta_xml.find(f".//{{{ns['0']}}}meta[@name='cover']").attrib["content"]
-    except AttributeError: metadata["cover_id"] = None
-    # Extract tags from the XML
-    tags = []
-    tag_elements = meta_xml.findall("dc:subject", namespaces=ns)
-    for tag_element in tag_elements:
-        tags.append(tag_element.text)
-    if len(tags) > 0:
-        metadata["tags"] = ",".join(tags)
-    # Extract all the content files to get the word count
-    word_count = 0
-    xml_text = mm_file_tools.read_text_file(xml_file)
-    content_files = re.findall("(?<=href=['\"]).+\\.xhtml(?=['\"])", xml_text)
-    for content_file in content_files:
-        filename = re.sub(r".+\/", "", content_file)
-        extracted = mm_file_tools.extract_file_from_zip(epub_file, extract_dir, filename, True)
-        if content_file is None or not exists(content_file):
-            word_count += mm_xhtml.get_word_count_from_html(extracted)
-    metadata["page_count"] = str(math.ceil(word_count/300))
-    # Return the extracted metadata
-    return metadata
+                ns["dc"] = re.findall(r"(?<=^{)[^}]*\/dc\/[^}]*(?=}[^{}]+$)", str(tag.tag))[0]
+                break
+            except IndexError:pass
+        metadata = mm_archive.get_empty_metadata()
+        # Extract title from the XML
+        metadata["title"] = meta_xml.findtext("dc:title", namespaces=ns)
+        # Extract date from the XML
+        metadata["date"] = meta_xml.findtext("dc:date", namespaces=ns)[:10]
+        if metadata["date"] == "0000-00-00":
+            metadata["date"] = None
+        # Extract the description from the XML
+        metadata["description"] = meta_xml.findtext("dc:description", namespaces=ns)
+        # Extract the publisher from the XML
+        metadata["publisher"] = meta_xml.findtext("dc:publisher", namespaces=ns)
+        # Get the URL from the xml
+        metadata["url"] = meta_xml.findtext("dc:source", namespaces=ns)
+        # Extract the score from the xml
+        try:
+            score = float(meta_xml.find(f".//{{{ns['0']}}}meta[@property='calibre:rating']").text)
+            score = int(math.floor(score/2))
+            metadata["score"] = str(score)
+        except (AttributeError, ValueError): metadata["score"] = None
+        # Get all writers and artists
+        writers = []
+        artists = []
+        cover_artists = []
+        meta_tags = meta_xml.findall("0:meta", namespaces=ns)
+        for creator in meta_xml.findall("dc:creator", namespaces=ns):
+            for meta_tag in meta_tags:
+                try:
+                    if meta_tag.attrib["refines"] == creator.attrib["id"]:
+                        if meta_tag.text == "aut":
+                            writers.append(creator.text)
+                        elif meta_tag.text == "ill":
+                            artists.append(creator.text)
+                        elif meta_tag.text == "cov":
+                            cover_artists.append(creator.text)
+                        break
+                except KeyError: pass
+        # Set creator metadata
+        if len(writers) > 0:
+            metadata["writers"] = ",".join(writers)
+        if len(artists) > 0:
+            metadata["artists"] = ",".join(artists)
+        if len(cover_artists) > 0:
+            metadata["cover_artists"] = ",".join(cover_artists)
+        # Get the age rating
+        try:
+            metadata["age_rating"] = meta_xml.find(f".//{{{ns['0']}}}meta[@property='dcterms:audience']").text
+        except AttributeError: metadata["age_rating"] = None
+        # Get series name and position
+        try:
+            metadata["series"] = meta_xml.find(f".//{{{ns['0']}}}meta[@property='belongs-to-collection'][@id='series-title']").text
+            metadata["series_number"] = meta_xml.find(f".//{{{ns['0']}}}meta[@property='group-position'][@refines='series-title']").text
+        except AttributeError:
+            metadata["series"] = None
+            metadata["series_number"] = None
+        # Get the cover ID
+        try:
+            metadata["cover_id"] = meta_xml.find(f".//{{{ns['0']}}}meta[@name='cover']").attrib["content"]
+        except AttributeError: metadata["cover_id"] = None
+        # Extract tags from the XML
+        tags = []
+        tag_elements = meta_xml.findall("dc:subject", namespaces=ns)
+        for tag_element in tag_elements:
+            tags.append(tag_element.text)
+        if len(tags) > 0:
+            metadata["tags"] = ",".join(tags)
+        # Extract all the content files to get the word count
+        word_count = 0
+        xml_text = mm_file_tools.read_text_file(xml_file)
+        content_files = re.findall("(?<=href=['\"]).+\\.xhtml(?=['\"])", xml_text)
+        for content_file in content_files:
+            filename = re.sub(r".+\/", "", content_file)
+            extracted = mm_file_tools.extract_file_from_zip(epub_file, extract_dir, filename, True)
+            if extracted is not None and exists(extracted):
+                word_count += mm_xhtml.get_word_count_from_html(extracted)
+        metadata["page_count"] = str(math.ceil(word_count/300))
+        # Return the extracted metadata
+        return metadata
 
 def update_epub_info(epub_file:str, metadata:dict, update_cover:bool=False):
     """
@@ -953,50 +951,50 @@ def update_epub_info(epub_file:str, metadata:dict, update_cover:bool=False):
     :param metadata: Metadata to use for the new content.opf file
     :type metadata: dict
     """
-    # Extract epub into temp file
-    full_epub_file = abspath(epub_file)
-    temp_dir = mm_file_tools.get_temp_dir("dvk_epub_info")
-    mm_file_tools.extract_zip(full_epub_file, temp_dir)
+    
     try:
-        # Get the opf content file
-        opf_file = mm_file_tools.find_files_of_type(temp_dir, ".opf")[0]
-        opf_text = mm_file_tools.read_text_file(opf_file)
-        # Get the tab value
-        tab = re.findall(".+(?=<metadata)", opf_text)[0]
-        # Replace the metadata XML
-        metadata_xml = get_metadata_xml(metadata, metadata["cover_id"])
-        opf_text = re.sub(r"\s*<metadata[\S\s]+<\/metadata>\s*", metadata_xml, opf_text)
-        # Create element from the read xml
-        base = ElementTree.fromstring(opf_text)
-        ns = {"0": re.findall("(?<=^{)[^}]+(?=}[^{}]+$)", str(base.tag))[0]}
-        ElementTree.register_namespace("", ns["0"])
-        ElementTree.indent(base, space="    ")
-        # Write the opf
-        xml = ElementTree.tostring(base).decode("UTF-8")
-        xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
-        mm_file_tools.write_text_file(opf_file, xml)
-        # Remove the mimetype
-        mimetype = abspath(join(temp_dir, "mimetype"))
-        if exists(mimetype):
-            os.remove(mimetype)
-        # Update the cover, if applicable
-        epub_dir = abspath(join(temp_dir, "EPUB"))
-        image_dir = abspath(join(epub_dir, "images"))
-        cover_file = abspath(join(image_dir, "image1.jpg"))
-        content_dir = abspath(join(epub_dir, "content"))
-        cover_xml = abspath(join(content_dir, "mm_cover_image.xhtml"))
-        if update_cover and exists(cover_xml) and exists(cover_file):
-            # Delete the existing cover image
-            os.remove(cover_file)
-            # Create a cover image
-            cover_image = mm_archive.get_cover_image(metadata["title"], metadata["writers"], uppercase=True)
-            cover_image = cover_image.convert("RGB")
-            cover_image.save(cover_file, quality=95)
-        # Repack the epub file
-        new_epub_file = abspath(join(temp_dir, "AAAA.epub"))
-        assert mm_file_tools.create_zip(temp_dir, new_epub_file, 8, "application/epub+zip")
-        # Replace the old epub file
-        os.remove(full_epub_file)
-        shutil.copy(new_epub_file, full_epub_file)
-        os.remove(new_epub_file)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Extract epub into temp file
+            mm_file_tools.extract_zip(abspath(epub_file), temp_dir)
+            # Get the opf content file
+            opf_file = mm_file_tools.find_files_of_type(temp_dir, ".opf")[0]
+            opf_text = mm_file_tools.read_text_file(opf_file)
+            # Get the tab value
+            tab = re.findall(".+(?=<metadata)", opf_text)[0]
+            # Replace the metadata XML
+            metadata_xml = get_metadata_xml(metadata, metadata["cover_id"])
+            opf_text = re.sub(r"\s*<metadata[\S\s]+<\/metadata>\s*", metadata_xml, opf_text)
+            # Create element from the read xml
+            base = ElementTree.fromstring(opf_text)
+            ns = {"0": re.findall("(?<=^{)[^}]+(?=}[^{}]+$)", str(base.tag))[0]}
+            ElementTree.register_namespace("", ns["0"])
+            ElementTree.indent(base, space="    ")
+            # Write the opf
+            xml = ElementTree.tostring(base).decode("UTF-8")
+            xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
+            mm_file_tools.write_text_file(opf_file, xml)
+            # Remove the mimetype
+            mimetype = abspath(join(temp_dir, "mimetype"))
+            if exists(mimetype):
+                os.remove(mimetype)
+            # Update the cover, if applicable
+            epub_dir = abspath(join(temp_dir, "EPUB"))
+            image_dir = abspath(join(epub_dir, "images"))
+            cover_file = abspath(join(image_dir, "image1.jpg"))
+            content_dir = abspath(join(epub_dir, "content"))
+            cover_xml = abspath(join(content_dir, "cover_image.xhtml"))
+            if update_cover and exists(cover_xml) and exists(cover_file):
+                # Delete the existing cover image
+                os.remove(cover_file)
+                # Create a cover image
+                cover_image = mm_archive.get_cover_image(metadata["title"], metadata["writers"], uppercase=True)
+                cover_image = cover_image.convert("RGB")
+                cover_image.save(cover_file, quality=95)
+            # Repack the epub file
+            new_epub_file = abspath(join(temp_dir, "AAAA.epub"))
+            assert mm_file_tools.create_zip(temp_dir, new_epub_file, 8, "application/epub+zip")
+            # Replace the old epub file
+            os.remove(abspath(epub_file))
+            shutil.copy(new_epub_file, abspath(epub_file))
+            os.remove(new_epub_file)
     except IndexError: pass

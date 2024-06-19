@@ -4,6 +4,7 @@ import os
 import re
 import copy
 import shutil
+import tempfile
 import html_string_tools
 import metadata_magic.sort as mm_sort
 import metadata_magic.rename as mm_rename
@@ -100,25 +101,27 @@ def get_info_from_cbz(cbz_file:str, check_subdirectories:bool=True) -> dict:
     :return: Dictionary containing metadata from the .cbz file
     :rtype: dict
     """
-    # Create temporary directory
-    file = abspath(cbz_file)
-    extract_dir = mm_file_tools.get_temp_dir("dvk_meta_extract")
-    assert exists(extract_dir)
-    # Extract ComicInfo.xml from given file
-    xml_file = mm_file_tools.extract_file_from_zip(cbz_file, extract_dir, "ComicInfo.xml", check_subdirectories)
-    if xml_file is None or not exists(xml_file):
-        return mm_archive.get_empty_metadata()
-    # Read XML file
-    metadata = mm_comic_xml.read_comic_info(xml_file)
-    # Get page count if not present
-    try:
-        assert metadata["page_count"] is not None and int(metadata["page_count"]) > 0
-    except (AssertionError, ValueError):
-        extract_dir = abspath(join(extract_dir, "images"))
-        os.mkdir(extract_dir)
-        mm_file_tools.extract_zip(cbz_file, extract_dir)
-        images = mm_file_tools.find_files_of_type(extract_dir, [".png", ".jpg", ".jpeg"])
-        metadata["page_count"] = str(len(images))
+    with tempfile.TemporaryDirectory() as extract_dir:
+        # Create temporary directory
+        file = abspath(cbz_file)
+        assert exists(extract_dir)
+        # Extract ComicInfo.xml from given file
+        xml_file = mm_file_tools.extract_file_from_zip(cbz_file, extract_dir, "ComicInfo.xml", check_subdirectories)
+        if xml_file is None or not exists(xml_file):
+            return mm_archive.get_empty_metadata()
+        # Read XML file
+        metadata = mm_comic_xml.read_comic_info(xml_file)
+        # Get page count if not present
+        try:
+            assert metadata["page_count"] is not None and int(metadata["page_count"]) > 0
+        except (AssertionError, ValueError):
+            extract_dir = abspath(join(extract_dir, "images"))
+            os.mkdir(extract_dir)
+            mm_file_tools.extract_zip(cbz_file, extract_dir)
+            images = mm_file_tools.find_files_of_type(extract_dir, [".png", ".jpg", ".jpeg"])
+            metadata["page_count"] = str(len(images))
+            # Update the cbz file
+            update_cbz_info(cbz_file, metadata)
     return metadata
 
 def update_cbz_info(cbz_file:str, metadata:dict):
@@ -130,18 +133,17 @@ def update_cbz_info(cbz_file:str, metadata:dict):
     :param metadata: Metadata to use for the new ComicInfo.xml file
     :type metadata: dict
     """
-    # Extract cbz into temp file
-    full_cbz_file = abspath(cbz_file)
-    temp_dir = mm_file_tools.get_temp_dir("dvk_comic_info")
-    if mm_file_tools.extract_zip(full_cbz_file, temp_dir):
-        # Delete existing ComicInfo.xml files
-        xml_files = mm_file_tools.find_files_of_type(temp_dir, ".xml")
-        for xml_file in xml_files:
-            if basename(xml_file) == "ComicInfo.xml":
-                os.remove(xml_file)
-        # Pack files into archive using new metadata
-        new_cbz = create_cbz(temp_dir, name=metadata["title"], metadata=metadata)
-        # Replace the old cbz file
-        os.remove(full_cbz_file)
-        shutil.copy(new_cbz, full_cbz_file)
-        os.remove(new_cbz)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Extract cbz into temp file
+        full_cbz_file = abspath(cbz_file)
+        if mm_file_tools.extract_zip(full_cbz_file, temp_dir):
+            # Delete existing ComicInfo.xml files
+            xml_files = mm_file_tools.find_files_of_type(temp_dir, ".xml")
+            for xml_file in xml_files:
+                if basename(xml_file) == "ComicInfo.xml":
+                    os.remove(xml_file)
+            # Pack files into archive using new metadata
+            new_cbz = create_cbz(temp_dir, name=metadata["title"], metadata=metadata)
+            # Replace the old cbz file
+            os.remove(full_cbz_file)
+            shutil.copy(new_cbz, full_cbz_file)
