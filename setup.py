@@ -17,7 +17,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="Metadata-Magic",
-    version="0.11.0",
+    version="0.11.1",
     author="Drakovek",
     author_email="DrakovekMail@gmail.com",
     description="Utility for managing metadata.",
@@ -30,6 +30,6 @@ setuptools.setup(
     classifiers=["Programming Language :: Python :: 3",
             "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
             "Operating System :: OS Independent"],
-    python_requires='>=3.9',
+    python_requires='>=3.8',
     entry_points={"console_scripts": console_scripts}
 )

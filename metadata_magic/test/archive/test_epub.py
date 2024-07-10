@@ -595,6 +595,7 @@ def test_create_ncx_file():
             compare = f"{compare}\n        </navPoint>"
             compare = f"{compare}\n    </navMap>"
             compare = f"{compare}\n</ncx>"
+            print(ncx_contents)
             assert ncx_contents == compare
             # Test not including chapters
             chapters[0]["title"] = "Cover"
@@ -647,7 +648,7 @@ def test_get_metadata_xml():
     compare = f"{compare}\n    <dc:date>0000-00-00T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>This's a title!\\'</dc:title>"
     compare = f"{compare}\n</metadata>"
-    assert xml == compare    
+    assert xml == compare
     # Test url metadata
     metadata["title"] = "Title."
     metadata["url"] = "this/is/a/test"

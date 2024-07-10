@@ -114,12 +114,12 @@ def get_comic_xml(metadata:dict, indent:bool=True) -> str:
     if metadata["age_rating"] is not None:
         age_rating.text = metadata["age_rating"]
     # Set indents to make the XML more readable
+    xml = ElementTree.tostring(base).decode("UTF-8").strip()
     if indent:
-        ElementTree.indent(base, space="  ")
-    # Get xml as string
-    xml = ElementTree.tostring(base).decode("UTF-8")
+        xml = html_string_tools.html.make_human_readable(xml, "  ")
+    xml = f"<?xml version=\"1.0\"?>\n{xml}"
     # Return XML
-    return f"<?xml version=\"1.0\"?>\n{xml}"
+    return xml
 
 def read_comic_info(xml_file:str) -> dict:
     """

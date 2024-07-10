@@ -235,7 +235,7 @@ def get_cover_image(title:str, authors:str, portrait:bool=True, uppercase:bool=T
     inner = Image.new("RGBA", size=(full_width - margin, full_height), color=palette["primary-saturated"])
     cover.alpha_composite(inner, (margin, 0))
     # Get the font for the image
-    system_fonts = etti.get_system_fonts()
+    system_fonts = etti.get_system_fonts(etti.get_font_locations())
     italic_font = etti.get_basic_font("sans-serif", system_fonts, bold=True, italic=True)
     bold_font = etti.get_basic_font("sans-serif", system_fonts, bold=True)
     # Create the text for the author
@@ -256,7 +256,7 @@ def get_cover_image(title:str, authors:str, portrait:bool=True, uppercase:bool=T
     title_image = etti.text_image_fit_box(title_text, italic_font, image_width=text_width, image_height=text_height,
             foreground=palette["primary-desaturated"], background="#00000000", justified="l", vertical="t", space=1)
     # Create the title framing
-    top, bottom = etti.get_vertical_bounds(title_image, "#00000000")
+    left, top, right, bottom = etti.get_bounds(title_image, palette["primary-desaturated"])
     frame_bottom = (bottom - top) + (margin * 1.5)
     draw = ImageDraw.Draw(cover)
     draw.rounded_rectangle([(0, half_margin), (full_width-half_margin, frame_bottom)],

@@ -425,9 +425,8 @@ def create_nav_file(chapters:List[dict], title:str, output_directory:str):
             a.attrib = {"href": chapter["file"]}
             a.text = chapter["title"]
     # Set indents to make the XML more readable
-    ElementTree.indent(base, space="    ")
-    # Get xml as string
     xml = ElementTree.tostring(base).decode("UTF-8")
+    xml = html_string_tools.html.make_human_readable(xml, "    ").strip()
     xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
     # Write the nav file
     nav_file = abspath(join(output_directory, "nav.xhtml"))
@@ -484,9 +483,8 @@ def create_ncx_file(chapters:List[dict], title:str, uid:str, output_directory:st
             nav_link = ElementTree.SubElement(nav_point, "content")
             nav_link.attrib = {"src":chapter["file"]}
     # Set indents to make the XML more readable
-    ElementTree.indent(base, space="    ")
-    # Get xml as string
     xml = ElementTree.tostring(base).decode("UTF-8")
+    xml = html_string_tools.html.make_human_readable(xml, "    ").strip()
     xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
     # Write the ncx file
     nav_file = abspath(join(output_directory, "toc.ncx"))
@@ -621,9 +619,9 @@ def get_metadata_xml(metadata:dict, cover_id:str=None) -> str:
         cover_tag = ElementTree.SubElement(base, "meta")
         cover_tag.attrib = {"name":"cover", "content":cover_id}
     # Set indents to make the XML more readable
-    ElementTree.indent(base, space="    ")
-    # Return xml as string
-    return ElementTree.tostring(base).decode("UTF-8")
+    xml = ElementTree.tostring(base).decode("UTF-8")
+    xml = html_string_tools.html.make_human_readable(xml, "    ").strip()
+    return xml
 
 def get_manifest_xml(chapters:List[dict], output_directory:str) -> str:
     """
@@ -677,9 +675,9 @@ def get_manifest_xml(chapters:List[dict], output_directory:str) -> str:
     ncx_item = ElementTree.SubElement(base, "item")
     ncx_item.attrib = {"href":"toc.ncx", "id":"ncx", "media-type":"application/x-dtbncx+xml"}
     # Set indents to make the XML more readable
-    ElementTree.indent(base, space="    ")
-    # Return xml as string
-    return ElementTree.tostring(base).decode("UTF-8")
+    xml = ElementTree.tostring(base).decode("UTF-8")
+    xml = html_string_tools.html.make_human_readable(xml, "    ").strip()
+    return xml
 
 def create_content_opf(chapters:List[dict], metadata:dict, output_directory:str):
     """
@@ -725,9 +723,8 @@ def create_content_opf(chapters:List[dict], metadata:dict, output_directory:str)
         itemref = ElementTree.SubElement(spine_element, "itemref")
         itemref.attrib = {"idref":chapter["id"]}
     # Set indents to make the XML more readable
-    ElementTree.indent(base, space="    ")
-    # Get xml as string
     xml = ElementTree.tostring(base).decode("UTF-8")
+    xml = html_string_tools.html.make_human_readable(xml, "    ").strip()
     xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
     # Write the opf file
     opf_file = abspath(join(output_directory, "content.opf"))
@@ -758,8 +755,8 @@ def create_epub(chapters:List[dict], metadata:dict, directory:str, copy_back_cov
         rootfiles = ElementTree.SubElement(base, "rootfiles")
         rootfile = ElementTree.SubElement(rootfiles, "rootfile")
         rootfile.attrib = {"media-type":"application/oebps-package+xml", "full-path":"EPUB/content.opf"}
-        ElementTree.indent(base, space="    ")
         xml = ElementTree.tostring(base).decode("UTF-8")
+        xml = html_string_tools.html.make_human_readable(xml, "    ").strip()
         xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
         container_file = abspath(join(meta_directory, "container.xml"))
         mm_file_tools.write_text_file(container_file, xml)
@@ -968,9 +965,9 @@ def update_epub_info(epub_file:str, metadata:dict, update_cover:bool=False):
             base = ElementTree.fromstring(opf_text)
             ns = {"0": re.findall("(?<=^{)[^}]+(?=}[^{}]+$)", str(base.tag))[0]}
             ElementTree.register_namespace("", ns["0"])
-            ElementTree.indent(base, space="    ")
             # Write the opf
             xml = ElementTree.tostring(base).decode("UTF-8")
+            xml = html_string_tools.html.make_human_readable(xml, "    ").strip()
             xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
             mm_file_tools.write_text_file(opf_file, xml)
             # Remove the mimetype

@@ -21,7 +21,7 @@ def get_title_from_file(file:str) -> str:
     title = re.sub(r"\.[^\.]{1,6}$", "", title).strip()
     title = re.sub(r"^\[[^\]]+\]\s*|^\([^\)]+\)\s*", "", title)
     return title
-
+        
 def format_xhtml(html:str, title:str) -> str:
     """
     Formats XML text into XHTML text ready to be included in an EPUB file.
@@ -44,8 +44,9 @@ def format_xhtml(html:str, title:str) -> str:
     meta.attrib = {"charset":"utf-8"}
     # Remove all unnecessary HTML escape entities
     formatted_html = html_string_tools.html.replace_reserved_in_html(html)
-    # Remove newlines
+    # Remove newlines and nonstandard spaces
     formatted_html = formatted_html.replace("\n", "").strip()
+    formatted_html = re.sub(r"\s", " ", formatted_html)
     # Remove whitespace before closing paragraph and div elenments
     formatted_html = re.sub(r"\s+<\s*\/\s*p\s*>", "</p>", formatted_html)
     formatted_html = re.sub(r"\s+<\s*\/\s*div\s*>", "</div>", formatted_html)
@@ -120,10 +121,10 @@ def format_xhtml(html:str, title:str) -> str:
         print(f"Error Section: {section}")
         return None
     # Set indents to make the XML more readable
-    ElementTree.indent(base, space="    ")
-    # Get xml as string
     xml = ElementTree.tostring(base).decode("UTF-8")
-    return f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
+    xml = html_string_tools.html.make_human_readable(xml, "    ").strip()
+    xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
+    return xml
 
 def text_to_xhtml(text:str, replace_reserved:bool=True) -> str:
     """
