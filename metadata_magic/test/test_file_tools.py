@@ -2,389 +2,305 @@
 
 import os
 import tempfile
+import metadata_magic.test as mm_test
 import metadata_magic.file_tools as mm_file_tools
 from os.path import abspath, basename, exists, isdir, join
 
-def test_read_write_text_file():
+def test_read_text_file():
     """
-    Tests the write_text_file and read_text_file functions.
+    Tests the read_text_file function.
+    """
+    # Test reading a basic unicode text file
+    text_directory = abspath(join(mm_test.BASIC_DIRECTORY, "text"))
+    text_file = abspath(join(text_directory, "unicode.txt"))
+    assert mm_file_tools.read_text_file(text_file) == "This is ünicode."
+    # Test reading non-unicode text files
+    text_file = abspath(join(text_directory, "latin1.txt"))
+    assert mm_file_tools.read_text_file(text_file) == "This is lätin1."
+    text_file = abspath(join(text_directory, "cp437.TXT"))
+    assert mm_file_tools.read_text_file(text_file) == "This is cp437."
+    # Test reading a non-text file
+    assert mm_file_tools.read_text_file(mm_test.BASIC_DIRECTORY) is None
+
+def test_write_text_file():
+    """
+    Tests the write_text_file function.
     """
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Test writing a text file
-        text_file = abspath(join(temp_dir, "text.txt"))
-        assert not exists(text_file)
-        mm_file_tools.write_text_file(text_file, "This is some text!")
-        assert exists(text_file)
-        assert mm_file_tools.read_text_file(text_file) == "This is some text!"
+        # Test writing a basic text file
+        text_file = abspath(join(temp_dir, "test.txt"))
+        mm_file_tools.write_text_file(text_file, "This is text!")
+        assert mm_file_tools.read_text_file(text_file) == "This is text!"
         # Test overwriting a text file
-        mm_file_tools.write_text_file(text_file, "Different text now.\nYay!")
-        assert mm_file_tools.read_text_file(text_file) == "Different text now.\nYay!"
-        # Test reading a non-text file
-        sub_dir = abspath(join(temp_dir, "directory"))
-        os.mkdir(sub_dir)
-        assert exists(sub_dir)
-        assert mm_file_tools.read_text_file(sub_dir) is None
-        # Test writing to invalid location
-        sub_dir = abspath(join(temp_dir, "non-existant"))
-        text_file = abspath(join(sub_dir, "new.txt"))
-        mm_file_tools.write_text_file(text_file, "Some stuff")
-        assert sorted(os.listdir(temp_dir)) == ["directory", "text.txt"]
-        # Test reading a non-unicode formatted text file
-        iso_file = abspath(join(temp_dir, "iso.txt"))
-        with open(iso_file, "w", encoding="ISO-8859-15") as out_file:
-            out_file.write("--This is not ständard ünicode--")
-        assert exists(iso_file)
-        assert mm_file_tools.read_text_file(iso_file) == "--This is not ständard ünicode--"
+        mm_file_tools.write_text_file(text_file, "New\nText.")
+        assert mm_file_tools.read_text_file(text_file) == "New\nText."
+        # Test writing to an invalid location
+        fake_text_file = abspath(join("/non/existant/dir/", "fake.txt"))
+        mm_file_tools.write_text_file(fake_text_file, "Thing")
+        assert os.listdir(abspath(temp_dir)) == ["test.txt"]
 
-def test_read_write_json_file():
+def test_read_json_file():
     """
-    Tests the write_json_file and read_json_file functions.
+    Tests the read_json_file function.
+    """
+    # Test reading a basic unicode JSON file
+    json_directory = abspath(join(mm_test.BASIC_DIRECTORY, "json"))
+    json_file = abspath(join(json_directory, "unicode.json"))
+    json = mm_file_tools.read_json_file(json_file)
+    assert json["name"] == "vãlue"
+    assert json["number"] == 25
+    assert json["boolean"] == False
+    assert json["internal"] == {"key":"another"}
+    # Test reading a non-unicode JSON file
+    json_file = abspath(join(json_directory, "latin1.JSON"))
+    json = mm_file_tools.read_json_file(json_file)
+    assert json["new"] == "Títle"
+    # Test reading a non-JSON file
+    json_file = abspath(join(mm_test.BASIC_DIRECTORY, "unicode.txt"))
+    assert mm_file_tools.read_json_file(json_file) == {}
+    assert mm_file_tools.read_json_file(mm_test.BASIC_DIRECTORY) == {}
+
+def test_write_json_file():
+    """
+    Tests the write_json_file function.
     """
     with tempfile.TemporaryDirectory() as temp_dir:
         # Test writing a JSON file
+        dictionary = {"name":"title", "num":42, "boolean":True}
         json_file = abspath(join(temp_dir, "test.json"))
-        assert not exists(json_file)
-        mm_file_tools.write_json_file(json_file, {"key":"pair", "Thing":"Other"})
-        assert exists(json_file)
-        assert mm_file_tools.read_json_file(json_file) == {"key":"pair", "Thing":"Other"}
+        mm_file_tools.write_json_file(json_file, dictionary)
+        assert mm_file_tools.read_json_file(json_file) == dictionary
         # Test overwriting a JSON file
-        mm_file_tools.write_json_file(json_file, {"all":"new"})
-        assert mm_file_tools.read_json_file(json_file) == {"all":"new"}
-        # Test reading a non-JSON file
-        sub_dir = abspath(join(temp_dir, "directory"))
-        os.mkdir(sub_dir)
-        assert exists(sub_dir)
-        assert mm_file_tools.read_json_file(sub_dir) == {}
-        text_file = abspath(join(temp_dir, "text.txt"))
-        mm_file_tools.write_text_file(text_file, "Not a JSON")
-        assert mm_file_tools.read_json_file(text_file) == {}
-        # Test writing to invalid location
-        sub_dir = abspath(join(temp_dir, "non-existant"))
-        text_file = abspath(join(sub_dir, "new.json"))
-        mm_file_tools.write_json_file(text_file, {"new":"key"})
-        assert sorted(os.listdir(temp_dir)) == ["directory", "test.json", "text.txt"]
-
-def test_find_files_of_type():
-    """
-    Tests the find_files_of_type function.
-    """
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test finding all files of a given extension
-        temp_file = abspath(join(temp_dir, "text.txt"))
-        mm_file_tools.write_text_file(temp_file, "Not")
-        temp_file = abspath(join(temp_dir, "new.txt"))
-        mm_file_tools.write_text_file(temp_file, "Important")
-        temp_file = abspath(join(temp_dir, "other.PNG"))
-        mm_file_tools.write_text_file(temp_file, "At")
-        temp_file = abspath(join(temp_dir, "blah.thing"))
-        mm_file_tools.write_text_file(temp_file, "All")
-        assert sorted(os.listdir(temp_dir)) == ["blah.thing", "new.txt", "other.PNG", "text.txt"]
-        files = mm_file_tools.find_files_of_type(temp_dir, ".txt")
-        assert len(files) == 2
-        assert basename(files[0]) == "new.txt"
-        assert basename(files[1]) == "text.txt"
-        assert exists(files[0])
-        assert exists(files[1])
-        assert mm_file_tools.find_files_of_type(temp_dir, ".thing") == [temp_file]
-        assert mm_file_tools.find_files_of_type(temp_dir, ".nope") == []
-        # Test finding files inside subdirectories
-        sub_directory = abspath(join(temp_dir, "sub"))
-        deep_directory = abspath(join(temp_dir, "deep.txt"))
-        os.mkdir(sub_directory)
-        os.mkdir(deep_directory)
-        temp_file = abspath(join(sub_directory, "sub.txt"))
-        mm_file_tools.write_text_file(temp_file, "Still")
-        temp_file = abspath(join(deep_directory, "deep.png"))
-        mm_file_tools.write_text_file(temp_file, "Nothing")
-        files = mm_file_tools.find_files_of_type(temp_dir, ".txt")
-        assert len(files) == 3
-        assert basename(files[0]) == "new.txt"
-        assert basename(files[1]) == "sub.txt"
-        assert basename(files[2]) == "text.txt"
-        files = mm_file_tools.find_files_of_type(temp_dir, ".png", include_subdirectories=True)
-        assert len(files) == 2
-        assert basename(files[0]) == "deep.png"
-        assert basename(files[1]) == "other.PNG"
-        assert files[0] == temp_file
-        # Test finding files, not including subdirectories
-        files = mm_file_tools.find_files_of_type(temp_dir, ".txt", include_subdirectories=False)
-        assert len(files) == 2
-        assert basename(files[0]) == "new.txt"
-        assert basename(files[1]) == "text.txt"
-        # Test finding files with inverted extension
-        files = mm_file_tools.find_files_of_type(temp_dir, ".txt", inverted=True)
-        assert len(files) == 3
-        assert basename(files[0]) == "blah.thing"
-        assert basename(files[1]) == "deep.png"
-        assert basename(files[2]) == "other.PNG"
-        # Test finding files of multiple types
-        files = mm_file_tools.find_files_of_type(temp_dir, [".txt", ".png"], include_subdirectories=False)
-        assert len(files) == 3
-        assert basename(files[0]) == "new.txt"
-        assert basename(files[1]) == "other.PNG"
-        assert basename(files[2]) == "text.txt"
-        # Test finding files of multiple types with inverted extension
-        files = mm_file_tools.find_files_of_type(temp_dir, [".txt", ".png"], inverted=True, include_subdirectories=False)
-        assert len(files) == 1
-        assert basename(files[0]) == "blah.thing"
-
-def test_directory_contains():
-    """
-    Tests the directory_contains function.
-    """
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test with single directory
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "text.txt")), "AAA")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "image.PNG")), "AAA")
-        assert mm_file_tools.directory_contains(temp_dir, [".txt"])
-        assert mm_file_tools.directory_contains(temp_dir, [".png"])
-        assert mm_file_tools.directory_contains(temp_dir, [".blah", ".txt"])
-        assert not mm_file_tools.directory_contains(temp_dir, [".jpg"])
-        assert not mm_file_tools.directory_contains(temp_dir, [".pdf", ".mp4"])
-        # Test with subdirectories
-        sub_dir = abspath(join(temp_dir, "sub"))
-        deep_dir = abspath(join(sub_dir, "deep"))
-        os.mkdir(sub_dir)
-        os.mkdir(deep_dir)
-        mm_file_tools.write_text_file(abspath(join(sub_dir, "doc.pdf")), "AAA")
-        mm_file_tools.write_text_file(abspath(join(sub_dir, "video.mkv")), "AAA")
-        assert mm_file_tools.directory_contains(temp_dir, [".txt"], True)
-        assert mm_file_tools.directory_contains(temp_dir, [".png"], True)
-        assert mm_file_tools.directory_contains(temp_dir, [".pdf"], True)
-        assert mm_file_tools.directory_contains(temp_dir, [".mkv"], True)
-        assert mm_file_tools.directory_contains(temp_dir, [".mkv", ".pdf"], True)
-        assert not mm_file_tools.directory_contains(temp_dir, [".mkv", ".pdf"], False)
-        assert mm_file_tools.directory_contains(temp_dir, [".txt"], False)
-
-def test_create_zip():
-    """
-    Tests the create_zip function.
-    """
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test Creating Zip with loose files
-        media_file = abspath(join(temp_dir, "media.jpg")) 
-        text_file = abspath(join(temp_dir, "text.txt"))
-        dot_file = abspath(join(temp_dir, ".dontinclude"))
-        mm_file_tools.write_text_file(media_file, "This is not a photo.")
-        mm_file_tools.write_text_file(text_file, "TEXT!")
-        mm_file_tools.write_text_file(dot_file, "Do Not Include")
-        assert exists(media_file)
-        assert exists(text_file)
-        assert exists(dot_file)
-        zip_file = abspath(join(temp_dir, "file.zip"))
-        assert not exists(zip_file)
-        assert mm_file_tools.create_zip(temp_dir, zip_file)
-        assert exists(zip_file)
-        extracted = abspath(join(temp_dir, "extracted"))
-        os.mkdir(extracted)
-        assert mm_file_tools.extract_zip(zip_file, extracted)
-        assert sorted(os.listdir(extracted)) == ["media.jpg", "text.txt"]
-        assert mm_file_tools.read_text_file(abspath(join(extracted, "media.jpg"))) == "This is not a photo."
-        assert mm_file_tools.read_text_file(abspath(join(extracted, "text.txt"))) == "TEXT!"
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test Creating Zip with internal directories
-        sub_dir = abspath(join(temp_dir, "sub"))
-        deep_dir = abspath(join(sub_dir, "deep"))
-        os.mkdir(sub_dir)
-        os.mkdir(deep_dir)
-        media_file = abspath(join(temp_dir, "main.txt"))
-        sub_file = abspath(join(sub_dir, "subtext.txt"))
-        deep_file = abspath(join(deep_dir, "deep.png"))
-        deep_dot = abspath(join(deep_dir, ".dontinclude"))
-        mm_file_tools.write_text_file(media_file, "This is text.")
-        mm_file_tools.write_text_file(sub_file, "Deeper text")
-        mm_file_tools.write_text_file(deep_file, "Deepest yet.")
-        mm_file_tools.write_text_file(deep_dot, "NO")
-        assert exists(media_file)
-        assert exists(sub_file)
-        assert exists(deep_file)
-        assert exists(deep_dot)
-        zip_file = abspath(join(temp_dir, "new.zip"))
-        assert not exists(zip_file)
-        assert mm_file_tools.create_zip(temp_dir, zip_file)
-        assert exists(zip_file)
-        extracted = abspath(join(temp_dir, "extracted"))
-        os.mkdir(extracted)
-        assert mm_file_tools.extract_zip(zip_file, extracted)
-        assert sorted(os.listdir(extracted)) == ["main.txt", "sub"]
-        extracted = abspath(join(extracted, "sub"))
-        assert sorted(os.listdir(extracted)) == ["deep", "subtext.txt"]
-        extracted = abspath(join(extracted, "deep"))
-        assert sorted(os.listdir(extracted)) == ["deep.png"]
-        assert mm_file_tools.read_text_file(abspath(join(extracted, "deep.png"))) == "Deepest yet."
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test Creating Mimetype
-        media_file = abspath(join(temp_dir, "main.txt"))
-        mm_file_tools.write_text_file(media_file, "This is text.")
-        assert exists(media_file)
-        zip_file = abspath(join(temp_dir, "mime.zip"))
-        assert not exists(zip_file)
-        assert mm_file_tools.create_zip(temp_dir, zip_file, 8, "filetype")
-        assert exists(zip_file)
-        extracted = abspath(join(temp_dir, "extracted"))
-        os.mkdir(extracted)
-        assert mm_file_tools.extract_zip(zip_file, extracted)
-        assert sorted(os.listdir(extracted)) == ["main.txt", "mimetype"]
-        assert mm_file_tools.read_text_file(abspath(join(extracted, "main.txt"))) == "This is text."
-        assert mm_file_tools.read_text_file(abspath(join(extracted, "mimetype"))) == "filetype"
+        mm_file_tools.write_json_file(json_file, {"A":"B"})
+        assert mm_file_tools.read_json_file(json_file) == {"A":"B"}
+        # Test writing a JSON file to an invalid location
+        fake_json_file = abspath(join("/non/existant/dir/", "fake.json"))
+        mm_file_tools.write_json_file(fake_json_file, "Thing")
+        assert os.listdir(abspath(temp_dir)) == ["test.json"]
 
 def test_extract_zip():
     """
     Tests the extract_zip function.
     """
+    # Get file paths
+    zip_file = abspath(join(mm_test.BASIC_DIRECTORY, "archive.zip"))
+    text_directory = abspath(join(mm_test.BASIC_DIRECTORY, "text"))
+    non_zip_file = abspath(join(text_directory, "unicode.txt"))
+    # Test extracting a zip file
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Test extracting zip with added directory
-        text_file = abspath(join(temp_dir, "text.txt"))
-        zip_file = abspath(join(temp_dir, "Name!.zip"))
-        mm_file_tools.write_text_file(text_file, "This is text!")
-        assert exists(text_file)
-        assert mm_file_tools.create_zip(temp_dir, zip_file)
-        assert exists(zip_file)
-        with tempfile.TemporaryDirectory() as extract_dir:
-            assert mm_file_tools.extract_zip(zip_file, extract_dir, create_folder=True)
-            assert os.listdir(extract_dir) == ["Name!"]
-            sub_dir = abspath(join(extract_dir, "Name!"))
-            assert os.listdir(sub_dir) == ["text.txt"]
-            read_file = abspath(join(sub_dir, "text.txt"))
-            assert mm_file_tools.read_text_file(read_file) == "This is text!"
+        assert mm_file_tools.extract_zip(zip_file, temp_dir)
+        assert sorted(os.listdir(temp_dir)) == ["DELETE.txt", "Internal", "metadata.json"]
+        internal_dir = abspath(join(temp_dir, "Internal"))
+        assert sorted(os.listdir(internal_dir)) == ["Text1.txt", "Text2.txt"]
+        text_file = abspath(join(temp_dir, "DELETE.txt"))
+        assert mm_file_tools.read_text_file(text_file) == "Delete Me!"
+    # Test extracting a zip file with an added container directory
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Test if added directory already exists
-        text_file = abspath(join(temp_dir, "thing.txt"))
-        zip_file = abspath(join(temp_dir, "duplicate.zip"))
-        mm_file_tools.write_text_file(text_file, "This is a file")
-        assert exists(text_file)
-        assert mm_file_tools.create_zip(temp_dir, zip_file)
-        assert exists(zip_file)
-        with tempfile.TemporaryDirectory() as extract_dir:
-            duplicate_file = abspath(join(extract_dir, "duplicate"))
-            mm_file_tools.write_text_file(duplicate_file, "test")
-            assert sorted(os.listdir(extract_dir)) == ["duplicate"]
-            assert mm_file_tools.extract_zip(zip_file, extract_dir, create_folder=True)
-            assert sorted(os.listdir(extract_dir)) == ["duplicate", "duplicate-2"]
-            sub_dir = abspath(join(extract_dir, "duplicate-2"))
-            assert os.listdir(sub_dir) == ["thing.txt"]
+        assert mm_file_tools.extract_zip(zip_file, temp_dir, create_folder=True)
+        assert os.listdir(temp_dir) == ["archive"]
+        archive_dir = abspath(join(temp_dir, "archive"))
+        assert sorted(os.listdir(archive_dir)) == ["DELETE.txt", "Internal", "metadata.json"]
+        internal_dir = abspath(join(archive_dir, "Internal"))
+        assert sorted(os.listdir(internal_dir)) == ["Text1.txt", "Text2.txt"]
+        text_file = abspath(join(internal_dir, "Text1.txt"))
+        assert mm_file_tools.read_text_file(text_file) == "This is text!"
+    # Test is the container directory already exists
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Test extracting zip while removing given files
-        text_file = abspath(join(temp_dir, "text.txt"))
-        media_file = abspath(join(temp_dir, "media.png"))
-        delete_file = abspath(join(temp_dir, "meta.xml"))
-        zip_file = abspath(join(temp_dir, "New.zip"))
-        mm_file_tools.write_text_file(text_file, "some text")
-        mm_file_tools.write_text_file(media_file, "Not an image")
-        mm_file_tools.write_text_file(delete_file, "To be deleted")
-        assert exists(text_file)
-        assert exists(media_file)
-        assert exists(delete_file)
-        assert mm_file_tools.create_zip(temp_dir, zip_file)
-        assert exists(zip_file)
-        with tempfile.TemporaryDirectory() as extract_dir:
-            assert mm_file_tools. extract_zip(zip_file, extract_dir, delete_files=["extraneous.txt", "meta.xml"])
-            assert sorted(os.listdir(extract_dir)) == ["media.png", "text.txt"]
+        duplicate_dir = abspath(join(temp_dir, "archive"))
+        os.mkdir(duplicate_dir)
+        assert mm_file_tools.extract_zip(zip_file, temp_dir, create_folder=True)
+        assert sorted(os.listdir(temp_dir)) == ["archive", "archive-2"]
+        archive_dir = abspath(join(temp_dir, "archive-2"))
+        assert sorted(os.listdir(archive_dir)) == ["DELETE.txt", "Internal", "metadata.json"]
+        internal_dir = abspath(join(archive_dir, "Internal"))
+        assert sorted(os.listdir(internal_dir)) == ["Text1.txt", "Text2.txt"]
+        text_file = abspath(join(internal_dir, "Text2.txt"))
+        assert mm_file_tools.read_text_file(text_file) == "Another File."
+    # Test extracting zip while deleting unwanted files
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Test extracting zip while removing internal folder
-        sub_zip_dir = abspath(join(temp_dir, "Internal"))
-        text_file = abspath(join(sub_zip_dir, "deep.txt"))
-        zip_file = abspath(join(temp_dir, "compressed.cbz"))
-        os.mkdir(sub_zip_dir)
-        mm_file_tools.write_text_file(text_file, "In a folder.")
-        assert exists(text_file)
-        assert mm_file_tools.create_zip(temp_dir, zip_file)
-        assert exists(zip_file)
-        with tempfile.TemporaryDirectory() as extract_dir:
-            assert mm_file_tools.extract_zip(zip_file, extract_dir, remove_internal=True)
-            assert os.listdir(extract_dir) == ["deep.txt"]
-        # Test that removing internal folder does not work with multiple files
-        os.remove(zip_file)
-        media_file = abspath(join(temp_dir, "media.jpg"))
-        mm_file_tools.write_text_file(media_file, "media")
-        assert exists(media_file)
-        assert mm_file_tools.create_zip(temp_dir, zip_file)
-        assert exists(zip_file)
-        with tempfile.TemporaryDirectory() as extract_dir:
-            assert mm_file_tools.extract_zip(zip_file, extract_dir, remove_internal=True)
-            assert sorted(os.listdir(extract_dir)) == ["Internal", "media.jpg"]
-            sub_dir = abspath(join(extract_dir, "Internal"))
-            assert os.listdir(sub_dir) == ["deep.txt"]
-        # Test removing folder after internal files are deleted
-        os.remove(zip_file)
-        zip_file = abspath(join(temp_dir, "NoExtension"))
-        assert mm_file_tools.create_zip(temp_dir, zip_file)
-        assert exists(zip_file)
-        with tempfile.TemporaryDirectory() as extract_dir:
-            assert mm_file_tools.extract_zip(zip_file, extract_dir, create_folder=True, remove_internal=True, delete_files=["media.jpg"])
-            assert os.listdir(extract_dir) == ["NoExtension"]
-            sub_dir = abspath(join(extract_dir, "NoExtension"))
-            assert os.listdir(sub_dir) == ["deep.txt"]
-        # Test if invalid zip file is given
-        assert exists(text_file)
-        with tempfile.TemporaryDirectory() as extract_dir:
-            assert not mm_file_tools.extract_zip(text_file, extract_dir)
+        assert mm_file_tools.extract_zip(zip_file, temp_dir, delete_files=["DELETE.txt"])
+        assert sorted(os.listdir(temp_dir)) == ["Internal", "metadata.json"]
+        internal_dir = abspath(join(temp_dir, "Internal"))
+        assert sorted(os.listdir(internal_dir)) == ["Text1.txt", "Text2.txt"]
+        text_file = abspath(join(temp_dir, "metadata.json"))
+        assert mm_file_tools.read_json_file(text_file) == {"title":"Zip Test"}
+    # Test extracting zip while removing internal directory
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Test if extracted files already exist
-        sub_zip_dir = abspath(join(temp_dir, "Internal"))
-        text_file = abspath(join(temp_dir, "text.txt"))
-        media_file = abspath(join(sub_zip_dir, "deep.png"))
-        zip_file = abspath(join(temp_dir, "Another One!.cbz"))
-        os.mkdir(sub_zip_dir)
-        mm_file_tools.write_text_file(text_file, "this is text")
-        mm_file_tools.write_text_file(media_file, "media")
-        assert exists(text_file)
-        assert exists(media_file)
-        assert mm_file_tools.create_zip(temp_dir, zip_file)
-        assert exists(zip_file)
-        with tempfile.TemporaryDirectory() as extract_dir:
-            sub_dir = abspath(join(extract_dir, "Internal"))
-            duplicate_file = abspath(join(extract_dir, "text.txt"))
-            os.mkdir(sub_dir)
-            mm_file_tools.write_text_file(duplicate_file, "Different Text")
-            assert exists(sub_dir)
-            assert exists(duplicate_file)
-            assert mm_file_tools.extract_zip(zip_file, extract_dir)
-            assert sorted(os.listdir(extract_dir)) == ["Internal", "Internal-2", "text-2.txt", "text.txt"]
-            assert mm_file_tools.read_text_file(abspath(join(extract_dir, "text-2.txt"))) == "this is text"
-            assert mm_file_tools.read_text_file(abspath(join(extract_dir, "text.txt"))) == "Different Text"
-            assert os.listdir(abspath(join(extract_dir, "Internal"))) == []
-            assert os.listdir(abspath(join(extract_dir, "Internal-2"))) == ["deep.png"]
+        delete = ["DELETE.txt", "metadata.json"]
+        assert mm_file_tools.extract_zip(zip_file, temp_dir, create_folder=True, remove_internal=True, delete_files=delete)
+        assert os.listdir(temp_dir) == ["archive"]
+        archive_dir = abspath(join(temp_dir, "archive"))
+        assert sorted(os.listdir(archive_dir)) == ["Text1.txt", "Text2.txt"]
+    # Test that directory is not removed with external files
+    with tempfile.TemporaryDirectory() as temp_dir:
+        assert mm_file_tools.extract_zip(zip_file, temp_dir, remove_internal=True)
+        assert sorted(os.listdir(temp_dir)) == ["DELETE.txt", "Internal", "metadata.json"]
+        internal_dir = abspath(join(temp_dir, "Internal"))
+        assert sorted(os.listdir(internal_dir)) == ["Text1.txt", "Text2.txt"]
+    # Test if the extracted files already exist
+    with tempfile.TemporaryDirectory() as temp_dir:
+        mm_file_tools.write_text_file(abspath(join(temp_dir, "Text1.txt")), "A")
+        mm_file_tools.write_text_file(abspath(join(temp_dir, "Text2.txt")), "B")
+        delete = ["DELETE.txt", "metadata.json"]
+        assert mm_file_tools.extract_zip(zip_file, temp_dir, remove_internal=True, delete_files=delete)
+        assert sorted(os.listdir(temp_dir)) == ["Text1-2.txt", "Text1.txt", "Text2-2.txt", "Text2.txt"]
+        text_file = abspath(join(temp_dir, "Text1-2.txt"))
+        assert mm_file_tools.read_text_file(text_file) == "This is text!"
+        text_file = abspath(join(temp_dir, "Text2-2.txt"))
+        assert mm_file_tools.read_text_file(text_file) == "Another File."
+    # Test if an invalid zip file is given
+    with tempfile.TemporaryDirectory() as temp_dir:
+        assert not mm_file_tools.extract_zip(non_zip_file, temp_dir)
+        assert not mm_file_tools.extract_zip("/non/existant/", temp_dir)
+        assert os.listdir(temp_dir) == []
 
 def test_extract_file_from_zip():
     """
     Tests the extract_file_from_zip function.
     """
-    with tempfile.TemporaryDirectory() as zip_dir:
-        # Test extracting a file
-        sub_dir = abspath(join(zip_dir, "sub"))
-        text_file = abspath(join(zip_dir, "text.txt"))
-        media_file = abspath(join(zip_dir, "media.png"))
-        sub_file = abspath(join(sub_dir, "deep.jpg"))
-        os.mkdir(sub_dir)
-        mm_file_tools.write_text_file(text_file, "This is text!")
-        mm_file_tools.write_text_file(media_file, "More text!")
-        mm_file_tools.write_text_file(sub_file, "too deep")
-        assert exists(text_file)
-        assert exists(media_file)
-        assert exists(sub_file)
-        zip_file = abspath(join(zip_dir, "zip.zip"))
-        assert mm_file_tools.create_zip(zip_dir, zip_file)
-        assert exists(zip_file)
-        with tempfile.TemporaryDirectory() as extract_dir:
-            extracted = mm_file_tools.extract_file_from_zip(zip_file, extract_dir, "text.txt")
-            assert exists(extracted)
-            assert basename(extracted) == "text.txt"
-            assert mm_file_tools.read_text_file(extracted) == "This is text!"
-            # Test extracting a file if the file is not present in the ZIP file
-            assert mm_file_tools.extract_file_from_zip(zip_file, extract_dir, "blah.txt") is None
-            assert mm_file_tools.extract_file_from_zip(zip_file, extract_dir, "deep.jpg") is None
-            # Test attempting to extract a directory
-            assert mm_file_tools.extract_file_from_zip(zip_file, extract_dir, "sub") is None
-            # Test extracting a file from a non-ZIP archive
-            assert mm_file_tools.extract_file_from_zip(text_file, extract_dir, "blah.txt") is None
-            # Test if file already exists
-            extracted = mm_file_tools.extract_file_from_zip(zip_file, extract_dir, "text.txt")
-            assert exists(extracted)
-            assert basename(extracted) == "text-2.txt"
-            # Test extracting file from a subdirectory
-            extracted = mm_file_tools.extract_file_from_zip(zip_file, extract_dir, "deep.jpg", check_subdirectories=True)
-            assert exists(extracted)
-            assert basename(extracted) == "deep.jpg"
-            assert abspath(join(extracted, os.pardir)) == extract_dir
-            assert mm_file_tools.read_text_file(extracted) == "too deep"
+    # Get file paths
+    zip_file = abspath(join(mm_test.BASIC_DIRECTORY, "archive.zip"))
+    text_directory = abspath(join(mm_test.BASIC_DIRECTORY, "text"))
+    non_zip_file = abspath(join(text_directory, "unicode.txt"))
+    # Test extracting a file from a zip file
+    with tempfile.TemporaryDirectory() as temp_dir:
+        extracted = mm_file_tools.extract_file_from_zip(zip_file, temp_dir, "metadata.json")
+        assert os.listdir(temp_dir) == ["metadata.json"]
+        assert abspath(join(extracted, os.pardir)) == abspath(temp_dir)
+        assert basename(extracted) == "metadata.json"
+        assert mm_file_tools.read_json_file(extracted) == {"title":"Zip Test"}
+    # Test extracting file from a subdirectory
+    with tempfile.TemporaryDirectory() as temp_dir:
+        extracted = mm_file_tools.extract_file_from_zip(zip_file, temp_dir, "Text1.txt", True)
+        assert os.listdir(temp_dir) == ["Text1.txt"]
+        assert abspath(join(extracted, os.pardir)) == abspath(temp_dir)
+        assert basename(extracted) == "Text1.txt"
+        assert mm_file_tools.read_text_file(extracted) == "This is text!"
+    # Test if requested file is not present in the zip file
+    with tempfile.TemporaryDirectory() as temp_dir:
+        extracted = mm_file_tools.extract_file_from_zip(zip_file, temp_dir, "Nothing.txt", True)
+        assert extracted is None
+        extracted = mm_file_tools.extract_file_from_zip(zip_file, temp_dir, "Text1.txt")
+        assert extracted is None
+        assert os.listdir(temp_dir) == []
+    # Test that directories cannot be extracted
+    with tempfile.TemporaryDirectory() as temp_dir:
+        extracted = mm_file_tools.extract_file_from_zip(zip_file, temp_dir, "Internal")
+        assert extracted is None
+        assert os.listdir(temp_dir) == []
+    # Test if the extracted file already exists
+    with tempfile.TemporaryDirectory() as temp_dir:
+        mm_file_tools.write_text_file(abspath(join(temp_dir, "DELETE.txt")), "A")
+        extracted = mm_file_tools.extract_file_from_zip(zip_file, temp_dir, "DELETE.txt")
+        assert sorted(os.listdir(temp_dir)) == ["DELETE-2.txt", "DELETE.txt"]
+        assert abspath(join(extracted, os.pardir)) == abspath(temp_dir)
+        assert basename(extracted) == "DELETE-2.txt"
+        assert mm_file_tools.read_text_file(extracted) == "Delete Me!"
+    # Test extracting from an invalid zip file
+    with tempfile.TemporaryDirectory() as temp_dir:
+        extracted = mm_file_tools.extract_file_from_zip(non_zip_file, temp_dir, "DELETE.txt")
+        assert extracted is None
+        extracted = mm_file_tools.extract_file_from_zip("/non/existant/file", temp_dir, "DELETE.txt")
+        assert extracted is None
+        assert os.listdir(temp_dir) == []
+
+def test_create_zip():
+    """
+    Tests the create_zip function.
+    """
+    # Get file paths
+    json_directory = abspath(join(mm_test.BASIC_DIRECTORY, "json"))
+    non_zip_file = abspath(join(json_directory, "unicode.json"))
+    # Test creating a zip file
+    with tempfile.TemporaryDirectory() as temp_dir:
+        created_zip = abspath(join(temp_dir, "created.zip"))
+        assert mm_file_tools.create_zip(json_directory, created_zip)
+        assert mm_file_tools.extract_zip(created_zip, temp_dir)
+        assert sorted(os.listdir(temp_dir)) == ["created.zip", "latin1.JSON", "unicode.json"]
+        json_file = abspath(join(temp_dir, "latin1.JSON"))
+        assert mm_file_tools.read_json_file(json_file) == {"new": "Títle"}
+    # Test creating a zip file with internal directories
+    with tempfile.TemporaryDirectory() as temp_dir:
+        created_zip = abspath(join(temp_dir, "created.zip"))
+        assert mm_file_tools.create_zip(mm_test.BASIC_DIRECTORY, created_zip)
+        assert mm_file_tools.extract_zip(created_zip, temp_dir)
+        assert sorted(os.listdir(temp_dir)) == ["archive.zip", "created.zip", "json", "text"]
+        internal_dir = abspath(join(temp_dir, "json"))
+        assert sorted(os.listdir(internal_dir)) == ["latin1.JSON", "unicode.json"]
+        internal_dir = abspath(join(temp_dir, "text"))
+        assert sorted(os.listdir(internal_dir)) == ["cp437.TXT", "latin1.txt", "unicode.txt"]
+        text_file = abspath(join(internal_dir, "cp437.TXT"))
+        assert mm_file_tools.read_text_file(text_file) == "This is cp437."
+    # Test adding a mimetype file
+    with tempfile.TemporaryDirectory() as temp_dir:
+        created_zip = abspath(join(temp_dir, "created.zip"))
+        assert mm_file_tools.create_zip(json_directory, created_zip, mimetype="Thing")
+        assert mm_file_tools.extract_zip(created_zip, temp_dir)
+        assert sorted(os.listdir(temp_dir)) == ["created.zip", "latin1.JSON", "mimetype", "unicode.json"]
+        text_file = abspath(join(temp_dir, "mimetype"))
+        assert mm_file_tools.read_text_file(text_file) == "Thing"
+
+def test_find_files_of_type():
+    """
+    Tests the find_files_of_type function.
+    """
+    # Get file paths
+    basic_directory = mm_test.BASIC_DIRECTORY
+    text_directory = abspath(join(basic_directory, "text"))
+    json_directory = abspath(join(basic_directory, "json"))
+    # Test finding all files of a given extension
+    files = mm_file_tools.find_files_of_type(text_directory, ".txt")
+    assert len(files) == 3
+    assert basename(files[0]) == "cp437.TXT"
+    assert basename(files[1]) == "latin1.txt"
+    assert basename(files[2]) == "unicode.txt"
+    assert mm_file_tools.find_files_of_type(text_directory, ".png") == []
+    assert mm_file_tools.find_files_of_type(text_directory, ".json") == []
+    assert mm_file_tools.find_files_of_type(basic_directory, ".txt", False) == []
+    # Test finding files while including subdirectories
+    files = mm_file_tools.find_files_of_type(basic_directory, ".txt")
+    assert len(files) == 3
+    files = mm_file_tools.find_files_of_type(basic_directory, [".json", ".zip"])
+    assert len(files) == 3
+    assert basename(files[0]) == "archive.zip"
+    assert abspath(join(files[0], os.pardir)) == basic_directory
+    assert basename(files[1]) == "latin1.JSON"
+    assert abspath(join(files[1], os.pardir)) == json_directory
+    assert basename(files[2]) == "unicode.json"
+    assert abspath(join(files[2], os.pardir)) == json_directory
+    # Test finding files with inverted extension
+    files = mm_file_tools.find_files_of_type(basic_directory, ".txt", inverted=True)
+    assert len(files) == 3
+    assert basename(files[0]) == "archive.zip"
+    assert abspath(join(files[0], os.pardir)) == basic_directory
+    assert basename(files[1]) == "latin1.JSON"
+    assert abspath(join(files[1], os.pardir)) == json_directory
+    assert basename(files[2]) == "unicode.json"
+    assert abspath(join(files[2], os.pardir)) == json_directory
+    files = mm_file_tools.find_files_of_type(basic_directory, [".txt", ".json"], inverted=True)
+    assert len(files) == 1
+    assert basename(files[0]) == "archive.zip"
+    assert abspath(join(files[0], os.pardir)) == basic_directory
+
+def test_directory_contains():
+    """
+    Tests the directory_contains function.
+    """
+    # Get file paths
+    basic_directory = mm_test.BASIC_DIRECTORY
+    text_directory = abspath(join(basic_directory, "text"))
+    json_directory = abspath(join(basic_directory, "json"))
+    # Test if a directory contains files without checking subdirectories
+    assert mm_file_tools.directory_contains(basic_directory, ".zip", False)
+    assert mm_file_tools.directory_contains(text_directory, ".txt")
+    assert mm_file_tools.directory_contains(text_directory, [".txt", ".json"])
+    assert not mm_file_tools.directory_contains(text_directory, ".t")
+    assert not mm_file_tools.directory_contains(text_directory, ".json")
+    assert not mm_file_tools.directory_contains(text_directory, [".json", ".png"])
+    assert not mm_file_tools.directory_contains(basic_directory, ".txt", False)
+    # Test if directory contains files while checking subdirectories
+    assert mm_file_tools.directory_contains(basic_directory, ".zip")
+    assert mm_file_tools.directory_contains(basic_directory, ".json")
+    assert mm_file_tools.directory_contains(basic_directory, [".txt", ".png"])
+    assert not mm_file_tools.directory_contains(basic_directory, ".png")
+    assert not mm_file_tools.directory_contains(basic_directory, [".jpeg", ".png", ".html"])

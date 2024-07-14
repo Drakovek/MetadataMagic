@@ -1,0 +1,9 @@
+{
+    "name":"vãlue",
+    "number":25,
+    "boolean":false,
+    "internal":
+        {
+            "key":"another"
+        }
+}

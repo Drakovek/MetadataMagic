@@ -2,7 +2,6 @@
 
 import os
 import json
-import chardet
 import shutil
 import zipfile
 import tempfile
@@ -38,19 +37,14 @@ def read_text_file(file:str) -> str:
     :return: Text contained in the given file
     :rtype: str
     """
-    try:
-        with open(abspath(file), "rb") as in_file:
-            data = in_file.read()
-            encoding = chardet.detect(data)["encoding"]
-            text = data.decode(encoding)
-            return text
-    except:
+    encodings = ["utf-8", "ascii", "latin_1", "cp437", "cp500"]
+    for encoding in encodings:
         try:
-            with open (file) as in_file:
-                text = in_file.read()
-                return text
-        except:
-            print(f"Error Reading: {file}")
+            with open(abspath(file), "rb") as in_file:
+                data = in_file.read()
+                text = data.decode(encoding)
+                return text.strip()
+        except: pass
     return None
 
 def write_json_file(file:str, contents:dict):
@@ -127,7 +121,7 @@ def find_files_of_type(directory:str, extension:str, include_subdirectories:bool
     # Return found files
     return mm_sort.sort_alphanum(files)
 
-def directory_contains(directory:str, extensions:List[str], include_subdirectories:bool=True) -> bool:
+def directory_contains(directory:str, extension:List[str], include_subdirectories:bool=True) -> bool:
     """
     Returns whether a given directory contains a file with any of the given extensions.
 
@@ -141,6 +135,10 @@ def directory_contains(directory:str, extensions:List[str], include_subdirectori
     :rtype: bool
     """
     directories = [abspath(directory)]
+    # Get the list of extensions
+    extensions = extension
+    if isinstance(extensions, str):
+        extensions = [extensions]
     # Run through all directories
     while len(directories) > 0:
         # Get list of all files in the current directory
@@ -154,8 +152,8 @@ def directory_contains(directory:str, extensions:List[str], include_subdirectori
                     directories.append(full_file)
                 continue
             # Check if the extension matches
-            extension = html_string_tools.html.get_extension(full_file).lower()
-            if extension in extensions:
+            cur_extension = html_string_tools.html.get_extension(full_file).lower()
+            if cur_extension in extensions:
                 return True
         # Delete the current directory from the list
         del directories[0]
@@ -227,7 +225,7 @@ def extract_zip(zip_path:str, extract_directory:str, create_folder:bool=False,
         try:
             with zipfile.ZipFile(zip_path, mode="r") as file:
                 file.extractall(path=unzip_dir)
-        except zipfile.BadZipFile: return False
+        except (FileNotFoundError, zipfile.BadZipFile): return False
         # Create new extraction subfolder if specified
         main_dir = abspath(extract_directory)
         new_dir = abspath(extract_directory)
