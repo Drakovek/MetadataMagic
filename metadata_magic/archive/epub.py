@@ -784,7 +784,7 @@ def create_epub(chapters:List[dict], metadata:dict, directory:str, copy_back_cov
         assert mm_file_tools.create_zip(build_directory, epub_file, 8, "application/epub+zip")
         return epub_file
 
-def create_epub_from_description(json_file:str, image_file:str, metadata:dict, directory:str) -> str:
+def create_epub_from_description(json_file:str, image_file:str, metadata:dict, directory:str, config:dict) -> str:
     """
     Creates an EPUB file from a image+json pair with the json metadata description used as the text.
     Image file is used as the cover image.
@@ -797,6 +797,8 @@ def create_epub_from_description(json_file:str, image_file:str, metadata:dict, d
     :type metadata: dict, required
     :param directory: Directory to get file info from and to save finished EPUB into
     :type directory: str, required
+    :param config: Dictionary of a metadata-magic config file
+    :type config: dict, required
     :return: The path of the created EPUB file
     :rtype: str
     """
@@ -814,7 +816,7 @@ def create_epub_from_description(json_file:str, image_file:str, metadata:dict, d
         cover_image = abspath(join(temp_dir, f"dvk-cover{extension}"))
         shutil.copy(image_file, cover_image)
         # Create the html from the json description
-        html = mm_meta_reader.load_metadata(json_file, image_file)["description"]
+        html = mm_meta_reader.load_metadata(json_file, config, image_file)["description"]
         html_file = abspath(join(temp_dir, json_name[:len(json_name) - 5] + ".html"))
         mm_file_tools.write_text_file(html_file, html)
         # Create the chapters list

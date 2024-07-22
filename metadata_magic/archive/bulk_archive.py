@@ -9,6 +9,7 @@ import tempfile
 import traceback
 import html_string_tools.html
 import python_print_tools.printer
+import metadata_magic.config as mm_config
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.error as mm_error
@@ -18,7 +19,7 @@ import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.comic_archive as mm_comic_archive
 from os.path import abspath, basename, exists, isdir, join
 
-def archive_all_media(directory:str, format_title:bool=False, description_length:int=1000) -> bool:
+def archive_all_media(directory:str, config:dict, format_title:bool=False, description_length:int=1000) -> bool:
     """
     Takes all supported JSON-media pairs and archives them into their appropriate media archives.
     Text files are archived into EPUB files.
@@ -26,6 +27,8 @@ def archive_all_media(directory:str, format_title:bool=False, description_length
     
     :param directory: Directory in which to search for JSON-media pairs and archive files
     :type directory: str, required
+    :param config: Dictionary of a metadata-magic config file
+    :type config: dict, required
     :param format_title: Whether to format media titles before archiving, defaults to False
     :type format_title: bool, optional
     :param description_length: Length that a description can be before being used as an ebook, defaults to 1000
@@ -45,6 +48,7 @@ def archive_all_media(directory:str, format_title:bool=False, description_length
             # Ignore if the extension is not supported
             extension = html_string_tools.html.get_extension(pair["media"]).lower()
             if extension not in media_extensions:
+                print(pair)
                 continue
             with tempfile.TemporaryDirectory() as temp_dir:
                 # Copy JSON and media into temp directory
@@ -53,7 +57,7 @@ def archive_all_media(directory:str, format_title:bool=False, description_length
                 shutil.copy(pair["json"], new_json)
                 shutil.copy(pair["media"], new_media)
                 # Get metadata from the JSON
-                metadata = mm_archive.get_info_from_jsons(temp_dir)
+                metadata = mm_archive.get_info_from_jsons(temp_dir, config)
                 # Format the title if specified
                 if format_title:
                     metadata["title"] = mm_archive.format_title(metadata["title"])
@@ -70,7 +74,7 @@ def archive_all_media(directory:str, format_title:bool=False, description_length
                         new_pair = mm_meta_finder.get_pairs(temp_dir, print_info=False)[0]
                         new_media = new_pair["media"]
                         new_json = new_pair["json"]
-                        archive_file = mm_epub.create_epub_from_description(new_json, new_media, metadata, temp_dir)
+                        archive_file = mm_epub.create_epub_from_description(new_json, new_media, metadata, temp_dir, config)
                 elif extension in mm_archive.SUPPORTED_TEXT:
                     with tempfile.TemporaryDirectory() as image_dir:
                         chapters = mm_epub.get_default_chapters(temp_dir, title=metadata["title"])
@@ -247,4 +251,6 @@ def main():
                 extract_all_archives(directory, create_folders=True, remove_structure=False)
         else:
             print("Archiving media files...")
-            archive_all_media(directory, args.format_titles, args.description_length)
+            config_paths = mm_config.get_default_config_paths()
+            config = mm_config.get_config(config_paths)
+            archive_all_media(directory, config, args.format_titles, args.description_length)

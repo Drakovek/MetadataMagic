@@ -2,6 +2,7 @@
 
 import os
 import tempfile
+import metadata_magic.config as mm_config
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.series as mm_series
 import metadata_magic.archive.archive as mm_archive
@@ -26,7 +27,8 @@ def test_get_default_labels():
         sub_dir = abspath(join(temp_dir, "sub"))
         os.mkdir(sub_dir)
         mm_file_tools.write_text_file(abspath(join(sub_dir, "deep.cbz")), "Text")
-        mm_bulk_archive.archive_all_media(temp_dir)
+        config = mm_config.DEFAULT_CONFIG
+        mm_bulk_archive.archive_all_media(temp_dir, config)
         assert sorted(os.listdir(temp_dir)) == ["1 Text.epub", "10 Image.cbz",
                 "A Text.epub", "B Image.cbz", "sub", "unimportant.txt"]
         assert sorted(os.listdir(sub_dir)) == ["deep.cbz"]
@@ -149,7 +151,8 @@ def test_write_series():
         mm_file_tools.write_json_file(abspath(join(temp_dir, "Comic.json")), {"title": "Comic", "writer":"Person"})
         mm_file_tools.write_text_file(abspath(join(temp_dir, "Other.png")), "Text")
         mm_file_tools.write_json_file(abspath(join(temp_dir, "Other.json")), {"title": "Other", "artist":"Blah"})
-        mm_bulk_archive.archive_all_media(temp_dir)
+        config = mm_config.DEFAULT_CONFIG
+        mm_bulk_archive.archive_all_media(temp_dir, config)
         assert sorted(os.listdir(temp_dir)) == ["Book.epub", "Comic.cbz", "Other.cbz"]
         book_file = abspath(join(temp_dir, "Book.epub"))
         comic_file = abspath(join(temp_dir, "Comic.cbz"))
@@ -189,7 +192,8 @@ def test_write_series_single():
         mm_file_tools.write_json_file(abspath(join(temp_dir, "Book.json")), {"title": "Book", "writer":"Name"})
         mm_file_tools.write_text_file(abspath(join(temp_dir, "Comic.jpg")), "Text")
         mm_file_tools.write_json_file(abspath(join(temp_dir, "Comic.json")), {"title": "Comic", "writer":"Person"})
-        mm_bulk_archive.archive_all_media(temp_dir)
+        config = mm_config.DEFAULT_CONFIG
+        mm_bulk_archive.archive_all_media(temp_dir, config)
         assert sorted(os.listdir(temp_dir)) == ["Book.epub", "Comic.cbz"]
         book_file = abspath(join(temp_dir, "Book.epub"))
         comic_file = abspath(join(temp_dir, "Comic.cbz"))

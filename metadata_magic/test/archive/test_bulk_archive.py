@@ -3,6 +3,7 @@
 import os
 import shutil
 import tempfile
+import metadata_magic.config as mm_config
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.epub as mm_epub
 import metadata_magic.archive.archive as mm_archive
@@ -43,9 +44,11 @@ def test_archive_all_media():
         assert files == ["other.txt", "sub_image.cbz", "sub_image.jpeg", "sub_image.json",
                 "sub_text.epub", "sub_text.htm", "sub_text.json"]
         # Archive all supported files
-        assert mm_bulk_archive.archive_all_media(temp_dir)
+        config = mm_config.DEFAULT_CONFIG
+        assert mm_bulk_archive.archive_all_media(temp_dir, config)
         assert sorted(os.listdir(temp_dir)) == ["image1.cbz", "image2.epub", "sub_dir", "text1.epub", "text2.epub",
                 "thing.png", "unsupported.blah", "unsupported.json"]
+        print(sorted(os.listdir(sub_dir)))
         assert sorted(os.listdir(sub_dir)) == ["other.txt", "sub_image-2.cbz", "sub_image.cbz",
                 "sub_text-2.epub", "sub_text.epub"]
         # Test that metadata in archives is correct
@@ -76,7 +79,7 @@ def test_archive_all_media():
         mm_file_tools.write_text_file(abspath(join(temp_dir, "image.png")), "Blah")
         mm_file_tools.write_json_file(abspath(join(temp_dir, "image.json")), {"title": "just a test"})
         assert sorted(os.listdir(temp_dir)) == ["image.json", "image.png"]
-        assert mm_bulk_archive.archive_all_media(temp_dir, True)    
+        assert mm_bulk_archive.archive_all_media(temp_dir, config, True)    
         assert sorted(os.listdir(temp_dir)) == ["image.cbz"]
         assert mm_comic_archive.get_info_from_cbz(abspath(join(temp_dir, "image.cbz")))["title"] == "Just a Test"
         cbz_extract = abspath(join(temp_dir, "cbz_extract"))
@@ -91,7 +94,7 @@ def test_archive_all_media():
         mm_file_tools.write_json_file(abspath(join(temp_dir, "short.json")), {"title":"Short", "caption":"A"*200})
         mm_file_tools.write_text_file(abspath(join(temp_dir, "long.png")), "BLAH")
         mm_file_tools.write_json_file(abspath(join(temp_dir, "long.json")), {"title":"Long", "caption":"A"*600})
-        assert mm_bulk_archive.archive_all_media(temp_dir, description_length=500)
+        assert mm_bulk_archive.archive_all_media(temp_dir, config, description_length=500)
         assert sorted(os.listdir(temp_dir)) == ["long.epub", "short.cbz"]
 
 def test_extract_cbz():

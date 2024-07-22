@@ -3,6 +3,8 @@
 import os
 import shutil
 import tempfile
+import metadata_magic.test as mm_test
+import metadata_magic.config as mm_config
 import metadata_magic.rename as mm_rename
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.archive as mm_archive
@@ -15,74 +17,97 @@ def test_get_file_friendly_text():
     Tests the get_file_friendly_text function.
     """
     # Test replacing invalid characters
-    assert mm_rename.get_file_friendly_text("**What?!?!") == "What-!-!"
-    assert mm_rename.get_file_friendly_text(".This:That") == "This - That"
-    assert mm_rename.get_file_friendly_text("Blah...") == "Blah…"
-    assert mm_rename.get_file_friendly_text("<\"This/That\\Other\">") == "This-That-Other"
-    assert mm_rename.get_file_friendly_text("(A|||B)") == "(A-B)"
-    assert mm_rename.get_file_friendly_text("...Mr. Roboto.") == "…Mr. Roboto"
-    assert mm_rename.get_file_friendly_text(" This    &    That ") == "This & That"
-    assert mm_rename.get_file_friendly_text("[A] 	Thing") == "[A] Thing"
-    assert mm_rename.get_file_friendly_text("thing--stuff  @*-   blah") == "thing-stuff @ blah"
-    assert mm_rename.get_file_friendly_text("This..") == "This"
-    assert mm_rename.get_file_friendly_text("..Dots.....") == "Dots…"
-    assert mm_rename.get_file_friendly_text("Spaced .  .   .") == "Spaced …"
-    assert mm_rename.get_file_friendly_text("  This is the end >.<  ") == "This is the end"
-    assert mm_rename.get_file_friendly_text(" No, THIS is the end. -.-.. ") == "No, THIS is the end"
-    assert mm_rename.get_file_friendly_text("A -> B") == "A to B"
-    assert mm_rename.get_file_friendly_text("Thing ----> Other") == "Thing to Other"
-    # Test removing hanging hyphens.
-    assert mm_rename.get_file_friendly_text("Blah!- Thing") == "Blah! Thing"
-    assert mm_rename.get_file_friendly_text("Other23- Item") == "Other23 Item"
-    assert mm_rename.get_file_friendly_text("First -!Next") == "First !Next"
-    assert mm_rename.get_file_friendly_text("None -Next") == "None Next"
-    # Test converting from non-standard latin characters
-    assert mm_rename.get_file_friendly_text("ÀÁÂÃÄÅ") == "AAAAAA"
-    assert mm_rename.get_file_friendly_text("ÈÉÊË") == "EEEE"
-    assert mm_rename.get_file_friendly_text("ÌÍÎÏ") == "IIII"
-    assert mm_rename.get_file_friendly_text("ÑÒÓÔÕÖ") == "NOOOOO"
-    assert mm_rename.get_file_friendly_text("ÙÚÛÜÝ") == "UUUUY"
-    assert mm_rename.get_file_friendly_text("àáâãäå") == "aaaaaa"
-    assert mm_rename.get_file_friendly_text("èéêë") == "eeee"
-    assert mm_rename.get_file_friendly_text("ìíîï") == "iiii"
-    assert mm_rename.get_file_friendly_text("ñòóôõö") == "nooooo"
-    assert mm_rename.get_file_friendly_text("ùúûüýÿ") == "uuuuyy"
-    # Test getting filename with no length
-    assert mm_rename.get_file_friendly_text("") == "0"
+    assert mm_rename.get_file_friendly_text(r"A < B > C") == "A - B - C"
+    assert mm_rename.get_file_friendly_text(r'1 " 2 " 3') == "1 - 2 - 3"
+    assert mm_rename.get_file_friendly_text(r"A\B/C | 123") == "A-B-C - 123"
+    assert mm_rename.get_file_friendly_text(r"a*b?c") == "a-b-c"
+    assert mm_rename.get_file_friendly_text(r"abcd..") == "abcd"
+    assert mm_rename.get_file_friendly_text(r"abcd . .") == "abcd"
+    assert mm_rename.get_file_friendly_text("ABCDE") == "ABCDE"
+    # Test removing reserved file names
+    assert mm_rename.get_file_friendly_text(r"CON") == "0"
+    assert mm_rename.get_file_friendly_text(r"prn") == "0"
+    assert mm_rename.get_file_friendly_text(r"AUX") == "0"
+    assert mm_rename.get_file_friendly_text(r"nul") == "0"
+    assert mm_rename.get_file_friendly_text(r"com1") == "0"
+    assert mm_rename.get_file_friendly_text(r"COM2") == "0"
+    assert mm_rename.get_file_friendly_text(r"com5") == "0"
+    assert mm_rename.get_file_friendly_text(r"lpt1") == "0"
+    assert mm_rename.get_file_friendly_text(r"LPT5") == "0"
+    assert mm_rename.get_file_friendly_text(r"CONTENT") == "CONTENT"
+    assert mm_rename.get_file_friendly_text(r"aprn") == "aprn"
+    assert mm_rename.get_file_friendly_text(r"com6") == "com6"
+    assert mm_rename.get_file_friendly_text(r"LPT6") == "LPT6"
+    assert mm_rename.get_file_friendly_text(r"LPT0") == "LPT0"
+    # Test replacing different types of whitespace and hyphens
+    assert mm_rename.get_file_friendly_text(r"A－B⎼C") == "A-B-C"
+    assert mm_rename.get_file_friendly_text("1\n2\t3") == "1 2 3"
+    # Test replacing multiple hyphens or whitespace
+    assert mm_rename.get_file_friendly_text(r"A-----B") == "A-B"
+    assert mm_rename.get_file_friendly_text(r"1     2") == "1 2"
+    assert mm_rename.get_file_friendly_text(r"a -  -?   -   b") == "a - b"
+    assert mm_rename.get_file_friendly_text(r"A- -*-   -Z") == "A-Z"
+    # Test replacing special structures
+    assert mm_rename.get_file_friendly_text(r"A:B") == "A - B"
+    assert mm_rename.get_file_friendly_text(r"abc...") == "abc…"
+    assert mm_rename.get_file_friendly_text(r"123.  . .  . ") == "123…"
+    assert mm_rename.get_file_friendly_text(r". . . A . . . . . .") == "… A … …"
+    assert mm_rename.get_file_friendly_text(r"A -> B") == "A to B"
+    assert mm_rename.get_file_friendly_text(r"B --－－-> C") == "B to C"
+    assert mm_rename.get_file_friendly_text(r"1->3") == "1-3"
+    # Test removing hanging hyphens
+    assert mm_rename.get_file_friendly_text(r"A- B") == "A B"
+    assert mm_rename.get_file_friendly_text(r"C -D") == "C D"
+    assert mm_rename.get_file_friendly_text(r"a? z") == "a z"
+    assert mm_rename.get_file_friendly_text(r"A *Z") == "A Z"
+    # Test removing whitespace and hyphens from ends of string
+    assert mm_rename.get_file_friendly_text(r"   ABC    ") == "ABC"
+    assert mm_rename.get_file_friendly_text(r"- - 123 - -") == "123"
+    assert mm_rename.get_file_friendly_text(r" ?? az * * ") == "az"
+    # Test replacing diacritic characters in ASCII only mode
+    assert mm_rename.get_file_friendly_text("Áéíóú") == "Áéíóú"
+    assert mm_rename.get_file_friendly_text("ÀÁÂÃÄÅ", True) == "AAAAAA"
+    assert mm_rename.get_file_friendly_text("ÈÉÊË", True) == "EEEE"
+    assert mm_rename.get_file_friendly_text("ÌÍÎÏ", True) == "IIII"
+    assert mm_rename.get_file_friendly_text("ÑŃÒÓÔÕÖ", True) == "NNOOOOO"
+    assert mm_rename.get_file_friendly_text("ÙÚÛÜÝŸ", True) == "UUUUYY"
+    assert mm_rename.get_file_friendly_text("àáâãäå", True) == "aaaaaa"
+    assert mm_rename.get_file_friendly_text("èéêë", True) == "eeee"
+    assert mm_rename.get_file_friendly_text("ìíîï", True) == "iiii"
+    assert mm_rename.get_file_friendly_text("ńñòóôõö", True) == "nnooooo"
+    assert mm_rename.get_file_friendly_text("ùúûüýÿ", True) == "uuuuyy"
+    # Test non-ASCII characters are removed in ASCII only mode
+    assert mm_rename.get_file_friendly_text("$.AAA☺") == "$.AAA☺"
+    assert mm_rename.get_file_friendly_text("$.☺abz", True) == "abz"
+    assert mm_rename.get_file_friendly_text("[A] @;`^{} (Z)", True) == "[A] - (Z)"
+    assert mm_rename.get_file_friendly_text("0 % % % 9!", True) == "0 - 9!"
+    # Test if the final filename has no length
+    assert mm_rename.get_file_friendly_text("@#$%^&*-=", True) == "0"
     assert mm_rename.get_file_friendly_text("---") == "0"
+    assert mm_rename.get_file_friendly_text("   ") == "0"
+    assert mm_rename.get_file_friendly_text("") == "0"
+    assert mm_rename.get_file_friendly_text(None) == "0"
 
 def test_get_available_filename():
     """
     Tests the get_available_filename function.
     """
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test getting filename with unacceptable characters.
-        assert mm_rename.get_available_filename(["a.txt"], "Name?", temp_dir) == "Name"
-        assert mm_rename.get_available_filename(["b.png"], ".dat", temp_dir) == "dat"
-        # Test getting filename if desired filename already exists
-        text_file = abspath(join(temp_dir, "name.txt"))
-        mm_file_tools.write_text_file(text_file, "some text")
-        assert exists(text_file)
-        assert mm_rename.get_available_filename(["a.txt"], "name", temp_dir) == "name-2"
-        # Test if filename exists with a different extension
-        assert mm_rename.get_available_filename(["b.png"], "name", temp_dir) == "name"
-        # Test if filename alternate filename is also taken
-        text_file_2 = abspath(join(temp_dir, "name-2.txt"))
-        text_file_3 = abspath(join(temp_dir, "name-3.txt"))
-        mm_file_tools.write_text_file(text_file_2, "more")
-        mm_file_tools.write_text_file(text_file_3, "text")
-        assert exists(text_file_2)
-        assert exists(text_file_3)
-        assert mm_rename.get_available_filename(["a.txt"], "name", temp_dir) == "name-4"
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test checking against multiple file extensions
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "title.txt")), "A")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "title-2.png")), "A")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "title-3.jpg")), "A")
-        assert mm_rename.get_available_filename(["a.doc"], "title", temp_dir) == "title"
-        assert mm_rename.get_available_filename(["a.txt"], "title", temp_dir) == "title-2"
-        assert mm_rename.get_available_filename(["a.txt", "b.png", "c.dvk"], "title", temp_dir) == "title-3"
-        assert mm_rename.get_available_filename(["a.txt", "b.png", "c.jpg"], "title", temp_dir) == "title-4"
+    # Test getting a filename with invalid characters
+    pair_dir = mm_test.PAIR_DIRECTORY
+    assert mm_rename.get_available_filename("a.txt", "Name?", pair_dir) == "Name"
+    assert mm_rename.get_available_filename(["a.txt"], ".Náme.", pair_dir) == ".Náme"
+    assert mm_rename.get_available_filename("a.txt", ".Náme.", pair_dir, True) == "Name"
+    # Test getting the filename if the desired filename already exists
+    assert mm_rename.get_available_filename("a.txt", "páir", pair_dir, True) == "pair-2"
+    assert mm_rename.get_available_filename(["a.TXT", "a.jpg"], "pair", pair_dir) == "pair-3"
+    # Test if filename exists with filename but different capitalization
+    image_dir = mm_test.PAIR_IMAGE_DIRECTORY
+    assert mm_rename.get_available_filename(".jpg", "Small", image_dir) == "Small-2"
+    # Test if the filename exists, but with a different extension
+    assert mm_rename.get_available_filename(".txt", "bare", image_dir) == "bare"
+    assert mm_rename.get_available_filename([".txt", ".jpg"], "Large", image_dir) == "Large"
+    # Test with invalid directory
+    assert mm_rename.get_available_filename(".txt", "bare", "/non/existant/dir/") is None
 
 def test_rename_file():
     """
@@ -91,57 +116,41 @@ def test_rename_file():
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create test file
         file = abspath(join(temp_dir, "file.txt"))
-        mm_file_tools.write_text_file(file, "TEST")
-        assert exists(file)
+        mm_file_tools.write_text_file(file, "test text")
         # Test renaming file
-        new_file = mm_rename.rename_file(file, "Name?")
-        assert exists(new_file)
-        assert abspath(join(new_file, os.pardir)) == temp_dir
-        assert basename(new_file) == "Name.txt"
+        file = mm_rename.rename_file(file, "Náme?")
+        assert abspath(join(file, os.pardir)) == temp_dir
+        assert basename(file) == "Náme.txt"
+        # Test renaming file with only ASCII characters allowed
+        file = mm_rename.rename_file(file, ".Náme", True)
+        assert abspath(join(file, os.pardir)) == temp_dir
+        assert basename(file) == "Name.txt"
         # Test renaming file to its current name
-        file = new_file
-        new_file = None
-        assert exists(file)
-        new_file = mm_rename.rename_file(file, "Name??????????????")
-        assert exists(new_file)
-        assert file == new_file
+        file = mm_rename.rename_file(file, "Name??????????????")
+        assert basename(file) == "Name.txt"
         # Test renaming file to name of existing file
-        file = abspath(join(temp_dir, "totally_new.txt"))
-        mm_file_tools.write_text_file(file, "NEW!")
-        assert exists(file)
-        new_file = mm_rename.rename_file(file, "Name")
-        assert exists(new_file)
-        assert abspath(join(new_file, os.pardir)) == temp_dir
-        assert basename(new_file) == "Name-2.txt"
+        file = abspath(join(temp_dir, "new.txt"))
+        mm_file_tools.write_text_file(file, "new text")
+        file = mm_rename.rename_file(file, "Name")
+        assert basename(file) == "Name-2.txt"
+        assert sorted(os.listdir(temp_dir)) == ["Name-2.txt", "Name.txt"]
         # Test renaming same filename but different extension
-        file = abspath(join(temp_dir, "Weeee!.png"))
-        mm_file_tools.write_text_file(file, "Not Actually PNG.")
-        assert exists(file)
-        new_file = mm_rename.rename_file(file, ":Name:")
-        assert exists(new_file)
-        assert abspath(join(new_file, os.pardir)) == temp_dir
-        assert basename(new_file) == "Name.png"
-        # Test renaming a third time
-        file = abspath(join(temp_dir, "next.txt"))
-        mm_file_tools.write_text_file(file, "Next")
-        assert exists(file)
-        new_file = mm_rename.rename_file(file, ":Name:")
-        assert exists(new_file)
-        assert abspath(join(new_file, os.pardir)) == temp_dir
-        assert basename(new_file) == "Name-3.txt"
+        file = abspath(join(temp_dir, "Image.png"))
+        mm_file_tools.write_text_file(file, "image text")
+        file = mm_rename.rename_file(file, ":Name:")
+        assert basename(file) == "Name.png"
         # Test that renamed files still contain the correct data
+        assert sorted(os.listdir(temp_dir)) == ["Name-2.txt", "Name.png", "Name.txt"]
         file = abspath(join(temp_dir, "Name.txt"))
-        assert mm_file_tools.read_text_file(file) == "TEST"
+        assert mm_file_tools.read_text_file(file) == "test text"
         file = abspath(join(temp_dir, "Name-2.txt"))
-        assert mm_file_tools.read_text_file(file) == "NEW!"
+        assert mm_file_tools.read_text_file(file) == "new text"
         file = abspath(join(temp_dir, "Name.png"))
-        assert mm_file_tools.read_text_file(file) == "Not Actually PNG."
-        file = abspath(join(temp_dir, "Name-3.txt"))
-        assert mm_file_tools.read_text_file(file) == "Next"
+        assert mm_file_tools.read_text_file(file) == "image text"
         # Test renaming invalid file
-        file = abspath(join(temp_dir, "non-existant.txt"))
-        new_file = mm_rename.rename_file(file, "new")
-        assert new_file is None
+        file = abspath(join(temp_dir, "non-existant"))
+        assert mm_rename.rename_file(file, "new") is None
+        assert mm_rename.rename_file("/non/existant/file", "new") is None
 
 def test_get_string_from_metadata():
     """
@@ -192,209 +201,139 @@ def test_rename_media_archives():
     """
     Tests the rename_media_archives function.
     """
+    # Test renaming cbz archives
+    config = mm_config.DEFAULT_CONFIG
     with tempfile.TemporaryDirectory() as temp_dir:
-        with tempfile.TemporaryDirectory() as build_dir:
-            # Create test archives
-            sub_dir = abspath(join(temp_dir, "sub"))
-            os.mkdir(sub_dir)
-            media_file = abspath(join(build_dir, "image.png"))
-            mm_file_tools.write_text_file(media_file, "AAA")
-            metadata = mm_archive.get_empty_metadata()
-            metadata["title"] = "CBZ Root"
-            metadata["artists"] = "Person"
-            cbz_file = mm_comic_archive.create_cbz(build_dir, "CBZ1", metadata=metadata)
-            shutil.copy(cbz_file, temp_dir)
-            os.remove(cbz_file)
-            metadata["title"] = "Part 2"
-            metadata["artists"] = "Person"
-            cbz_file = mm_comic_archive.create_cbz(build_dir, "CBZ2", metadata=metadata)
-            shutil.copy(cbz_file, temp_dir)
-            os.remove(cbz_file)
-            metadata["title"] = "CBZ Deep"
-            metadata["artists"] = "Artist"
-            cbz_file = mm_comic_archive.create_cbz(build_dir, "CBZ3", metadata=metadata)
-            shutil.copy(cbz_file, sub_dir)
-        with tempfile.TemporaryDirectory() as build_dir:
-            text_file = abspath(join(build_dir, "text.txt"))
-            mm_file_tools.write_text_file(text_file, "Text")
-            metadata["title"] = "EPUB Root"
-            metadata["artists"] = "Writer"
-            chapters = mm_epub.get_default_chapters(build_dir)
-            epub_file = mm_epub.create_epub(chapters, metadata, build_dir)
-            shutil.copy(epub_file, temp_dir)
-            os.remove(epub_file)
-            metadata["title"] = "EPUB Sub"
-            metadata["artists"] = "Final"
-            chapters = mm_epub.get_default_chapters(build_dir)
-            epub_file = mm_epub.create_epub(chapters, metadata, build_dir)
-            shutil.copy(epub_file, sub_dir)
-            assert sorted(os.listdir(temp_dir)) == ["CBZ1.cbz", "CBZ2.cbz", "EPUB Root.epub", "sub"]
-            assert sorted(os.listdir(sub_dir)) == ["CBZ3.cbz", "EPUB Sub.epub"]
-            # Test renaming archives to their titles 
-            mm_rename.rename_archives(temp_dir, "{title}")
-            assert sorted(os.listdir(temp_dir)) == ["CBZ Root.cbz", "EPUB Root.epub", "Part 2.cbz", "sub"]
-            assert sorted(os.listdir(sub_dir)) == ["CBZ Deep.cbz", "EPUB Sub.epub"]
-            # Test with additional keys
-            mm_rename.rename_archives(temp_dir, "[{artists}] {title}")
-            assert sorted(os.listdir(temp_dir)) == ["[Person] CBZ Root.cbz", "[Person] Part 2.cbz", "[Writer] EPUB Root.epub", "sub"]
-            assert sorted(os.listdir(sub_dir)) == ["[Artist] CBZ Deep.cbz", "[Final] EPUB Sub.epub"]
-            # Test if archive filename already exists
-            duplicate_cbz = abspath(join(sub_dir, "CBZ Deep.cbz"))
-            duplicate_epub = abspath(join(sub_dir, "EPUB Sub.epub"))
-            mm_file_tools.write_text_file(duplicate_cbz, "TEXT")
-            mm_file_tools.write_text_file(duplicate_epub, "TEXT")
-            mm_rename.rename_archives(temp_dir, "{title}")
-            assert sorted(os.listdir(temp_dir)) == ["CBZ Root.cbz", "EPUB Root.epub", "Part 2.cbz", "sub"]
-            assert sorted(os.listdir(sub_dir)) == ["CBZ Deep-2.cbz", "CBZ Deep.cbz", "EPUB Sub-2.epub", "EPUB Sub.epub"]
-            mm_rename.rename_archives(temp_dir, "{artists}")
-            assert sorted(os.listdir(temp_dir)) == ["Person-2.cbz", "Person.cbz", "Writer.epub", "sub"]
-            assert sorted(os.listdir(sub_dir)) == ["Artist.cbz", "CBZ Deep.cbz", "EPUB Sub.epub", "Final.epub"]
+        cbz_dir = abspath(join(temp_dir, "cbz_dir"))
+        shutil.copytree(mm_test.ARCHIVE_CBZ_DIRECTORY, cbz_dir)
+        mm_rename.rename_archives(cbz_dir, "{title}")
+        assert sorted(os.listdir(cbz_dir)) == ["Cómic.cbz"]
+        # Test that files aren't renamed if already correct
+        mm_rename.rename_archives(cbz_dir, "{title}")
+        assert sorted(os.listdir(cbz_dir)) == ["Cómic.cbz"]
+        # Test with different keys
+        mm_rename.rename_archives(cbz_dir, "[{date}]")
+        assert sorted(os.listdir(cbz_dir)) == ["[2012-12-21].cbz"]
+    # Test renaming epub archives
+    with tempfile.TemporaryDirectory() as temp_dir:
+        epub_dir = abspath(join(temp_dir, "epub_dir"))
+        shutil.copytree(mm_test.ARCHIVE_EPUB_DIRECTORY, epub_dir)
+        mm_rename.rename_archives(epub_dir, "{title}")
+        assert sorted(os.listdir(epub_dir)) == ["Basic EPUB.epub"]
+        # Test that files aren't renamed if already correct
+        mm_rename.rename_archives(epub_dir, "{title}")
+        assert sorted(os.listdir(epub_dir)) == ["Basic EPUB.epub"]
+        # Test with different keys
+        mm_rename.rename_archives(epub_dir, "[{writers}]")
+        assert sorted(os.listdir(epub_dir)) == ["[Writer].epub"]
+    # Test renaming archives with an invalid key/empty filename
+    with tempfile.TemporaryDirectory() as temp_dir:
+        cbz_dir = abspath(join(temp_dir, "cbz_dir"))
+        shutil.copytree(mm_test.ARCHIVE_CBZ_DIRECTORY, cbz_dir)
+        mm_rename.rename_archives(cbz_dir, "{unused}")
+        assert sorted(os.listdir(cbz_dir)) == ["basic.cbz"]
+    # Test renaming archives while only allowing basic ASCII characters
+    with tempfile.TemporaryDirectory() as temp_dir:
+        cbz_dir = abspath(join(temp_dir, "cbz_dir"))
+        shutil.copytree(mm_test.ARCHIVE_CBZ_DIRECTORY, cbz_dir)
+        mm_rename.rename_archives(cbz_dir, "{title}", True)
+        assert sorted(os.listdir(cbz_dir)) == ["Comic.cbz"]
 
 def test_rename_json_pairs():
     """
     Tests the rename_json_pairs function.
     """
+    # Test renaming JSON pairs
+    config = mm_config.DEFAULT_CONFIG
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Create test files
-        sub_dir = abspath(join(temp_dir, "sub"))
-        os.mkdir(sub_dir)
-        text_file = abspath(join(temp_dir, "textA.txt"))
-        mm_file_tools.write_text_file(text_file, "TEXT")
-        json_file = abspath(join(temp_dir, "textA.json"))
-        mm_file_tools.write_json_file(json_file, {"title":"Title A!", "artist":"Artist"})
-        text_file = abspath(join(temp_dir, "textB.txt"))
-        mm_file_tools.write_text_file(text_file, "TEXT")
-        json_file = abspath(join(temp_dir, "textB.json"))
-        mm_file_tools.write_json_file(json_file, {"title":"Other", "artist":"Name"})
-        text_file = abspath(join(sub_dir, "textC.txt"))
-        mm_file_tools.write_text_file(text_file, "TEXT")
-        json_file = abspath(join(sub_dir, "textC.json"))
-        mm_file_tools.write_json_file(json_file, {"title":"Final", "artist":"New"})
-        text_file = abspath(join(sub_dir, "unrelated.txt"))
-        mm_file_tools.write_text_file(text_file, "TEXT")
-        assert sorted(os.listdir(temp_dir)) == ["sub", "textA.json", "textA.txt", "textB.json", "textB.txt"]
-        assert sorted(os.listdir(sub_dir)) == ["textC.json", "textC.txt", "unrelated.txt"]
-        # Test renaming JSON pairs
-        mm_rename.rename_json_pairs(temp_dir, "{title}")
-        assert sorted(os.listdir(temp_dir)) == ["Other.json", "Other.txt", "Title A!.json", "Title A!.txt", "sub"]
-        assert sorted(os.listdir(sub_dir)) == ["Final.json", "Final.txt", "unrelated.txt"]
+        text_dir = abspath(join(temp_dir, "text"))
+        image_dir = abspath(join(temp_dir, "image"))
+        shutil.copytree(mm_test.PAIR_TEXT_DIRECTORY, text_dir)
+        shutil.copytree(mm_test.PAIR_IMAGE_DIRECTORY, image_dir)
+        mm_rename.rename_json_pairs(temp_dir, "{title}", config)
+        assert sorted(os.listdir(text_dir)) == ["HTML.html", "HTML.json", "TXT.JSON", "TXT.TXT"]
+        assert sorted(os.listdir(image_dir)) == ["LRG.json", "LRG.webp", "SML.JPG", "SML.JSON", "Émpty.json", "Émpty.png"]
         # Test that files aren't renamed if not necessary
-        mm_rename.rename_json_pairs(temp_dir, "{title}")
-        assert sorted(os.listdir(temp_dir)) == ["Other.json", "Other.txt", "Title A!.json", "Title A!.txt", "sub"]
-        assert sorted(os.listdir(sub_dir)) == ["Final.json", "Final.txt", "unrelated.txt"]
-        # Test with additional keys
-        mm_rename.rename_json_pairs(temp_dir, "{title} ({writers})")
-        assert sorted(os.listdir(temp_dir)) == ["Other (Name).json", "Other (Name).txt", "Title A! (Artist).json", "Title A! (Artist).txt", "sub"]
-        assert sorted(os.listdir(sub_dir)) == ["Final (New).json", "Final (New).txt", "unrelated.txt"]
-        # Test renaming if JSON filename already exists
-        duplicate_json = abspath(join(sub_dir, "Final A.json"))
-        mm_file_tools.write_json_file(duplicate_json, "NOT ACTUAL JSON")
-        mm_rename.rename_json_pairs(temp_dir, "{title} A")
-        assert sorted(os.listdir(temp_dir)) == ["Other A.json", "Other A.txt", "Title A! A.json", "Title A! A.txt", "sub"]
-        assert sorted(os.listdir(sub_dir)) == ["Final A-2.json", "Final A-2.txt", "Final A.json", "unrelated.txt"]
-        # Test renaming if media filename already exists
-        duplicate_media = abspath(join(temp_dir, "Other B.txt"))
-        mm_file_tools.write_json_file(duplicate_media, "Text")
-        mm_rename.rename_json_pairs(temp_dir, "{title} B")
-        assert sorted(os.listdir(temp_dir)) == ["Other B-2.json", "Other B-2.txt", "Other B.txt", "Title A! B.json", "Title A! B.txt", "sub"]
-        assert sorted(os.listdir(sub_dir)) == ["Final A.json", "Final B.json", "Final B.txt", "unrelated.txt"]
-        # Test renaming pair with invalid JSON metadata
-        json_file = abspath(join(sub_dir, "Final C.json"))
-        mm_file_tools.write_json_file(json_file, "NOT ACTUAL JSON")
-        media_file = abspath(join(sub_dir, "Final C.png"))
-        mm_file_tools.write_json_file(media_file, "Text")
-        mm_rename.rename_json_pairs(temp_dir, "{title} C")
-        assert sorted(os.listdir(temp_dir)) == ["Other B.txt", "Other C.json", "Other C.txt", "Title A! C.json", "Title A! C.txt", "sub"]
-        assert sorted(os.listdir(sub_dir)) == ["Final A.json", "Final C-2.json", "Final C-2.txt", "Final C.json", "Final C.png", "unrelated.txt"]
+        mm_rename.rename_json_pairs(temp_dir, "{title}", config)
+        assert sorted(os.listdir(text_dir)) == ["HTML.html", "HTML.json", "TXT.JSON", "TXT.TXT"]
+        assert sorted(os.listdir(image_dir)) == ["LRG.json", "LRG.webp", "SML.JPG", "SML.JSON", "Émpty.json", "Émpty.png"]
+    # Test with multiple keys
+    with tempfile.TemporaryDirectory() as temp_dir:
+        text_dir = abspath(join(temp_dir, "text"))
+        shutil.copytree(mm_test.PAIR_TEXT_DIRECTORY, text_dir)
+        mm_rename.rename_json_pairs(text_dir, "{unused}-{writers}", config)
+        assert sorted(os.listdir(text_dir)) == ["1-AAA.html", "1-AAA.json", "2-BBB.JSON", "2-BBB.TXT"]
+    # Test if JSON filename already exists
+    with tempfile.TemporaryDirectory() as temp_dir:
+        text_dir = abspath(join(temp_dir, "text"))
+        shutil.copytree(mm_test.PAIR_TEXT_DIRECTORY, text_dir)
+        mm_file_tools.write_text_file(abspath(join(text_dir, "2.json")), "A")
+        mm_rename.rename_json_pairs(text_dir, "{unused}", config)
+        assert sorted(os.listdir(text_dir)) == ["1.html", "1.json", "2-2.JSON", "2-2.TXT", "2.json"]
+    # Test if media filename already exists
+    with tempfile.TemporaryDirectory() as temp_dir:
+        text_dir = abspath(join(temp_dir, "text"))
+        shutil.copytree(mm_test.PAIR_TEXT_DIRECTORY, text_dir)
+        mm_file_tools.write_text_file(abspath(join(text_dir, "1.html")), "A")
+        mm_rename.rename_json_pairs(text_dir, "{unused}", config)
+        assert sorted(os.listdir(text_dir)) == ["1-2.html", "1-2.json", "1.html", "2.JSON", "2.TXT"]
+    # Test with an invalid filename template
+    with tempfile.TemporaryDirectory() as temp_dir:
+        text_dir = abspath(join(temp_dir, "text"))
+        shutil.copytree(mm_test.PAIR_TEXT_DIRECTORY, text_dir)
+        mm_rename.rename_json_pairs(text_dir, "{NONE}", config)
+        assert sorted(os.listdir(text_dir)) == ["text 02.TXT", "text 02.txt.JSON", "text 1.html", "text 1.json"]
+    # Test renaming while only allowing basic ASCII characters
+    with tempfile.TemporaryDirectory() as temp_dir:
+        text_dir = abspath(join(temp_dir, "text"))
+        image_dir = abspath(join(temp_dir, "image"))
+        shutil.copytree(mm_test.PAIR_TEXT_DIRECTORY, text_dir)
+        shutil.copytree(mm_test.PAIR_IMAGE_DIRECTORY, image_dir)
+        mm_rename.rename_json_pairs(temp_dir, "{title}", config, True)
+        assert sorted(os.listdir(text_dir)) == ["HTML.html", "HTML.json", "TXT.JSON", "TXT.TXT"]
+        assert sorted(os.listdir(image_dir)) == ["Empty.json", "Empty.png", "LRG.json", "LRG.webp", "SML.JPG", "SML.JSON"]
 
 def test_sort_rename():
     """
     Tests the sort_rename function.
     """
+    # Test sorting unlinked files
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Test sorting unlinked files
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "A.txt")), "A")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "B.png")), "B")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "C.jpg")), "C")
-        mm_rename.sort_rename(temp_dir, "Title [###]")
-        assert sorted(os.listdir(temp_dir)) == ["Title [001].txt", "Title [002].png", "Title [003].jpg"]
-        # Test sorting JSON pairs
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "Title [001].json")), "A")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "Title [002].json")), "B")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "Title [003].json")), "C")
-        mm_rename.sort_rename(temp_dir, "New - ##")
-        files = sorted(os.listdir(temp_dir))
-        assert len(files) == 6
-        assert basename(files[0]) == "New - 01.json"
-        assert basename(files[1]) == "New - 01.txt"
-        assert basename(files[2]) == "New - 02.json"
-        assert basename(files[3]) == "New - 02.png"
-        assert basename(files[4]) == "New - 03.jpg"
-        assert basename(files[5]) == "New - 03.json"
-        # Test sorting combination of JSON pairs and unlinked files
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "Unlinked.json")), "A")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "Thing.png")), "A")
-        mm_rename.sort_rename(temp_dir, "New")
-        files = sorted(os.listdir(temp_dir))
-        assert len(files) == 8
-        assert basename(files[0]) == "New [01].json"
-        assert basename(files[1]) == "New [01].txt"
-        assert basename(files[2]) == "New [02].json"
-        assert basename(files[3]) == "New [02].png"
-        assert basename(files[4]) == "New [03].jpg"
-        assert basename(files[5]) == "New [03].json"
-        assert basename(files[6]) == "New [04].png"
-        assert basename(files[7]) == "New [05].json"
-        # Test sorting files with a different starting index
-        mm_rename.sort_rename(temp_dir, "AAA (###)", 23)
-        files = sorted(os.listdir(temp_dir))
-        assert len(files) == 8
-        assert basename(files[0]) == "AAA (023).json"
-        assert basename(files[1]) == "AAA (023).txt"
-        assert basename(files[2]) == "AAA (024).json"
-        assert basename(files[3]) == "AAA (024).png"
-        assert basename(files[4]) == "AAA (025).jpg"
-        assert basename(files[5]) == "AAA (025).json"
-        assert basename(files[6]) == "AAA (026).png"
-        assert basename(files[7]) == "AAA (027).json"
-        # Test that files in subdirectories aren't effected
-        sub_dir = abspath(join(temp_dir, "subdir"))
-        os.mkdir(sub_dir)
-        mm_file_tools.write_text_file(abspath(join(sub_dir, "File.png")), "A")
-        mm_file_tools.write_text_file(abspath(join(sub_dir, "File.json")), "B")
-        mm_file_tools.write_text_file(abspath(join(sub_dir, "Other.jpg")), "C")
-        mm_rename.sort_rename(temp_dir, "##", 0)
-        files = sorted(os.listdir(temp_dir))
-        assert len(files) == 9
-        assert basename(files[0]) == "00.json"
-        assert basename(files[1]) == "00.txt"
-        assert basename(files[2]) == "01.json"
-        assert basename(files[3]) == "01.png"
-        assert basename(files[4]) == "02.jpg"
-        assert basename(files[5]) == "02.json"
-        assert basename(files[6]) == "03.png"
-        assert basename(files[7]) == "04.json"
-        assert basename(files[8]) == "subdir"
-        assert sorted(os.listdir(sub_dir)) == ["File.json", "File.png", "Other.jpg"]
+        file_dir = abspath(join(temp_dir, "copy"))
+        shutil.copytree(mm_test.BASIC_TEXT_DIRECTORY, file_dir)
+        mm_rename.sort_rename(file_dir, "A [###]")
+        assert sorted(os.listdir(file_dir)) == ["A [001].TXT", "A [002].txt", "A [003].txt"]
+    # Test sorting JSON-media pairs
+    with tempfile.TemporaryDirectory() as temp_dir:
+        file_dir = abspath(join(temp_dir, "copy"))
+        shutil.copytree(mm_test.PAIR_TEXT_DIRECTORY, file_dir)
+        mm_rename.sort_rename(file_dir, "B#")
+        assert sorted(os.listdir(file_dir)) == ["B1.html", "B1.json", "B2.JSON", "B2.TXT"]
         # Test that files aren't renamed if unnecessary
-        mm_rename.sort_rename(temp_dir, "##", 0)
-        files = sorted(os.listdir(temp_dir))
-        assert len(files) == 9
-        assert basename(files[0]) == "00.json"
-        assert basename(files[1]) == "00.txt"
-        assert basename(files[2]) == "01.json"
-        assert basename(files[3]) == "01.png"
-        assert basename(files[4]) == "02.jpg"
-        assert basename(files[5]) == "02.json"
-        assert basename(files[6]) == "03.png"
-        assert basename(files[7]) == "04.json"
-        assert basename(files[8]) == "subdir"
+        mm_rename.sort_rename(file_dir, "B#")
+        assert sorted(os.listdir(file_dir)) == ["B1.html", "B1.json", "B2.JSON", "B2.TXT"]
+    # Test sorting a combination of JSON-media pairs and unlinked files
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Test renaming a single file
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "File.png")), "A")
-        mm_rename.sort_rename(temp_dir, "New File")
-        assert os.listdir(temp_dir) == ["New File.png"]
-        mm_rename.sort_rename(temp_dir, "New ##")
-        assert os.listdir(temp_dir) == ["New 01.png"]
-        mm_rename.sort_rename(temp_dir, "Other", 5)
-        assert os.listdir(temp_dir) == ["Other [05].png"]
+        file_dir = abspath(join(temp_dir, "copy"))
+        shutil.copytree(mm_test.PAIR_TEXT_DIRECTORY, file_dir)
+        mm_file_tools.write_text_file(abspath(join(file_dir, "text.txt")), "A")
+        mm_rename.sort_rename(file_dir, "#")
+        assert sorted(os.listdir(file_dir)) == ["1.html", "1.json", "2.JSON", "2.TXT", "3.txt"]
+    # Test Using a different starting index
+    with tempfile.TemporaryDirectory() as temp_dir:
+        file_dir = abspath(join(temp_dir, "copy"))
+        shutil.copytree(mm_test.BASIC_TEXT_DIRECTORY, file_dir)
+        mm_rename.sort_rename(file_dir, "[##]", 42)
+        assert sorted(os.listdir(file_dir)) == ["[42].TXT", "[43].txt", "[44].txt"]
+        # Test that subdirectories are not affected
+        mm_rename.sort_rename(temp_dir, "NONE [#####]", 500)
+        assert sorted(os.listdir(file_dir)) == ["[42].TXT", "[43].txt", "[44].txt"]
+    # Test renaming a single file
+    with tempfile.TemporaryDirectory() as temp_dir:
+        mm_file_tools.write_text_file(abspath(join(temp_dir, "AAA.png")), "AAA")
+        mm_rename.sort_rename(temp_dir, "Title", 500)
+        assert sorted(os.listdir(temp_dir)) == ["Title [500].png"]
+        mm_rename.sort_rename(temp_dir, "Title")
+        assert sorted(os.listdir(temp_dir)) == ["Title.png"]
+        mm_rename.sort_rename(temp_dir, "#")
+        assert sorted(os.listdir(temp_dir)) == ["1.png"]

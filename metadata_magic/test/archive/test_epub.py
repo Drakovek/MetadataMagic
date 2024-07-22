@@ -1,6 +1,7 @@
 import os
 import shutil
 import tempfile
+import metadata_magic.config as mm_config
 import metadata_magic.archive.epub as mm_epub
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.archive as mm_archive
@@ -1135,7 +1136,8 @@ def test_create_epub_from_description():
         metadata["url"] = "/thing/"
         metadata["date"] = "2021-01-01"
         metadata["description"] = "Something Else"
-        epub_file = mm_epub.create_epub_from_description(json_file, image_file, metadata, temp_dir)
+        config = mm_config.DEFAULT_CONFIG
+        epub_file = mm_epub.create_epub_from_description(json_file, image_file, metadata, temp_dir, config)
         assert basename(epub_file) == "This is a Title.epub"
         assert abspath(join(epub_file, os.pardir)) == temp_dir
         assert exists(epub_file)

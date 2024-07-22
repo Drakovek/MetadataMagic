@@ -8,6 +8,7 @@ import html_string_tools.html
 import python_print_tools.printer
 import easy_text_to_image.color as etti_color
 import easy_text_to_image.text_to_image as etti
+import metadata_magic.config as mm_config
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.meta_reader as mm_meta_reader
@@ -63,7 +64,7 @@ def get_empty_metadata() -> dict:
     meta_dict["page_count"] = None
     return meta_dict
 
-def get_info_from_jsons(path:str) -> dict:
+def get_info_from_jsons(path:str, config:dict) -> dict:
     """
     Extracts the data to be put into archive metadata from a JSON file in a given directory.
     Extracts data from the first JSON file found in directory when alphanumerically sorted.
@@ -71,6 +72,8 @@ def get_info_from_jsons(path:str) -> dict:
     
     :param path: Directory in which to search for JSON files
     :type path: str, required
+    :param config: Dictionary of a metadata-magic config file
+    :type config: dict, required
     :return: Dictionary containing the metadata info
     :rtype: dict
     """
@@ -79,7 +82,7 @@ def get_info_from_jsons(path:str) -> dict:
     # Read all JSON metadata
     json_metas = []
     for pair in pairs:
-        json_metas.append(mm_meta_reader.load_metadata(pair["json"], pair["media"]))
+        json_metas.append(mm_meta_reader.load_metadata(pair["json"], config, pair["media"]))
     # Get first instance of JSON metadata
     try:
         main_meta = json_metas[0]
@@ -468,7 +471,9 @@ def main():
             python_print_tools.printer.color_print("Unsupported media.", "red")
         else:
             # Get existing info from a directory
-            metadata = get_info_from_jsons(path)
+            config_paths = mm_config.get_default_config_paths()
+            config = mm_config.get_config(config_paths)
+            metadata = get_info_from_jsons(path, config)
             if metadata["title"] is None:
                 metadata["title"] = ""
             # Remove default values that the user wishes to change

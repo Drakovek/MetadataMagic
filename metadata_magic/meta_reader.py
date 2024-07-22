@@ -35,70 +35,83 @@ def get_value_from_keylist(dictionary:dict, keylist:List[List[str]], type_obj):
             continue
     return None
 
-def get_id(json:dict) -> str:
+def get_id(json:dict, config:dict) -> str:
     """
     Attempts to find the ID from a given JSON dictionary.
     
     :param json: JSON in dict form to search for metadata within
     :type json: dict, required
+    :param config: Dictionary of a metadata-magic config file
+    :type config: dict, required
     :return: Extracted value for the ID
     :rtype: str
     """
     # Gets the value of the ID as read from the JSON
-    keylist = [["id"], ["display_id"], ["index"], ["submission_id"], ["submitid"]]
+    keylist = config["json_reader"]["id"]["keys"]
     value = get_value_from_keylist(json, keylist, int)
     if value is None:
         value = get_value_from_keylist(json, keylist, str)
     # Return None if no ID value is found
     if value is None:
         return None
-    # Strip out leading three letter ID tag if ID is from a DVK file
-    try:
-        leader = re.findall("^[A-Z]{3}[^0-9A-Z]*(?=[0-9])", value)
-        new_value = value[len(leader[0]):]
-        value = new_value
-    except (IndexError, TypeError): pass
-    # Add file ID, if applicable
-    file_id = get_value_from_keylist(json, [["file_id"]], str)
-    if file_id is not None:
-        value = f"{value}-{file_id}"
+    # Strip out leading three letter ID tag if ID is from an old DVK file
+    value = re.sub(r"^[A-Z]{3}[^0-9A-Z]?(?=[0-9]+$)", "", str(value))
     # Return Value
-    return str(value)
+    return value
 
-def get_title(json:dict) -> str:
+def get_title(json:dict, config:dict) -> str:
     """
     Attempts to find the title from a given JSON dictionary.
     
     :param json: JSON in dict form to search for metadata within
     :type json: dict, required
+    :param config: Dictionary of a metadata-magic config file
+    :type config: dict, required
     :return: Extracted value of the title
     :rtype: str
     """
-    keylist = [["title"], ["info", "title"]]
+    keylist = config["json_reader"]["title"]["keys"]
     return get_value_from_keylist(json, keylist, str)
 
-def get_artists_and_writers(json:dict, extension:str) -> (List[str], List[str]):
+def get_index(json:dict, config:dict) -> str:
+    """
+    Attempts to find the index from a given JSON dictionary.
+    Index refers to a number indicating the image/part number in a collection.
+    
+    :param json: JSON in dict form to search for metadata within
+    :type json: dict, required
+    :param config: Dictionary of a metadata-magic config file
+    :type config: dict, required
+    :return: Extracted value of the index
+    :rtype: str
+    """
+    keylist = config["json_reader"]["index"]["keys"]
+    value = get_value_from_keylist(json, keylist, int)
+    if value is None:
+        return get_value_from_keylist(json, keylist, str)
+    return str(value)
+
+def get_artists_and_writers(json:dict, config:dict, extension:str) -> (List[str], List[str]):
     """
     Attempts to find the artists and writers from a given JSON dictionary.
     
     :param json: JSON in dict form to search for metadata within
     :type json: dict, required
+    :param config: Dictionary of a metadata-magic config file
+    :type config: dict, required
     :param extension: Extension of the JSON file's associated media
     :type extension: str, required
     :return: Extracted value of the authors, structured (artists, writers)
     :rtype: List[str], List[str]
     """
     # Get multiple artists and writers
-    multiple_artist_keys = [["artists"], ["info", "artists"]]
-    multiple_writer_keys = [["writers"], ["authors"]]
-    artists = get_value_from_keylist(json, multiple_artist_keys, list)
-    writers = get_value_from_keylist(json, multiple_writer_keys, list)
+    artist_keys = config["json_reader"]["artists"]["keys"]
+    writer_keys = config["json_reader"]["writers"]["keys"]
+    artists = get_value_from_keylist(json, artist_keys, list)
+    writers = get_value_from_keylist(json, writer_keys, list)
     # Get single artist and writers
-    single_artist_keys = [["artist"], ["username"], ["user"], ["owner"],
-            ["author", "username"], ["user", "name"], ["info", "artists"]]
-    single_writer_keys = [["writer"], ["author"], ["creator", "full_name"]]
-    single_artist = get_value_from_keylist(json, single_artist_keys, str)
-    single_writer = get_value_from_keylist(json, single_writer_keys, str)
+    single_artist = get_value_from_keylist(json, artist_keys, str)
+    single_writer = get_value_from_keylist(json, writer_keys, str)
     if artists is None and single_artist is not None:
         artists = [single_artist]
     if writers is None and single_writer is not None:
@@ -115,17 +128,19 @@ def get_artists_and_writers(json:dict, extension:str) -> (List[str], List[str]):
     # Return artists and writers
     return (artists, writers)
 
-def get_date(json:dict) -> str:
+def get_date(json:dict, config:dict) -> str:
     """
     Attempts to find the publication date from a given JSON dictionary.
     
     :param json: JSON in dict form to search for metadata within
     :type json: dict, required
+    :param config: Dictionary of a metadata-magic config file
+    :type config: dict, required
     :return: Extracted value of the publication date
     :rtype: str
     """
-    # Get the date string
-    keylist = [["date"], ["upload_date"], ["published_at"], ["info", "time"]]
+    # Get the base date string
+    keylist = config["json_reader"]["date"]["keys"]
     value = get_value_from_keylist(json, keylist, str)
     # Return None if no value can be found
     if value is None:
@@ -143,12 +158,14 @@ def get_date(json:dict) -> str:
         return f"{year}-{month}-{day}"
     return None
 
-def get_description(json:dict) -> str:
+def get_description(json:dict, config:dict) -> str:
     """
     Attempts to find the description from a given JSON dictionary.
     
     :param json: JSON in dict form to search for metadata within
     :type json: dict, required
+    :param config: Dictionary of a metadata-magic config file
+    :type config: dict, required
     :return: Extracted value for the description
     :rtype: str
     """
@@ -156,63 +173,39 @@ def get_description(json:dict) -> str:
             ["chapter_description"], ["post_content"], ["webtoon_summary"]]
     return get_value_from_keylist(json, keylist, str)
 
-def get_publisher(json:dict) -> str:
+def get_publisher(json:dict, config:dict) -> str:
     """
     Attempts to find the publisher from a given JSON dictionary.
     
     :param json: JSON in dict form to search for metadata within
     :type json: dict, required
+    :param config: Dictionary of a metadata-magic config file
+    :type config: dict, required
     :return: Extracted value for the publisher
     :rtype: str
     """
     # Find the page URL/category of the media to base publisher on
-    keylist = [["link"], ["post_url"], ["webpage_url"], ["page_url"],
-            ["url"], ["web", "page_url"], ["category"]]
-    value = get_value_from_keylist(json, keylist, str)
+    keylist = config["json_reader"]["publisher"]["keys"]
+    url = get_value_from_keylist(json, keylist, str)
     # Return None if there was no returned value
-    if value is None:
+    if url is None:
         return None
-    value = value.lower()
-    # Find a publisher based on recieved value
-    if "deviantart" in value:
-        return "DeviantArt"
-    if "docs-lab" in value:
-        return "Doc's Lab"
-    if "furaffinity" in value:
-        return "Fur Affinity"
-    if "inkbunny" in value:
-        return "Inkbunny"
-    if "kemono.cafe" in value:
-        return "Kemono Café"
-    if "newgrounds" in value:
-        return "Newgrounds"
-    if "patreon" in value:
-        return "Patreon"
-    if "pixiv" in value:
-        return "pixiv"
-    if "tgcomics" in value:
-        return "TGComics"
-    if "transfur" in value:
-        return "Transfur"
-    if "tumblr" in value:
-        return "Tumblr"
-    if "twitter" in value:
-        return "Twitter"
-    if "weasyl" in value:
-        return "Weasyl"
-    if "webtoon" in value:
-        return "Webtoon"
-    if "youtube" in value:
-        return "YouTube"
+    # Find a publisher by matching to a value in the config file
+    url = url.lower()
+    for comparison in config["json_reader"]["publisher"]["match"]:
+        if comparison["match"].lower() in url:
+            return comparison["publisher"]
     # Return None of no appropriate publisher can be found
     return None
 
-def get_url(json:dict, publisher:str=None, media_id:str=None) -> str:
+def get_url(json:dict, config:dict, publisher:str=None, media_id:str=None) -> str:
     """
     Gets the page URL for the media described by the JSON.
     
     :param json: JSON in dict form to search for metadata within
     :type json: dict, required
+    :param config: Dictionary of a metadata-magic config file
+    :type config: dict, required
     :param publisher: Publisher as returned by get_publisher, defaults to None
     :type publisher: str, optional
     :param media_id: ID as returned by get_id, defaults to None
@@ -220,114 +213,86 @@ def get_url(json:dict, publisher:str=None, media_id:str=None) -> str:
     :return: URL that the media originated from
     :rtype: str
     """
-    # Return None if publisher or ID are non-existant
-    if publisher is not None and media_id is not None:
-        # Generate media URL from publisher and ID if necessary
-        if publisher == "Fur Affinity":
-            return f"https://www.furaffinity.net/view/{media_id}/"
-        if publisher == "Inkbunny":
-            return f"https://inkbunny.net/s/{media_id}"
-        if publisher == "pixiv":
-            return f"https://www.pixiv.net/en/artworks/{media_id}"
+    # Attempt to get the publisher via the publisher and id
+    try:
+        pattern = config["json_reader"]["url"]["patterns"][publisher]
+        return re.sub(r"\*+", media_id, pattern)
+    except (KeyError, TypeError): pass
     # Return default URL if it couldn't be determined by ID and publisher
-    keylist = [["link"], ["post_url"], ["webpage_url"], ["url"], ["web", "page_url"]]
+    keylist = config["json_reader"]["url"]["keys"]
     return get_value_from_keylist(json, keylist, str)
 
-def get_tags(json:dict) -> List[str]:
+def get_tags(json:dict, config:dict) -> List[str]:
     """
     Attempts to find the tags from a given JSON dictionary.
     
     :param json: JSON in dict form to search for metadata within
     :type json: dict, required
+    :param config: Dictionary of a metadata-magic config file
+    :type config: dict, required
     :return: Extracted value for the tags
     :rtype: str
     """
+    # Create a list of all the tags in the metadata
     tags = []
-    # Append listed tags to the tag list
-    keys = [["info", "web_tags"], ["tags"], ["categories"], ["genres"],
-            ["transformations"], ["transformation_details"], ["sexual_preferences"], ["status"]]
-    for key in keys:
-        new_tags = get_value_from_keylist(json, [key], list)
-        if new_tags is not None:
-            tags.extend(new_tags)
-    # Append tags that exist as a single string
-    keys = ["da_category", "theme", "species", "gender"]
-    for key in keys:
-        tag = get_value_from_keylist(json, [[key]], str)
-        if tag is not None:
-            tags.append(tag)
-    # Replace tag with a simple string if applicable
-    keylist = [["translated_name"], ["name"]]
+    keylist = config["json_reader"]["tags"]["keys"]
+    for key in keylist:
+        multi_tags = get_value_from_keylist(json, [key], list)
+        if multi_tags is None:
+            tags.append(get_value_from_keylist(json, [key], str))
+            continue
+        tags.extend(multi_tags)
+    # Replace tags that are not strings
+    keylist = config["json_reader"]["tags"]["internal_keys"]
     for i in range(0, len(tags)):
         if not isinstance(tags[i], str):
-            tags[i] = get_value_from_keylist(tags[i], keylist, str)
-    # Delete tags that got replaced as None
+            tags[i] = get_value_from_keylist(tags[i], keylist, str) 
+    # Delete tags that have no value
     for i in range(len(tags)-1, -1, -1):
-        if tags[i] is None:
+        if tags[i] is None or tags[i] == "":
             del tags[i]
-    # Return None if there were no tags
+    # Return None if there are no tags
     if tags == []:
         return None
     # Return tags
     return tags
 
-def get_age_rating(json:dict, publisher:str) -> str:
+def get_age_rating(json:dict, config:dict, publisher:str) -> str:
     """
     Attempts to get a standardized age rating based on ratings values in a given JSON dictionary.
     
     :param json: JSON in dict form to search for metadata within
     :type json: dict, required
+    :param config: Dictionary of a metadata-magic config file
+    :type config: dict, required
     :param publisher: Publisher as returned by get_publisher to determine how the rating is stored in the JSON
     :type publisher: str, required
     :return: Extracted value for the age rating
     :rtype: str
     """
+    # Get the keylist and match list
     try:
-        rating = ""
-        # Check the publisher
-        if publisher == "DeviantArt":
-            # Get age rating from DeviantArt JSON
-            mature = json["is_mature"]
-            # Return Everyone if not Mature
-            if not mature:
-                return "Everyone"
-            # Check how strict the mature rating should be
-            level = json["mature_level"]
-            if level == "moderate":
-                return "Mature 17+"
-            if level == "strict":
-                return "X18+"
-        if (publisher == "Fur Affinity"
-                or publisher == "Doc's Lab"
-                or publisher == "Inkbunny"
-                or publisher == "Newgrounds"
-                or publisher == "pixiv"
-                or publisher == "TGComics"
-                or publisher == "Weasyl"):
-            # Get standard age rating keys
-            keys = [["age_rating"], ["rating"], ["rating_name"]]
-            rating = get_value_from_keylist(json, keys , str).lower()
-    except (AttributeError, KeyError):
+        keylist = config["json_reader"]["age_rating"]["specialized"][publisher]["keys"]
+        match = config["json_reader"]["age_rating"]["specialized"][publisher]["match"]
+    except KeyError:
+        keylist = config["json_reader"]["age_rating"]["keys"]
+        match = config["json_reader"]["age_rating"]["match"]
+    # Get the age rating based on the base metadata value and its match in the config
+    try:
+        assert publisher in config["json_reader"]["age_rating"]["allowed"]
+        base = get_value_from_keylist(json, keylist, str).lower()
+        return match[base]
+    except (AssertionError, AttributeError, KeyError):
         return "Unknown"
-    # Return rating from rating string
-    if rating == "general" or rating == "e":
-        return "Everyone"
-    if rating == "t" or rating == "pg" or rating == "tgc-c":
-        return "Teen"
-    if rating == "mature" or rating == "m" or rating == "r" or rating == "tgc-r":
-        return "Mature 17+"
-    if (rating == "adult" or rating == "x" or rating == "a" or rating == "r-18"
-            or rating == "explicit" or rating == "tgc-m" or rating == "tgc-x"):
-        return "X18+"
-    # Return "Unknown" by default
-    return "Unknown"
 
-def load_metadata(json_file:str, media_file:str) -> dict:
+def load_metadata(json_file:str, config:dict, media_file:str) -> dict:
     """
     Loads metadata from a given JSON file.
     
     :param json_file: Path of the JSON file to read
     :type json_file: str, required
+    :param config: Dictionary of a metadata-magic config file
+    :type config: dict, required
     :param media_file: Path of the associated media file of the JSON
     :type media_file: str, required
     :return: Dictionary containing the JSON's metadata using standardized keys
@@ -338,16 +303,17 @@ def load_metadata(json_file:str, media_file:str) -> dict:
     # Set the path of the JSON in the metadata
     meta_dict = {"json_path":abspath(json_file)}
     # Add internal metadata in standardized forms
-    meta_dict["id"] = get_id(json)
-    meta_dict["title"] = get_title(json)
-    meta_dict["date"] = get_date(json)
-    meta_dict["description"] = get_description(json)
-    meta_dict["publisher"] = get_publisher(json)
-    meta_dict["tags"] = get_tags(json)
-    meta_dict["url"] = get_url(json, meta_dict["publisher"], meta_dict["id"])
-    meta_dict["age_rating"] = get_age_rating(json, meta_dict["publisher"])
+    meta_dict["id"] = get_id(json, config)
+    meta_dict["title"] = get_title(json, config)
+    meta_dict["index"] = get_index(json, config)
+    meta_dict["date"] = get_date(json, config)
+    meta_dict["description"] = get_description(json, config)
+    meta_dict["publisher"] = get_publisher(json, config)
+    meta_dict["tags"] = get_tags(json, config)
+    meta_dict["url"] = get_url(json, config, meta_dict["publisher"], meta_dict["id"])
+    meta_dict["age_rating"] = get_age_rating(json, config, meta_dict["publisher"])
     extension = html_string_tools.html.get_extension(media_file)
-    meta_dict["artists"], meta_dict["writers"] = get_artists_and_writers(json, extension)
+    meta_dict["artists"], meta_dict["writers"] = get_artists_and_writers(json, config, extension)
     meta_dict["original"] = json
     # Return the dict with all metadata
     return meta_dict

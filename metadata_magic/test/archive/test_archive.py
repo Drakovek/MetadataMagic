@@ -2,6 +2,7 @@
 
 import os
 import tempfile
+import metadata_magic.config as mm_config
 import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.epub as mm_epub
 import metadata_magic.archive.comic_archive as mm_comic_archive
@@ -89,14 +90,15 @@ def test_get_info_from_jsons():
         assert exists(main_json)
         assert exists(sub_media)
         assert exists(sub_json)
-        meta = mm_archive.get_info_from_jsons(temp_dir)
+        config = mm_config.DEFAULT_CONFIG
+        meta = mm_archive.get_info_from_jsons(temp_dir, config)
         assert meta["title"] == "This is a title!"
         assert meta["artists"] is None
         assert meta["description"] is None
         # Test getting description
         json_meta["description"] = "Some caption."
         mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir)
+        meta = mm_archive.get_info_from_jsons(temp_dir, config)
         assert meta["title"] == "This is a title!"
         assert meta["description"] == "Some caption."
         assert meta["date"] is None
@@ -104,20 +106,20 @@ def test_get_info_from_jsons():
         # Test simplifying description with HTML info contained
         json_meta["description"] = "Let's say there's a <a href='ajsdlf'>link</a>.<br>Other!!"
         mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir)
+        meta = mm_archive.get_info_from_jsons(temp_dir, config)
         assert meta["description"] == "Let's say there's a link. Other!!"
         json_meta["description"] = "<div><p>Way too many tags!</p><br>\n<br/> <b>B</b>ut it's <i>o</i>kay right?</div>"
         mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir)
+        meta = mm_archive.get_info_from_jsons(temp_dir, config)
         assert meta["description"] == "Way too many tags! But it's okay right?"
         json_meta["description"] = "What about 'em elements &amp; such? &gt;.&gt;"
         mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir)
+        meta = mm_archive.get_info_from_jsons(temp_dir, config)
         assert meta["description"] == "What about 'em elements & such? >.>"
         # Test getting date
         json_meta["date"] = "2012-12-21"
         mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir)
+        meta = mm_archive.get_info_from_jsons(temp_dir, config)
         assert meta["title"] == "This is a title!"
         assert meta["date"] == "2012-12-21"
         assert meta["cover_artists"] is None
@@ -125,7 +127,7 @@ def test_get_info_from_jsons():
         json_meta["artists"] = ["Illustrator!"]
         json_meta["writers"] = ["Story", "People"]
         mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir)
+        meta = mm_archive.get_info_from_jsons(temp_dir, config)
         assert meta["title"] == "This is a title!"
         assert meta["writers"] == "Story,People"
         assert meta["cover_artists"] == "Illustrator!"
@@ -134,28 +136,28 @@ def test_get_info_from_jsons():
         # Test getting publisher
         json_meta["url"] = "youtube.com/something"
         mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir)
+        meta = mm_archive.get_info_from_jsons(temp_dir, config)
         assert meta["title"] == "This is a title!"
         assert meta["publisher"] == "YouTube"
         assert meta["tags"] is None
         # Test getting tags
         json_meta["tags"] = ["These", "Are", "Tags"]
         mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir)
+        meta = mm_archive.get_info_from_jsons(temp_dir, config)
         assert meta["title"] == "This is a title!"
         assert meta["tags"] == "These,Are,Tags"
         json_meta["tags"] = ["Tag"]
         mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir)
+        meta = mm_archive.get_info_from_jsons(temp_dir, config)
         assert meta["tags"] == "Tag"
         json_meta["tags"] = []
         mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir)
+        meta = mm_archive.get_info_from_jsons(temp_dir, config)
         assert meta["tags"] is None
         # Test getting url
         json_meta["url"] = "someurlthing.net"
         mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir)
+        meta = mm_archive.get_info_from_jsons(temp_dir, config)
         assert meta["title"] == "This is a title!"
         assert meta["url"] == "someurlthing.net"
         assert meta["tags"] is None
@@ -166,26 +168,26 @@ def test_get_info_from_jsons():
         json_everyone = abspath(join(temp_dir, "everyone.json"))
         mm_file_tools.write_text_file(media_everyone, "E For All")
         mm_file_tools.write_json_file(json_everyone, {"title":"Thing!", "url":"newgrounds.com/", "rating":"E"})
-        meta = mm_archive.get_info_from_jsons(temp_dir)
+        meta = mm_archive.get_info_from_jsons(temp_dir, config)
         assert meta["title"] == "Thing!"
         assert meta["age_rating"] == "Everyone"
         media_teen = abspath(join(temp_dir, "teen.gif"))
         json_teen = abspath(join(temp_dir, "teen.json"))
         mm_file_tools.write_json_file(media_teen, "Edgy")
         mm_file_tools.write_json_file(json_teen, {"rating":"t", "url":"www.newgrounds.com"})
-        meta = mm_archive.get_info_from_jsons(temp_dir)
+        meta = mm_archive.get_info_from_jsons(temp_dir, config)
         assert meta["age_rating"] == "Teen"
         media_mature = abspath(join(temp_dir, "mature.txt"))
         json_mature = abspath(join(temp_dir, "mature.json"))
         mm_file_tools.write_text_file(media_mature, "Blood Bleeder")
         mm_file_tools.write_json_file(json_mature, {"url":"newgrounds", "rating":"m"})
-        meta = mm_archive.get_info_from_jsons(temp_dir)
+        meta = mm_archive.get_info_from_jsons(temp_dir, config)
         assert meta["age_rating"] == "Mature 17+"
         media_adult = abspath(join(temp_dir, "adult.png"))
         json_adult = abspath(join(temp_dir, "adult.json"))
         mm_file_tools.write_text_file(media_adult, "AAAAAAAAAA!")
         mm_file_tools.write_json_file(json_adult, {"url":"www.newgrounds.com/thing", "rating":"A"})
-        meta = mm_archive.get_info_from_jsons(temp_dir)
+        meta = mm_archive.get_info_from_jsons(temp_dir, config)
         assert meta["age_rating"] == "X18+"
         assert exists(json_everyone)
         assert exists(json_teen)
@@ -209,14 +211,14 @@ def test_get_info_from_jsons():
         assert exists(main_json)
         assert exists(sub_media)
         assert exists(sub_json)
-        meta = mm_archive.get_info_from_jsons(temp_dir)
+        meta = mm_archive.get_info_from_jsons(temp_dir, config)
         assert meta["title"] == "Real Title."
     with tempfile.TemporaryDirectory() as temp_dir:
         # Test with no JSON files
         test_file = abspath(join(temp_dir, "File!.txt"))
         mm_file_tools.write_text_file(test_file, "Blah.")
         assert exists(test_file)
-        meta = mm_archive.get_info_from_jsons(temp_dir)
+        meta = mm_archive.get_info_from_jsons(temp_dir, config)
         assert meta["title"] is None
         assert meta["description"] is None
         assert meta["date"] is None
@@ -234,7 +236,7 @@ def test_get_info_from_jsons():
         mm_file_tools.write_json_file(main_json, json_meta)
         assert exists(main_media)
         assert exists(main_json)
-        meta = mm_archive.get_info_from_jsons(temp_dir)
+        meta = mm_archive.get_info_from_jsons(temp_dir, config)
         assert meta["title"] == "This is a title!"
         assert meta["writers"] == "Some Person"
         assert meta["artists"] is None

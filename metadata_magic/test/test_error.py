@@ -4,6 +4,7 @@ import os
 import shutil
 import tempfile
 import metadata_magic.error as mm_error
+import metadata_magic.config as mm_config
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.bulk_archive as mm_bulk_archive
@@ -22,7 +23,8 @@ def test_find_long_descriptions():
         mm_file_tools.write_json_file(abspath(join(temp_dir, "text.json")), metadata)
         mm_file_tools.write_text_file(abspath(join(temp_dir, "image.png")), "IMAGE")
         mm_file_tools.write_json_file(abspath(join(temp_dir, "image.json")), metadata)
-        mm_bulk_archive.archive_all_media(temp_dir)
+        config = mm_config.DEFAULT_CONFIG
+        mm_bulk_archive.archive_all_media(temp_dir, config)
         source_cbz = abspath(join(temp_dir, "image.cbz"))
         source_epub = abspath(join(temp_dir, "text.epub"))
         sub_dir = abspath(join(temp_dir, "sub"))
@@ -54,11 +56,11 @@ def test_find_long_descriptions():
         assert sorted(os.listdir(temp_dir)) == ["image.cbz", "longE.epub", "short.cbz", "sub", "text.epub"]
         assert sorted(os.listdir(sub_dir)) == ["longC.cbz", "mid.epub", "other.cbz"]
         # Test finding archives with long descriptions
-        archives = mm_error.find_long_descriptions(temp_dir)
+        archives = mm_error.find_long_descriptions(temp_dir, config)
         assert len(archives) == 2
         assert basename(archives[0]) == "longE.epub"
         assert basename(archives[1]) == "longC.cbz"
-        archives = mm_error.find_long_descriptions(temp_dir, 200)
+        archives = mm_error.find_long_descriptions(temp_dir, config, 200)
         assert len(archives) == 3
         assert basename(archives[0]) == "longE.epub"
         assert basename(archives[1]) == "longC.cbz"
@@ -82,10 +84,10 @@ def test_find_long_descriptions():
         assert sorted(os.listdir(temp_dir)) == ["mid.json", "mid.png", "sub", "text.json", "text.txt"]
         assert sorted(os.listdir(sub_dir)) == ["image.jpg", "image.json", "long.json", "long.png"]
         # Test finding archives with long descriptions
-        archives = mm_error.find_long_descriptions(temp_dir)
+        archives = mm_error.find_long_descriptions(temp_dir, config)
         assert len(archives) == 1
         assert basename(archives[0]) == "long.json"
-        archives = mm_error.find_long_descriptions(temp_dir, 200)
+        archives = mm_error.find_long_descriptions(temp_dir, config, 200)
         assert len(archives) == 2
         assert basename(archives[0]) == "mid.json"
         assert basename(archives[1]) == "long.json"
@@ -136,10 +138,10 @@ def test_find_missing_metadata():
         # Test with unlinked files
         mm_file_tools.write_text_file(abspath(join(temp_dir, "unlinked.txt")), "BLAH")
         mm_file_tools.write_text_file(abspath(join(temp_dir, "thing.jpg")), "BLAH")
-        mm_file_tools.write_text_file(abspath(join(sub, "next.cbz")), "BLAH")
+        mm_file_tools.write_text_file(abspath(join(sub, "next.png")), "BLAH")
         missing_metadata = mm_error.find_missing_metadata(temp_dir)
         assert len(missing_metadata) == 3
-        assert basename(missing_metadata[0]) == "next.cbz"
+        assert basename(missing_metadata[0]) == "next.png"
         assert abspath(join(missing_metadata[0], os.pardir)) == sub
         assert basename(missing_metadata[1]) == "thing.jpg"
         assert abspath(join(missing_metadata[1], os.pardir)) == temp_dir

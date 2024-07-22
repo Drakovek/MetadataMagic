@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import tempfile
+import metadata_magic.test as mm_test
+import metadata_magic.config as mm_config
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_reader as mm_meta_reader
 from os.path import abspath, exists, join
@@ -26,539 +28,394 @@ def test_get_value_from_keylist():
     # Test getting value if no keys are valid
     assert mm_meta_reader.get_value_from_keylist(dictionary, ["nope"], str) is None
     assert mm_meta_reader.get_value_from_keylist(dictionary, ["nope", "not this either", ["or", "this"]], int) is None
+    assert mm_meta_reader.get_value_from_keylist(None, ["nope"], str) is None
 
 def test_load_metadata():
     """
     Tests the load_metadata function.
     """
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Create JSON to load
-        test_json = abspath(join(temp_dir, "empty.json"))
-        mm_file_tools.write_json_file(test_json, {"title":"test", "thing":"other"})
-        assert exists(test_json)
-        # Attempt to load the JSON file
-        meta = mm_meta_reader.load_metadata(test_json, "a.txt")
-        assert meta["json_path"] == test_json
-        assert meta["title"] == "test"
-        assert meta["original"] == {"title":"test", "thing":"other"}
-        # Test loading from an invalid path
-        meta = mm_meta_reader.load_metadata("/not/real/directory/", "a.txt")
-        assert not exists(meta["json_path"])
-        assert meta["id"] is None
-        assert meta["title"] is None
-        assert meta["artists"] is None
-        assert meta["writers"] is None
-        assert meta["date"] is None
-        assert meta["description"] is None
-        assert meta["publisher"] is None
-        assert meta["tags"] is None
-        assert meta["url"] is None
-        assert meta["original"] == {}
+    # Get JSON file to load
+    config = mm_config.DEFAULT_CONFIG
+    json_directory = abspath(join(mm_test.PAIR_DIRECTORY, "images"))
+    json_file = abspath(join(json_directory, "bare.PNG.json"))
+    # Check the loaded contents of the JSON file
+    metadata = mm_meta_reader.load_metadata(json_file, config, "bare.png")
+    assert metadata["json_path"] == json_file
+    assert metadata["id"] is None
+    assert metadata["title"] == "Émpty"
+    assert metadata["index"] is None
+    assert metadata["date"] is None
+    assert metadata["description"] is None
+    assert metadata["publisher"] is None
+    assert metadata["tags"] is None
+    assert metadata["url"] is None
+    assert metadata["age_rating"] == "Unknown"
+    assert metadata["artists"] is None
+    assert metadata["writers"] is None
+    assert metadata["original"] == mm_file_tools.read_json_file(json_file)
+    # Test loading an invalid JSON file
+    metadata = mm_meta_reader.load_metadata("/non/existant/file.json", config, "A")
+    assert metadata["json_path"] == "/non/existant/file.json"
+    assert metadata["id"] is None
+    assert metadata["title"] is None
+    assert metadata["index"] is None
+    assert metadata["date"] is None
+    assert metadata["description"] is None
+    assert metadata["publisher"] is None
+    assert metadata["tags"] is None
+    assert metadata["url"] is None
+    assert metadata["age_rating"] == "Unknown"
+    assert metadata["artists"] is None
+    assert metadata["writers"] is None
+    assert metadata["original"] == {}
 
 def test_get_title():
     """
     Tests the get_title function.
     """
-    # Test getting title from dictionary
-    dictionary = {"thing":"blah", "inner":{"title":"Thing!"}, "title":"Bleh"}
-    assert mm_meta_reader.get_title(dictionary) == "Bleh"
-    dictionary = {"info":{"title": "New Title", "artists":["thing"]}}
-    assert mm_meta_reader.get_title(dictionary) == "New Title"
-    # Test if there is no title
-    assert mm_meta_reader.get_title({"no":"title"}) is None
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Create JSON to load
-        test_json = abspath(join(temp_dir, "title.json"))
-        mm_file_tools.write_json_file(test_json, {"thing":"other", "title":"Loaded!"})
-        assert exists(test_json)
-        # Test getting title when read directly from JSON
-        meta = mm_meta_reader.load_metadata(test_json, "b.jpg")
-        assert meta["json_path"] == test_json
-        assert meta["title"] == "Loaded!"
+    # Test getting title with the default config
+    config = mm_config.DEFAULT_CONFIG
+    metadata = {"title":"Name", "info":{"title":"Different"}}
+    assert mm_meta_reader.get_title(metadata, config) == "Name"
+    metadata = {"other":"string", "info":{"title":"Different"}}
+    assert mm_meta_reader.get_title(metadata, config) == "Different"
+    # Test if there is no title in the metadata
+    assert mm_meta_reader.get_title({"A":"B"}, config) is None
+    # Test getting title when loading metadata
+    json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair.json"))
+    metadata = mm_meta_reader.load_metadata(json_file, config, "a.txt")
+    assert metadata["title"] == "Pair #1"
+    json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair-2.json"))
+    metadata = mm_meta_reader.load_metadata(json_file, config, "a.jpg")
+    assert metadata["title"] == "JPEG Image"
+
+def test_get_index():
+    """
+    Tests the get_index function.
+    """
+    # Test getting the index when it is a string
+    config = mm_config.DEFAULT_CONFIG
+    metadata = {"title":"Name", "num":"12"}
+    assert mm_meta_reader.get_index(metadata, config) == "12"
+    metadata = {"title":"Name", "image_number":"123"}
+    assert mm_meta_reader.get_index(metadata, config) == "123"
+    # Test getting the index when it is an integer
+    metadata = {"title":"Name", "image_num":5}
+    assert mm_meta_reader.get_index(metadata, config) == "5"
+    metadata = {"title":"Name", "part":42}
+    assert mm_meta_reader.get_index(metadata, config) == "42"
+    # Test getting the index when no valid index is present
+    assert mm_meta_reader.get_index({"A":"B"}, config) is None
+    assert mm_meta_reader.get_index({"num":None}, config) is None
+    # Test getting index when loading metadata
+    json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair.json"))
+    metadata = mm_meta_reader.load_metadata(json_file, config, "A.txt")
+    assert metadata["index"] == "3"
+    json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair-2.json"))
+    metadata = mm_meta_reader.load_metadata(json_file, config, "A.txt")
+    assert metadata["index"] == "32"
 
 def test_get_artists_and_writers():
     """
     Tests the get_artists_and_writers function.
     """
-    # Test getting a single artist and writer
-    dictionary = {"artist":"Person", "writer":"Other", "Thing":123}
-    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".jpg")
-    assert artists == ["Person"]
-    assert writers == ["Other"]
-    # Test getting multiple artists and writers
-    dictionary = {"artists":["A","B"], "writers":["1","2","3"], "Final":"Thing"}
-    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".png")
-    assert artists == ["A","B"]
-    assert writers == ["1","2","3"]
-    # Test only artists
-    dictionary = {"artist":"Guy", "Thing":"Other"}
-    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".jpeg")
-    assert artists == ["Guy"]
-    assert writers == ["Guy"]
-    dictionary = {"artists":["Some", "People"], "Thing":"Other"}
-    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".bmp")
-    assert artists == ["Some", "People"]
-    assert writers == ["Some", "People"]
-    # Test only writers
-    dictionary = {"id":"Thing", "writer":"dude"}
-    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".mp4")
-    assert artists == ["dude"]
-    assert writers == ["dude"]
-    dictionary = {"bleh":"blah", "writers":["writer","author"]}
-    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".webm")
-    assert artists == ["writer","author"]
-    assert writers == ["writer","author"]
-    # Test no artists or writers
-    dictionary = {"id":"nothing"}
-    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".png")
-    assert artists is None
-    assert writers is None
-    # Test if the media file is a written work
-    dictionary = {"id":"Thing", "artist":"Author"}
-    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".html")
-    assert artists is None
+    # Test getting separate single artist and writer
+    config = mm_config.DEFAULT_CONFIG
+    metadata = {"title":"AAA", "artist":"Illustrator", "writer":"Author"}
+    artists, writers = mm_meta_reader.get_artists_and_writers(metadata, config, ".jpg")
+    assert artists == ["Illustrator"]
     assert writers == ["Author"]
-    dictionary = {"id":"Thing", "writers":["People","Thingies"]}
-    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".doc")
-    assert artists is None
-    assert writers == ["People","Thingies"]
-    dictionary = {"id":"Thing", "writer":"Person", "artist":"Other"}
-    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".txt")
-    assert artists == ["Other"]
-    assert writers == ["Person"]
-    # DVK style artists
-    dictionary = {"info":{"title":"thing", "artists":["Name", "Person"]}}
-    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".png")
-    assert artists == ["Name", "Person"]
-    assert writers == ["Name", "Person"]
-    # Deviantart style username
-    dictionary = {"author":{"username":"my dude"}, "id":"Thing"}
-    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".png")
-    assert artists == ["my dude"]
-    assert writers == ["my dude"]
-    # Inkbunny style username
-    dictionary = {"username":"Artist", "id":"Thing"}
-    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".jpg")
+    # Test getting multiple artists and writers
+    metadata = {"title":"B", "artists":["A","B"], "writers":["1","2","3"]}
+    artists, writers = mm_meta_reader.get_artists_and_writers(metadata, config, ".txt")
+    assert artists == ["A", "B"]
+    assert writers == ["1", "2", "3"]
+    # Test that writers are the same as artists if only artist tags are present
+    metadata = {"author":{"username":"Artist"}, "title":"AAA"}
+    artists, writers = mm_meta_reader.get_artists_and_writers(metadata, config, ".jpg")
     assert artists == ["Artist"]
     assert writers == ["Artist"]
-    # Newgrounds style username
-    dictionary = {"AAA":"AAAAA", "user":"Person", "id":"Thing"}
-    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".mp4")
-    assert artists == ["Person"]
-    assert writers == ["Person"]
-    # Patreon style username
-    dictionary = {"creator":{"full_name":"Creator Person"}, "id":"Thing"}
-    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".png")
-    assert artists == ["Creator Person"]
-    assert writers == ["Creator Person"]
-    # Pixiv style username
-    dictionary = {"A":"A","user":{"name":"Another"}, "C":"C"}
-    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".jpg")
-    assert artists == ["Another"]
-    assert writers == ["Another"]
-    # Weasyl style username
-    dictionary = {"A":"B", "owner":"Thing"}
-    artists, writers = mm_meta_reader.get_artists_and_writers(dictionary, ".jpg")
-    assert artists == ["Thing"]
-    assert writers == ["Thing"]
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Create JSON to load
-        test_json = abspath(join(temp_dir, "date.json"))
-        mm_file_tools.write_json_file(test_json, {"artists":["Artist", "Other"], "writer":"person"})
-        assert exists(test_json)
-        # Test reading artist and writer from a JSON file
-        meta = mm_meta_reader.load_metadata(test_json, "Blah.txt")
-        assert meta["artists"] == ["Artist", "Other"]
-        assert meta["writers"] == ["person"]
+    metadata = {"user":["Multiple", "Artists"], "title":"AAA"}
+    artists, writers = mm_meta_reader.get_artists_and_writers(metadata, config, ".jpg")
+    assert artists == ["Multiple", "Artists"]
+    assert writers == ["Multiple", "Artists"]
+    # Test that artists are the same as artists if not a written work
+    metadata = {"author":"Writer", "title":"AAA"}
+    artists, writers = mm_meta_reader.get_artists_and_writers(metadata, config, ".jpg")
+    assert artists == ["Writer"]
+    assert writers == ["Writer"]
+    metadata = {"writer":["Multiple", "Writers"], "title":"AAA"}
+    artists, writers = mm_meta_reader.get_artists_and_writers(metadata, config, ".jpg")
+    assert artists == ["Multiple", "Writers"]
+    assert writers == ["Multiple", "Writers"]
+    # Test that only writers are included for written works if no illustrator is provided
+    metadata = {"writer":"Not Artist", "title":"AAA"}
+    artists, writers = mm_meta_reader.get_artists_and_writers(metadata, config, ".html")
+    assert artists is None
+    assert writers == ["Not Artist"]
+    metadata = {"artists":["Multiple", "Authors"], "title":"AAA"}
+    artists, writers = mm_meta_reader.get_artists_and_writers(metadata, config, ".txt")
+    assert artists is None
+    assert writers == ["Multiple", "Authors"]
+    # Test if there are no valid artists or authors in the metadata
+    metadata = {"A": "B"}
+    artists, writers = mm_meta_reader.get_artists_and_writers(metadata, config, ".png")
+    assert artists is None
+    assert writers is None
+    # Test getting artists and writers when loading metadata
+    json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair.json"))
+    metadata = mm_meta_reader.load_metadata(json_file, config, "a.txt")
+    assert metadata["artists"] is None
+    assert metadata["writers"] == ["Different", "People"]
+    json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair-2.json"))
+    metadata = mm_meta_reader.load_metadata(json_file, config, "a.jpg")
+    assert metadata["artists"] == ["Creator"]
+    assert metadata["writers"] == ["Creator"]
 
 def test_get_date():
     """
     Tests the get_date function.
     """
     # Test getting date from dictionary in YYYY-MM-DD format
-    dictionary = {"thing":50, "date":"2022-12-25"}
-    assert mm_meta_reader.get_date(dictionary) == "2022-12-25"
-    dictionary = {"upload_date":"1983/07-14", "other":False, "new":"Thing"}
-    assert mm_meta_reader.get_date(dictionary) == "1983-07-14"
-    dictionary = {"published_at":"2019-05-01T00:31:00.000+00:00"}
-    assert mm_meta_reader.get_date(dictionary) == "2019-05-01"
-    dictionary = {"info":{"time":"2012/12/21|22:33"}}
-    assert mm_meta_reader.get_date(dictionary) == "2012-12-21"
-    # Test getting date from dictionary in YYYYMMDD format
-    dictionary = {"date":"19990723", "next":24}
-    assert mm_meta_reader.get_date(dictionary) == "1999-07-23"
-    dictionary = {"thing":"other", "upload_date":"20041115", "date":{"other":23}}
-    assert mm_meta_reader.get_date(dictionary) == "2004-11-15"
-    dictionary = {"info":{"time":"20121221", "title":23}}
-    assert mm_meta_reader.get_date(dictionary) == "2012-12-21"
-    # Test getting invalid date
-    dictionary = {"date":"2012-02-35"}
-    assert mm_meta_reader.get_date(dictionary) is None
-    dictionary = {"upload_date":"thing"}
-    assert mm_meta_reader.get_date(dictionary) is None
-    dictionary = {"thing":"blah"}
-    assert mm_meta_reader.get_date(dictionary) is None
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Create JSON to load
-        test_json = abspath(join(temp_dir, "date.json"))
-        mm_file_tools.write_json_file(test_json, {"thing":"other", "date":"20230513"})
-        assert exists(test_json)
-        # Test getting date when read directly from JSON
-        meta = mm_meta_reader.load_metadata(test_json, "b.txt")
-        assert meta["json_path"] == test_json
-        assert meta["date"] == "2023-05-13"
+    config = mm_config.DEFAULT_CONFIG
+    metadata = {"title":"AAA", "date":"2022-12-25"}
+    assert mm_meta_reader.get_date(metadata, config) == "2022-12-25"
+    metadata = {"upload_date":"1983/07-14", "title":"AAA"}
+    assert mm_meta_reader.get_date(metadata, config) == "1983-07-14"
+    metadata = {"published_at":"2019-05-01T00:31:00.000+00:00"}
+    assert mm_meta_reader.get_date(metadata, config) == "2019-05-01"
+    metadata = {"info":{"time":"2012/12/21|22:33"}, "artist":"BBB"}
+    assert mm_meta_reader.get_date(metadata, config) == "2012-12-21"
+    # Test getting date from metadata in YYYYMMDD format
+    metadata = {"date":"19990723", "title":"AAA"}
+    assert mm_meta_reader.get_date(metadata, config) == "1999-07-23"
+    metadata = {"title":"B", "upload_date":"20041115"}
+    assert mm_meta_reader.get_date(metadata, config) == "2004-11-15"
+    metadata = {"info":{"time":"20121221", "title":"BBB"}}
+    assert mm_meta_reader.get_date(metadata, config) == "2012-12-21"
+    # Test if there is no valid date in the metadata
+    metadata = {"date":"2012-02-35"}
+    assert mm_meta_reader.get_date(metadata, config) is None
+    metadata = {"upload_date":"AAA"}
+    assert mm_meta_reader.get_date(metadata, config) is None
+    metadata = {"title":"AAA"}
+    assert mm_meta_reader.get_date(metadata, config) is None
+    # Test getting date from when loading metadata
+    json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair.json"))
+    metadata = mm_meta_reader.load_metadata(json_file, config, "A.txt")
+    assert metadata["date"] == "2024-07-01"
+    json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair-2.json"))
+    metadata = mm_meta_reader.load_metadata(json_file, config, "A.txt")
+    assert metadata["date"] == "1997-11-28"
 
 def test_get_description():
     """
     Tests the get_description function.
     """
-    # Test getting description from dictionary
-    dictionary = {"thing":"other", "description":"Some words.<br>Thing"}
-    assert mm_meta_reader.get_description(dictionary) == "Some words.<br>Thing"
-    dictionary = {"description":{"inner":"thing"}, "caption":"New", "content":False}
-    assert mm_meta_reader.get_description(dictionary) == "New"
-    dictionary = {"other":"Key", "content":"More text"}
-    assert mm_meta_reader.get_description(dictionary) == "More text"
-    dictionary = {"thing":"other", "info":{"description":"New Text"}}
-    assert mm_meta_reader.get_description(dictionary) == "New Text"
-    dictionary = {"webtoon_summary":"<p>A THING!</p>", "blah":"blah"}
-    assert mm_meta_reader.get_description(dictionary) == "<p>A THING!</p>"
-    # Test if there is no description
-    dictionary = {"no":"description"}
-    assert mm_meta_reader.get_description(dictionary) is None
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Create JSON to load
-        test_json = abspath(join(temp_dir, "description.json"))
-        mm_file_tools.write_json_file(test_json, {"thing":"other", "description":"New<br><br>Description!"})
-        assert exists(test_json)
-        # Test getting decscription when read directly from JSON
-        meta = mm_meta_reader.load_metadata(test_json, "a.png")
-        assert meta["json_path"] == test_json
-        assert meta["description"] == "New<br><br>Description!"
+    # Test getting description from metadata with default config
+    config = mm_config.DEFAULT_CONFIG
+    metadata = {"title":"AAA", "description":"A<br/>B"}
+    assert mm_meta_reader.get_description(metadata, config) == "A<br/>B"
+    metadata = {"caption":"Description", "title":"BBB"}
+    assert mm_meta_reader.get_description(metadata, config) == "Description"
+    metadata = {"Artist":"AAA", "content":"Text"}
+    assert mm_meta_reader.get_description(metadata, config) == "Text"
+    metadata = {"title":"AAA", "info":{"description":"Internal"}}
+    assert mm_meta_reader.get_description(metadata, config) == "Internal"
+    # Test getting description if there is no valid description
+    assert mm_meta_reader.get_description({"A":"B"}, config) is None
+    # Test getting description when loading metadata
+    json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair.json"))
+    metadata = mm_meta_reader.load_metadata(json_file, config, "A.txt")
+    assert metadata["description"] == "<div>Text Description</div>"
+    json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair-2.json"))
+    metadata = mm_meta_reader.load_metadata(json_file, config, "A.txt")
+    assert metadata["description"] == ".DVK Style"
 
 def test_get_id():
     """
     Tests the get_id function.
     """
-    # Test getting string ID
-    dictionary = {"test":"thing", "id":"abc123"}
-    assert mm_meta_reader.get_id(dictionary) == "abc123"
-    dictionary = {"test":"thing", "display_id":"thing", "id":{"inner":"thing"}}
-    assert mm_meta_reader.get_id(dictionary) == "thing"
-    dictionary = {"index":"New1"}
-    assert mm_meta_reader.get_id(dictionary) == "New1"
-    dictionary = {"submission_id":"Final", "other":23}
-    assert mm_meta_reader.get_id(dictionary) == "Final"
-    dictionary = {"submitid":"Other"}
-    assert mm_meta_reader.get_id(dictionary) == "Other"
-    # Test getting int ID
-    dictionary = {"test":"thing", "id":4254}
-    assert mm_meta_reader.get_id(dictionary) == "4254"
-    dictionary = {"test":"thing", "display_id":3600, "id":{"inner":"thing"}}
-    assert mm_meta_reader.get_id(dictionary) == "3600"
-    dictionary = {"index":3}
-    assert mm_meta_reader.get_id(dictionary) == "3"
-    dictionary = {"submission_id":58403, "other":23}
-    assert mm_meta_reader.get_id(dictionary) == "58403"
-    dictionary = {"submitid":483}
-    assert mm_meta_reader.get_id(dictionary) == "483"
-    # Test getting old DVK ID format
-    dictionary = {"id":"DVA48305"}
-    assert mm_meta_reader.get_id(dictionary) == "48305"
-    dictionary = {"index":"FAF29045"}
-    assert mm_meta_reader.get_id(dictionary) == "29045"
-    dictionary = {"display_id":"INK-1234"}
-    assert mm_meta_reader.get_id(dictionary) == "1234"
-    dictionary = {"display_id":"ink123"}
-    assert mm_meta_reader.get_id(dictionary) == "ink123"
-    dictionary = {"id":"DVAV225"}
-    assert mm_meta_reader.get_id(dictionary) == "DVAV225"
-    # Test adding file id, if necessary
-    dictionary = {"id":"INK135", "file_id":"987"}
-    assert mm_meta_reader.get_id(dictionary) == "135-987"
-    dictionary = {"index":"4829", "thing":54, "file_id":"27606"}
-    assert mm_meta_reader.get_id(dictionary) == "4829-27606"
-    # Test if there is no ID
-    dictionary = {"no":"id"}
-    assert mm_meta_reader.get_id(dictionary) is None
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Create JSON to load
-        test_json = abspath(join(temp_dir, "id.json"))
-        mm_file_tools.write_json_file(test_json, {"thing":"other", "id":"Blah"})
-        assert exists(test_json)
-        # Test getting ID when read directly from JSON
-        meta = mm_meta_reader.load_metadata(test_json, "b.txt")
-        assert meta["json_path"] == test_json
-        assert meta["id"] == "Blah"
+    # Test getting an ID that is a string
+    config = mm_config.DEFAULT_CONFIG
+    metadata = {"title":"AAA", "id":"abc123"}
+    assert mm_meta_reader.get_id(metadata, config) == "abc123"
+    metadata = {"title":"AAA", "index":"Identifier"}
+    assert mm_meta_reader.get_id(metadata, config) == "Identifier"
+    # Test getting an ID that is an integer
+    metadata = {"artist":"AAA", "submission_id":12345}
+    assert mm_meta_reader.get_id(metadata, config) == "12345"
+    metadata = {"title":"AAA", "display_id":246}
+    assert mm_meta_reader.get_id(metadata, config) == "246"
+    # Test getting an ID in the old .DVK format
+    metadata = {"title":"AAA", "id":"DVA1234"}
+    assert mm_meta_reader.get_id(metadata, config) == "1234"
+    metadata = {"title":"AAA", "id":"FAF0123"}
+    assert mm_meta_reader.get_id(metadata, config) == "0123"
+    metadata = {"title":"AAA", "id":"NEW-246"}
+    assert mm_meta_reader.get_id(metadata, config) == "246"
+    metadata = {"title":"AAA", "id":"new123"}
+    assert mm_meta_reader.get_id(metadata, config) == "new123"
+    metadata = {"title":"AAA", "id":"DVNT987"}
+    assert mm_meta_reader.get_id(metadata, config) == "DVNT987"
+    metadata = {"title":"AAA", "id":"FAF123Q"}
+    assert mm_meta_reader.get_id(metadata, config) == "FAF123Q"
+    # Test if there is no valid ID
+    assert mm_meta_reader.get_id({"A", "B"}, config) is None
+    # Test getting ID when loading metadata
+    json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair.json"))
+    metadata = mm_meta_reader.load_metadata(json_file, config, "A.txt")
+    assert metadata["id"] == "702725"
+    json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair-2.json"))
+    metadata = mm_meta_reader.load_metadata(json_file, config, "A.txt")
+    assert metadata["id"] == "2468"
 
 def test_get_publisher():
     """
     Tests the get_publisher function.
     """
     # Test getting DeviantArt as publisher
-    dictionary = {"url":"www.deviantart.com/person/art/thing20398462-183", "thing":"blah"}
-    assert mm_meta_reader.get_publisher(dictionary) == "DeviantArt"
-    dictionary = {"category":"DeviantArt", "url":{"inner":"thing"}}
-    assert mm_meta_reader.get_publisher(dictionary) == "DeviantArt"
+    config = mm_config.DEFAULT_CONFIG
+    metadata = {"url":"www.deviantart.com/AAA", "title":"AAA"}
+    assert mm_meta_reader.get_publisher(metadata, config) == "DeviantArt"
+    metadata = {"category":"DeviantArt", "url":False}
+    assert mm_meta_reader.get_publisher(metadata, config) == "DeviantArt"
     # Test getting FurAffinity as publisher
-    dictionary = {"a":"thing", "webpage_url":"www.furaffinity.net/art/091289023001290389012"}
-    assert mm_meta_reader.get_publisher(dictionary) == "Fur Affinity"
-    dictionary = {"category":"FurAffinity", "some":292}
-    assert mm_meta_reader.get_publisher(dictionary) == "Fur Affinity"
-    # Test getting Inkbunny as publisher
-    dictionary = {"b":"thing", "post_url":"www.inkbunny.net/thing/", "a":"blah"}
-    assert mm_meta_reader.get_publisher(dictionary) == "Inkbunny"
-    dictionary = {"this":"thing", "category":"inkbunny"}
-    assert mm_meta_reader.get_publisher(dictionary) == "Inkbunny"
+    metadata = {"webpage_url":"www.furaffinity.net/art/AAA", "artist":"AAA"}
+    assert mm_meta_reader.get_publisher(metadata, config) == "Fur Affinity"
+    metadata = {"category":"FurAffinity", "title":"AAA"}
+    assert mm_meta_reader.get_publisher(metadata, config) == "Fur Affinity"
     # Test getting Newgrounds as publisher
-    dictionary = {"b":"thing", "post_url":"www.newgrounds.com/art/qojkadskljfd", "a":"blah"}
-    assert mm_meta_reader.get_publisher(dictionary) == "Newgrounds"
-    dictionary = {"this":"thing", "category":"newgrounds", "id":"other"}
-    assert mm_meta_reader.get_publisher(dictionary) == "Newgrounds"
-    # Test getting Patreon as publisher
-    dictionary = {"thing":"Blah", "web":{"page_url":"www.patreon.com/test/url"}}
-    assert mm_meta_reader.get_publisher(dictionary) == "Patreon"
-    dictionary = {"category":"patreon"}
-    assert mm_meta_reader.get_publisher(dictionary) == "Patreon"
-    # Test getting pixiv as publisher
-    dictionary = {"b":"blah", "url":"www.pixiv.net/thing", "2":2}
-    assert mm_meta_reader.get_publisher(dictionary) == "pixiv"
-    dictionary = {"category":"pixiv"}
-    assert mm_meta_reader.get_publisher(dictionary) == "pixiv"
-    # Test getting Weasyl as publisher
-    dictionary = {"link":"www.weasyl.com", "url":"not-deviantart", "a":"blah"}
-    assert mm_meta_reader.get_publisher(dictionary) == "Weasyl"
-    dictionary = {"category":"WEASYL", "other":True}
-    assert mm_meta_reader.get_publisher(dictionary) == "Weasyl"
-    # Test getting YouTube as publisher
-    dictionary = {"webpage_url":"www.youtube.com/thing/other", "a":"blah"}
-    assert mm_meta_reader.get_publisher(dictionary) == "YouTube"
-    dictionary = {"this":"thing", "category":"YouTube"}
-    assert mm_meta_reader.get_publisher(dictionary) == "YouTube"
-    # Test getting Tumblr as a publisher
-    dictionary = {"post_url":"https://person.tumblr.com/post/454", "type":"Thing"}
-    assert mm_meta_reader.get_publisher(dictionary) == "Tumblr"
-    dictionary = {"category":"tumblr", "other":"Thing"}
-    assert mm_meta_reader.get_publisher(dictionary) == "Tumblr"
-    # Test getting Twitter(X) as a publisher
-    dictionary = {"thing":"other", "category":"twitter"}
-    assert mm_meta_reader.get_publisher(dictionary) == "Twitter"
-    # Test getting Doc's Lab as a publisher
-    dictionary = {"thing":"other", "url":"https://www.docs-lab.com/submissions/187381830927"}
-    assert mm_meta_reader.get_publisher(dictionary) == "Doc's Lab"
-    # Test getting TGComics as a publisher
-    dictionary = {"thing":"other", "page_url":"https://tgcomics.com/tgc/comics/cname/"}
-    assert mm_meta_reader.get_publisher(dictionary) == "TGComics"
-    # Test getting Transfur as a publisher
-    dictionary = {"url":"https://www.transfur.com/users/someone", "blah":"Thing"}
-    assert mm_meta_reader.get_publisher(dictionary) == "Transfur"
-    # Test getting Kemono Café as a publisher
-    dictionary = {"url":"https://bethellium.kemono.cafe/comic/jkjasjdf/", "A":"B"}
-    assert mm_meta_reader.get_publisher(dictionary) == "Kemono Café"
-    # Test getting Webtoon as a publisher
-    dictionary = {"url":"https://www.webtoons.com/en/genre/thing/other", "A":"B"}
-    assert mm_meta_reader.get_publisher(dictionary) == "Webtoon"
-    # Test if there is no viable publisher
-    dictionary = {"url":"none"}
-    assert mm_meta_reader.get_publisher(dictionary) is None
-    dictionary = {"no":"URLS"}
-    assert mm_meta_reader.get_publisher(dictionary) is None
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Create JSON to load
-        test_json = abspath(join(temp_dir, "publisher.json"))
-        mm_file_tools.write_json_file(test_json, {"thing":"other", "url":"www.deviantart.com/art/blah"})
-        assert exists(test_json)
-        # Test getting publisher when read directly from JSON
-        meta = mm_meta_reader.load_metadata(test_json, "b.txt")
-        assert meta["json_path"] == test_json
-        assert meta["publisher"] == "DeviantArt"
+    metadata = {"title":"BBB", "post_url":"www.newgrounds.com/art/AAA"}
+    assert mm_meta_reader.get_publisher(metadata, config) == "Newgrounds"
+    dictionary = {"artist":"BBB", "category":"newgrounds"}
+    assert mm_meta_reader.get_publisher(metadata, config) == "Newgrounds"
+    #Test if there is no viable publisher
+    assert mm_meta_reader.get_publisher({"post_url", "AAA"}, config) is None
+    assert mm_meta_reader.get_publisher({"AAA":"BBB"}, config) is None
+    # Test getting publisher when loading metadata
+    json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair.json"))
+    metadata = mm_meta_reader.load_metadata(json_file, config, "A.txt")
+    assert metadata["publisher"] == "DVK Test"
+    json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair-2.json"))
+    metadata = mm_meta_reader.load_metadata(json_file, config, "A.txt")
+    assert metadata["publisher"] == "DVK Test"
 
 def test_get_url():
     """
     Tests the get_url function.
     """
-    # Test getting URL strictly from JSON dictionary
-    dictionary = {"url":"www.thisisatest.pizza", "thing":True}
-    assert mm_meta_reader.get_url(dictionary) == "www.thisisatest.pizza"
-    dictionary = {"link":"URL.thing", "id":"other"}
-    assert mm_meta_reader.get_url(dictionary, "NotPublisher", "ID123") == "URL.thing"
-    dictionary = {"total":124, "post_url":"New.url.thing"}
-    assert mm_meta_reader.get_url(dictionary, None, "123") == "New.url.thing"
-    dictionary = {"webpage_url":"newthing.txt.thing", "id":"ABC"}
-    assert mm_meta_reader.get_url(dictionary, "Fur Affinity", None) == "newthing.txt.thing"
-    dictionary = {"web":{"page_url":"new/url/value", "url":"not_this"}, "id":"ABC"}
-    assert mm_meta_reader.get_url(dictionary, "Deviantart", None) == "new/url/value"
-    # Test getting Fur Affinity URL
-    assert mm_meta_reader.get_url({"D":"M"}, "Fur Affinity", "ID123") == "https://www.furaffinity.net/view/ID123/"
-    assert mm_meta_reader.get_url({"A":"B"}, "Fur Affinity", "Other") == "https://www.furaffinity.net/view/Other/"
-    # Test getting Inkbunny URL
-    assert mm_meta_reader.get_url({"D":"M"}, "Inkbunny", "ID123") == "https://inkbunny.net/s/ID123"
-    assert mm_meta_reader.get_url({"A":"B"}, "Inkbunny", "Other") == "https://inkbunny.net/s/Other"
+    # Test getting the URL from only the metadata
+    config = mm_config.DEFAULT_CONFIG
+    metadata = {"url":"/url/", "title":"AAA"}
+    assert mm_meta_reader.get_url(metadata, config) == "/url/"
+    metadata = {"post_url":"page/url/", "title":"AAA"}
+    assert mm_meta_reader.get_url(metadata, config) == "page/url/" 
+    # Test getting Fur Affinity URL based on publisher and ID from config
+    url = mm_meta_reader.get_url({}, config, "Fur Affinity", "ID123")
+    assert url == "https://www.furaffinity.net/view/ID123"
+    url = mm_meta_reader.get_url({}, config, "Fur Affinity", "Other")
+    assert url == "https://www.furaffinity.net/view/Other"
     # Test getting pixiv URL
-    assert mm_meta_reader.get_url({"D":"M"}, "pixiv", "ID123") == "https://www.pixiv.net/en/artworks/ID123"
-    assert mm_meta_reader.get_url({"A":"B"}, "pixiv", "Other") == "https://www.pixiv.net/en/artworks/Other"
-    # Test when there is no URL
-    assert mm_meta_reader.get_url({"no":"url"}) is None
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Create JSON to load
-        dictionary = {"url":"www.furaffinity.net/thing/", "id":"ID-ABC"}
-        test_json = abspath(join(temp_dir, "url.json"))
-        mm_file_tools.write_json_file(test_json, dictionary)
-        assert exists(test_json)
-        # Test getting URL when read directly from JSON
-        meta = mm_meta_reader.load_metadata(test_json, "a.png")
-        assert meta["json_path"] == test_json
-        assert meta["id"] == "ID-ABC"
-        assert meta["publisher"] == "Fur Affinity"
-        assert meta["url"] == "https://www.furaffinity.net/view/ID-ABC/"
+    url = mm_meta_reader.get_url({}, config, "pixiv", "ID123")
+    assert url == "https://www.pixiv.net/en/artworks/ID123"
+    url = mm_meta_reader.get_url({}, config, "pixiv", "Other")
+    assert url == "https://www.pixiv.net/en/artworks/Other"
+    # Test if the publisher or ID are invalid
+    assert mm_meta_reader.get_url({}, config, "NonExistant", "ID123") is None
+    assert mm_meta_reader.get_url({}, config, None, "ID123") is None
+    assert mm_meta_reader.get_url({}, config, "Fur Affinity", None) is None
+    # Test if there is no url or publisher info
+    assert mm_meta_reader.get_url({}, config) is None
+    # Test getting URL when loading metadata
+    json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair.json"))
+    metadata = mm_meta_reader.load_metadata(json_file, config, "A.txt")
+    assert metadata["url"] == "https://www.non-existant-website.ca/no/page/"
+    json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair-2.json"))
+    metadata = mm_meta_reader.load_metadata(json_file, config, "A.txt")
+    assert metadata["url"] == "https://www.non-existant-website.ca/no/page/2"
 
 def test_get_tags():
     """
     Tests the get_tags function.
     """
-    # Test getting tags from only JSON lists
-    dictionary = {"tags":["These", "are"], "categories":["some", "tags"]}
-    assert mm_meta_reader.get_tags(dictionary) == ["These", "are", "some", "tags"]
-    dictionary = {"categories":"blah", "tags":["New", "Tags"]}
-    assert mm_meta_reader.get_tags(dictionary) == ["New", "Tags"]
-    # Test getting tags from only single strings
-    dictionary = {"da_category":"Artwork", "theme":"Something", "thing":"other"}
-    assert mm_meta_reader.get_tags(dictionary) == ["Artwork", "Something"]
-    dictionary = {"theme":234, "species":"Cat", "gender":"Female"}
-    assert mm_meta_reader.get_tags(dictionary) == ["Cat", "Female"]
-    # Test getting tags from internal parts of lists
-    dictionary = {"tags":[{"name":"Thing"}, {"blah":"Thing"}, {"name":"other"}, {"no":"tags"}]}
-    assert mm_meta_reader.get_tags(dictionary) == ["Thing", "other"]
-    dictionary = {"tags":[{"name":"Nope", "translated_name":"Over"}], "categories":[{"name":"blah"}, {"translated_name":"next"}]}
-    assert mm_meta_reader.get_tags(dictionary) == ["Over", "blah", "next"]
-    dictionary = {"tags":["blah"], "info":{"web_tags":["DVK", "Style", "Tags"]}}
-    assert mm_meta_reader.get_tags(dictionary) == ["DVK", "Style", "Tags", "blah"]
-    # Test getting tags from multiple sources
-    dictionary = {"tags":[{"name":"thing"}], "categories":["Tag", "Things"], "theme":"other", "species":["nope"]}
-    assert mm_meta_reader.get_tags(dictionary) == ["thing", "Tag", "Things", "other"]
-    # TGComics tags
-    dictionary = {"genres":["Humor"], "transformations":["TG","TF"], "transformation_details":["blah"],
-            "sexual_preferences":["nope"], "status":"Complete"}
-    assert mm_meta_reader.get_tags(dictionary) == ["Humor", "TG", "TF", "blah", "nope"]
-    # Test with no tags
-    assert mm_meta_reader.get_tags({"no":"tags"}) is None
-    assert mm_meta_reader.get_tags({"tags":[{"nope":"nope"}]}) is None
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Create JSON to load
-        dictionary = {"tags":["These", "are", "some", "tags"]}
-        test_json = abspath(join(temp_dir, "tags.json"))
-        mm_file_tools.write_json_file(test_json, dictionary)
-        assert exists(test_json)
-        # Test getting tags when read directly from JSON
-        meta = mm_meta_reader.load_metadata(test_json, "a.jpg")
-        assert meta["json_path"] == test_json
-        assert meta["tags"] == ["These", "are", "some", "tags"]
+    # Test getting tags from multiple lists of tags
+    config = mm_config.DEFAULT_CONFIG
+    metadata = {"title":"123", "tags":["A", "B"], "categories":["C", "D"]}
+    assert mm_meta_reader.get_tags(metadata, config) == ["A", "B", "C", "D"]
+    # Test getting tags from multiple single string entries in the metadata
+    metadata = {"artist":"AAA", "theme":"Art", "species":"Cat"}
+    assert mm_meta_reader.get_tags(metadata, config) == ["Art", "Cat"]
+    # Test getting tags that are nested
+    metadata = {"title":"AAA", "tags":[{"name":"Tag1"}, {"name":"Tag2"}]}
+    assert mm_meta_reader.get_tags(metadata, config) == ["Tag1", "Tag2"]
+    metadata = {"title":"AAA", "tags":[{"name":"BBB", "translated_name":"Single"}]}
+    assert mm_meta_reader.get_tags(metadata, config) == ["Single"]
+    # Test getting tags from list and string sources
+    metadata = {"title":"AAA", "tags":["1", "2", "3"], "theme":"Single"}
+    assert mm_meta_reader.get_tags(metadata, config) == ["1", "2", "3", "Single"]
+    # Test if there are no valid tags
+    assert mm_meta_reader.get_tags({"tags":[]}, config) is None
+    assert mm_meta_reader.get_tags({"tags":None}, config) is None
+    assert mm_meta_reader.get_tags({"tags":123}, config) is None
+    assert mm_meta_reader.get_tags({"A", "B"}, config) is None
+    # Test getting tags when loading metadata
+    json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair.json"))
+    metadata = mm_meta_reader.load_metadata(json_file, config, "A.txt")
+    assert metadata["tags"] == ["Multiple", "Tags", "New"]
+    json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair-2.json"))
+    metadata = mm_meta_reader.load_metadata(json_file, config, "A.txt")
+    assert metadata["tags"] == ["Internal", "Tags"]
 
 def test_get_age_rating():
     """
     Tests the get_age_rating function.
     """
-    # Test deviantart-style rating
-    dictionary = {"is_mature":False, "thing":"blah"}
-    assert mm_meta_reader.get_age_rating(dictionary, "DeviantArt") == "Everyone"
-    dictionary = {"is_mature":True, "mature_level":"moderate"}
-    assert mm_meta_reader.get_age_rating(dictionary, "DeviantArt") == "Mature 17+"
-    dictionary = {"is_mature":True, "mature_level":"strict"}
-    assert mm_meta_reader.get_age_rating(dictionary, "DeviantArt") == "X18+"
-    dictionary = {"is_mature":True, "mature_level":"blah"}
-    assert mm_meta_reader.get_age_rating(dictionary, "DeviantArt") == "Unknown"
-    dictionary = {"is_mature":"nope"}
-    assert mm_meta_reader.get_age_rating(dictionary, "DeviantArt") == "Unknown"
-    dictionary = {"is_mature":True, "blah":"thing"}
-    assert mm_meta_reader.get_age_rating(dictionary, "DeviantArt") == "Unknown"
-    dictionary = {"thing":False}
-    assert mm_meta_reader.get_age_rating(dictionary, "DeviantArt") == "Unknown"
-    # Test Fur Affinity style ratings
-    dictionary = {"rating":"General", "other":"thing"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Fur Affinity") == "Everyone"
-    dictionary = {"rating":"Mature", "other":False}
-    assert mm_meta_reader.get_age_rating(dictionary, "Fur Affinity") == "Mature 17+"
-    dictionary = {"3":True, "rating":"Adult"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Fur Affinity") == "X18+"
-    dictionary = {"rating":"Who Knows?"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Fur Affinity") == "Unknown"
-    dictionary = {"thing":"Other"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Fur Affinity") == "Unknown"
-    # Test Inkbunny style ratings
-    dictionary = {"rating_name":"General", "other":"thing"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Inkbunny") == "Everyone"
-    dictionary = {"rating_name":"Mature", "other":False}
-    assert mm_meta_reader.get_age_rating(dictionary, "Inkbunny") == "Mature 17+"
-    dictionary = {"3":True, "rating_name":"Adult"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Inkbunny") == "X18+"
-    dictionary = {"rating_name":"Who Knows?"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Inkbunny") == "Unknown"
-    dictionary = {"thing":"Other"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Inkbunny") == "Unknown"
-    # Test Newgrounds style ratings
-    dictionary = {"rating":"e", "info":"other"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Newgrounds") == "Everyone"
-    dictionary = {"4":True, "rating":"T"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Newgrounds") == "Teen"
-    dictionary = {"rating":"m", "Final":"Not"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Newgrounds") == "Mature 17+"
-    dictionary = {"rating":"A"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Newgrounds") == "X18+"
-    dictionary = {"rating":"thing"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Newgrounds") == "Unknown"
-    dictionary = {"blah":"thing"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Newgrounds") == "Unknown"
-    # Test pixiv style ratings
-    dictionary = {"rating":"General", "thing":12}
-    assert mm_meta_reader.get_age_rating(dictionary, "pixiv") == "Everyone"
-    dictionary = {"true":False, "rating":"R-18"}
-    assert mm_meta_reader.get_age_rating(dictionary, "pixiv") == "X18+"
-    dictionary = {"rating":"blah"}
-    assert mm_meta_reader.get_age_rating(dictionary, "pixiv") == "Unknown"
-    dictionary = {"blah":"blah"}
-    assert mm_meta_reader.get_age_rating(dictionary, "pixiv") == "Unknown"
-    # Test Weasyl style ratings
-    dictionary = {"rating":"General", "info":"other"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Weasyl") == "Everyone"
-    dictionary = {"rating":"Mature", "Final":"Not"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Weasyl") == "Mature 17+"
-    dictionary = {"rating":"Explicit"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Weasyl") == "X18+"
-    dictionary = {"rating":"thing"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Weasyl") == "Unknown"
-    dictionary = {"blah":"thing"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Weasyl") == "Unknown"
-    # Test getting Doc's Lab style ratings
-    dictionary = {"age_rating":"PG", "blah":"blah"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Doc's Lab") == "Teen"
-    dictionary = {"age_rating":"R", "other":"thing"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Doc's Lab") == "Mature 17+"
-    dictionary = {"age_rating":"X", "Word":"Stuff"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Doc's Lab") == "X18+"
-    # Test getting TGComics style ratings
-    dictionary = {"age_rating":"TGC-C", "blah":"blah"}
-    assert mm_meta_reader.get_age_rating(dictionary, "TGComics") == "Teen"
-    dictionary = {"age_rating":"TGC-R", "other":"thing"}
-    assert mm_meta_reader.get_age_rating(dictionary, "TGComics") == "Mature 17+"
-    dictionary = {"age_rating":"TGC-M", "Word":"Stuff"}
-    assert mm_meta_reader.get_age_rating(dictionary, "TGComics") == "X18+"
-    dictionary = {"age_rating":"TGC-X", "Word":"bleh"}
-    assert mm_meta_reader.get_age_rating(dictionary, "TGComics") == "X18+"
-    # Test with invalid Publisher
-    dictionary = {"rating":"General"}
-    assert mm_meta_reader.get_age_rating(dictionary, "NotRecognized") == "Unknown"
-    dictionary = {"rating":"mature"}
-    assert mm_meta_reader.get_age_rating(dictionary, "Other") == "Unknown"
-    dictionary = {"rating":"mature"}
-    assert mm_meta_reader.get_age_rating(dictionary, None) == "Unknown"
-    # Create JSON to load
-    with tempfile.TemporaryDirectory() as temp_dir:
-        dictionary = {"url":"www.furaffinity.net/thing/", "rating":"Mature"}
-        test_json = abspath(join(temp_dir, "url.json"))
-        mm_file_tools.write_json_file(test_json, dictionary)
-        assert exists(test_json)
-        # Test getting age rating when read directly from JSON
-        meta = mm_meta_reader.load_metadata(test_json, "a.txt")
-        assert meta["json_path"] == test_json
-        assert meta["publisher"] == "Fur Affinity"
-        assert meta["age_rating"] == "Mature 17+"
+    # Test getting general style age ratings from Fur Affinity
+    config = mm_config.DEFAULT_CONFIG
+    metadata = {"title":"AAA", "rating":"General"}
+    assert mm_meta_reader.get_age_rating(metadata, config, "Fur Affinity") == "Everyone"
+    metadata = {"title":"AAA", "rating":"Mature"}
+    assert mm_meta_reader.get_age_rating(metadata, config, "Fur Affinity") == "Mature 17+"
+    metadata = {"title":"AAA", "rating":"Adult"}
+    assert mm_meta_reader.get_age_rating(metadata, config, "Fur Affinity") == "X18+"
+    metadata = {"title":"AAA", "rating":"???"}
+    assert mm_meta_reader.get_age_rating(metadata, config, "Fur Affinity") == "Unknown"
+    # Test getting general style age ratings from Fur Affinity
+    metadata = {"title":"AAA", "rating":"e"}
+    assert mm_meta_reader.get_age_rating(metadata, config, "Newgrounds") == "Everyone"
+    metadata = {"title":"AAA", "rating":"T"}
+    assert mm_meta_reader.get_age_rating(metadata, config, "Newgrounds") == "Teen"
+    metadata = {"title":"AAA", "rating":"m"}
+    assert mm_meta_reader.get_age_rating(metadata, config, "Newgrounds") == "Mature 17+"
+    metadata = {"title":"AAA", "rating":"A"}
+    assert mm_meta_reader.get_age_rating(metadata, config, "Newgrounds") == "X18+"
+    metadata = {"title":"AAA", "rating":"f"}
+    assert mm_meta_reader.get_age_rating(metadata, config, "Newgrounds") == "Unknown"
+    # Test getting specialized age ratings from Deviantart
+    metadata = {"title":"AAA", "is_mature":"False"}
+    assert mm_meta_reader.get_age_rating(metadata, config, "DeviantArt") == "Everyone"
+    metadata = {"title":"AAA", "is_mature":"True", "mature_level":"moderate"}
+    assert mm_meta_reader.get_age_rating(metadata, config, "DeviantArt") == "Mature 17+"
+    metadata = {"title":"AAA", "is_mature":"True", "mature_level":"strict"}
+    assert mm_meta_reader.get_age_rating(metadata, config, "DeviantArt") == "X18+"
+    metadata = {"title":"AAA", "is_mature":"True", "mature_level":"???"}
+    assert mm_meta_reader.get_age_rating(metadata, config, "DeviantArt") == "Unknown"
+    metadata = {"title":"AAA", "is_mature":"Unknown"}
+    assert mm_meta_reader.get_age_rating(metadata, config, "DeviantArt") == "Unknown"
+    metadata = {"A":"B"}
+    assert mm_meta_reader.get_age_rating(metadata, config, "DeviantArt") == "Unknown"
+    # Test getting age rating for a Publisher not in the config file
+    metadata = {"title":"AAA", "rating":"General"}
+    assert mm_meta_reader.get_age_rating(metadata, config, "Unknown") == "Unknown"
+    metadata = {"title":"AAA", "rating":"mature"}
+    assert mm_meta_reader.get_age_rating(metadata, config, "Publisher") == "Unknown"
+    metadata = {"title":"AAA", "rating":"adult"}
+    assert mm_meta_reader.get_age_rating(metadata, config, None) == "Unknown"
+    # Test getting age rating when loading metadata
+    json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair.json"))
+    metadata = mm_meta_reader.load_metadata(json_file, config, "A.txt")
+    assert metadata["age_rating"] == "Teen"
+    json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair-2.json"))
+    metadata = mm_meta_reader.load_metadata(json_file, config, "A.txt")
+    assert metadata["age_rating"] == "Unknown"

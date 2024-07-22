@@ -5,6 +5,7 @@ import tqdm
 import argparse
 import python_print_tools.printer
 import metadata_magic.sort as mm_sort
+import metadata_magic.config as mm_config
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.meta_reader as mm_meta_reader
@@ -25,7 +26,7 @@ def find_missing_media(path:str) -> List[str]:
     """
     # Separate JSON and media files and get proper metadata pairs
     jsons, media = mm_meta_finder.separate_files(path)
-    pairs = mm_meta_finder.get_pairs_from_lists(media)
+    pairs = mm_meta_finder.get_pairs_from_lists(jsons, media)
     # Remove paired JSON files
     print("Finding JSONs with missing media:")
     for pair in tqdm.tqdm(pairs):
@@ -47,7 +48,7 @@ def find_missing_metadata(path:str) -> List[str]:
     """
     # Separate JSON and media files and get proper metadata pairs
     jsons, media = mm_meta_finder.separate_files(path)
-    pairs = mm_meta_finder.get_pairs_from_lists(media)
+    pairs = mm_meta_finder.get_pairs_from_lists(jsons, media)
     # Remove paired JSON files
     print("Finding media with missing metadata:")
     for pair in tqdm.tqdm(pairs):
@@ -58,12 +59,14 @@ def find_missing_metadata(path:str) -> List[str]:
     # Return list of media without metadata
     return media
 
-def find_long_descriptions(path:str, length:int=LONG_DESCRIPTION) -> List[str]:
+def find_long_descriptions(path:str, config:dict, length:int=LONG_DESCRIPTION) -> List[str]:
     """
     Returns a list of archives and metadata files with overly long descriptions.
     
     :param path: Directory in which to search for metadata
     :type path: str, required
+    :param config: Dictionary of a metadata-magic config file
+    :type config: dict, required
     :param length: Number of characters for a description to be considered long, defaults to LONG_DESCRIPTION value
     :type length: int, optional
     :return: List of archives and metadata files with overly long titles
@@ -84,13 +87,11 @@ def find_long_descriptions(path:str, length:int=LONG_DESCRIPTION) -> List[str]:
     pairs = mm_meta_finder.get_pairs(full_path)
     # Run throug all json files
     for pair in pairs:
-        metadata = mm_meta_reader.load_metadata(pair["json"], pair["media"])
+        metadata = mm_meta_reader.load_metadata(pair["json"], config, pair["media"])
         if metadata["description"] is not None and len(metadata["description"]) > length:
             long.append(pair["json"])
     # Return list of files with long descriptions
     return mm_sort.sort_alphanum(long)
-
-    
 
 def find_missing_fields(path:str, fields:List[str]) -> List[str]:
     """
@@ -190,7 +191,9 @@ def main():
             print_errors(missing, directory, "JSONs With Missing Media")
         # Find long descriptions
         if args.long_description is not None:
-            long = find_long_descriptions(directory, args.long_description)
+            config_paths = mm_config.get_default_config_paths()
+            config = mm_config.get_config(config_paths)
+            long = find_long_descriptions(directory, config, args.long_description)
             print_errors(long, directory, "Media With Long Descriptions")
         # Find missing metadata
         if args.missing_json:
