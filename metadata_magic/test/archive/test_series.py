@@ -2,6 +2,8 @@
 
 import os
 import tempfile
+import shutil
+import metadata_magic.test as mm_test
 import metadata_magic.config as mm_config
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.series as mm_series
@@ -14,55 +16,41 @@ def test_get_default_labels():
     Tests the get_default_labels function.
     """
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Create test files
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "1 Text.txt")), "Text")
-        mm_file_tools.write_json_file(abspath(join(temp_dir, "1 Text.json")), {"title": "Text"})
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "A Text.txt")), "Text")
-        mm_file_tools.write_json_file(abspath(join(temp_dir, "A Text.json")), {"title": "More Text"})
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "10 Image.png")), "Text")
-        mm_file_tools.write_json_file(abspath(join(temp_dir, "10 Image.json")), {"title": "Image"})
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "B Image.png")), "Text")
-        mm_file_tools.write_json_file(abspath(join(temp_dir, "B Image.json")), {"title": "B Image"})
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "unimportant.txt")), "Text")
-        sub_dir = abspath(join(temp_dir, "sub"))
-        os.mkdir(sub_dir)
-        mm_file_tools.write_text_file(abspath(join(sub_dir, "deep.cbz")), "Text")
-        config = mm_config.DEFAULT_CONFIG
-        mm_bulk_archive.archive_all_media(temp_dir, config)
-        assert sorted(os.listdir(temp_dir)) == ["1 Text.epub", "10 Image.cbz",
-                "A Text.epub", "B Image.cbz", "sub", "unimportant.txt"]
-        assert sorted(os.listdir(sub_dir)) == ["deep.cbz"]
-        # Test getting default labels with no sequence information
-        files = mm_series.get_default_labels(temp_dir)
-        assert len(files) == 4
-        assert basename(files[0]["file"]) == "1 Text.epub"
-        assert files[0]["label"] == "1.0"
-        assert basename(files[1]["file"]) == "10 Image.cbz"
-        assert files[1]["label"] == "2.0"
-        assert basename(files[2]["file"]) == "A Text.epub"
-        assert files[2]["label"] == "3.0"
-        assert basename(files[3]["file"]) == "B Image.cbz"
-        assert files[3]["label"] == "4.0"
-        # Test getting default labels with existing sequence information
-        metadata = mm_archive.get_empty_metadata()
-        metadata["cover_id"] = None
-        metadata["series"] = "Thing"
-        metadata["series_number"] = "1.0"
-        mm_archive.update_archive_info(abspath(join(temp_dir, "A Text.epub")), metadata)
-        metadata["series_number"] = "1.25"
-        mm_archive.update_archive_info(abspath(join(temp_dir, "1 Text.epub")), metadata)
-        metadata["series_number"] = "2.456"
-        mm_archive.update_archive_info(abspath(join(temp_dir, "B Image.cbz")), metadata)
-        files = mm_series.get_default_labels(temp_dir)
-        assert len(files) == 4
-        assert basename(files[0]["file"]) == "A Text.epub"
-        assert files[0]["label"] == "1.0"
-        assert basename(files[1]["file"]) == "1 Text.epub"
-        assert files[1]["label"] == "1.25"
-        assert basename(files[2]["file"]) == "B Image.cbz"
-        assert files[2]["label"] == "2.456"
-        assert basename(files[3]["file"]) == "10 Image.cbz"
-        assert files[3]["label"] == "100000.0"
+        # Test getting the default labels based on sequence information
+        series_directory = abspath(join(temp_dir, "series"))
+        shutil.copytree(mm_test.ARCHIVE_SERIES_DIRECTORY, series_directory)
+        labels = mm_series.get_default_labels(series_directory)
+        assert len(labels) == 5
+        assert basename(labels[0]["file"]) == "1.cbz"
+        assert labels[0]["label"] == "1.0"
+        assert basename(labels[1]["file"]) == "10.epub"
+        assert labels[1]["label"] == "1.5"
+        assert basename(labels[2]["file"]) == "2.cbz"
+        assert labels[2]["label"] == "2.0"
+        assert basename(labels[3]["file"]) == "00A.cbz"
+        assert labels[3]["label"] == "100000.0"
+        assert basename(labels[4]["file"]) == "00B.epub"
+        assert labels[4]["label"] == "100001.0"
+        # Remove All Sequence information
+        for file in mm_file_tools.find_files_of_type(temp_dir, [".cbz", ".epub"]):
+            metadata = mm_archive.get_info_from_archive(file)
+            metadata["series"] = None
+            metadata["series_number"] = None
+            metadata["series_total"] = None
+            mm_archive.update_archive_info(file, metadata)
+        # Test getting the default labels based on filename alone
+        labels = mm_series.get_default_labels(series_directory)
+        assert len(labels) == 5
+        assert basename(labels[0]["file"]) == "00A.cbz"
+        assert labels[0]["label"] == "1.0"
+        assert basename(labels[1]["file"]) == "00B.epub"
+        assert labels[1]["label"] == "2.0"
+        assert basename(labels[2]["file"]) == "1.cbz"
+        assert labels[2]["label"] == "3.0"
+        assert basename(labels[3]["file"]) == "2.cbz"
+        assert labels[3]["label"] == "4.0"
+        assert basename(labels[4]["file"]) == "10.epub"
+        assert labels[4]["label"] == "5.0"
 
 def test_label_files():
     """
@@ -143,76 +131,69 @@ def test_write_series():
     """
     Tests the write_series function.
     """
+    # Test writing series information
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Create test files
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "Book.txt")), "Text")
-        mm_file_tools.write_json_file(abspath(join(temp_dir, "Book.json")), {"title": "Book", "writer":"Name"})
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "Comic.jpg")), "Text")
-        mm_file_tools.write_json_file(abspath(join(temp_dir, "Comic.json")), {"title": "Comic", "writer":"Person"})
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "Other.png")), "Text")
-        mm_file_tools.write_json_file(abspath(join(temp_dir, "Other.json")), {"title": "Other", "artist":"Blah"})
-        config = mm_config.DEFAULT_CONFIG
-        mm_bulk_archive.archive_all_media(temp_dir, config)
-        assert sorted(os.listdir(temp_dir)) == ["Book.epub", "Comic.cbz", "Other.cbz"]
-        book_file = abspath(join(temp_dir, "Book.epub"))
-        comic_file = abspath(join(temp_dir, "Comic.cbz"))
-        other_file = abspath(join(temp_dir, "Other.cbz"))
-        # Test writing series info
-        labeled_files = []
-        labeled_files.append({"file":comic_file, "label":"1.0"})
-        labeled_files.append({"file":book_file, "label":"1.5"})
-        labeled_files.append({"file":other_file, "label":"2.0"})
-        mm_series.write_series(labeled_files, "It's a Series!")
-        metadata = mm_archive.get_info_from_archive(book_file)
-        assert metadata["series"] == "It's a Series!"
-        assert metadata["series_number"] == "1.5"
+        series_directory = abspath(join(temp_dir, "series"))
+        shutil.copytree(mm_test.ARCHIVE_SERIES_DIRECTORY, series_directory)
+        labels = mm_series.get_default_labels(series_directory)
+        labels[0]["label"] = "0.0"
+        labels[1]["label"] = "0.5"
+        labels[2]["label"] = "1.0"
+        labels[3]["label"] = "1.25"
+        labels[4]["label"] = "2.0"
+        mm_series.write_series(labels, "Series Test")
+        metadata = mm_archive.get_info_from_archive(abspath(join(series_directory, "1.cbz")))
+        assert metadata["title"] == "CBZ A"
+        assert metadata["series"] == "Series Test"
+        assert metadata["series_number"] == "0.0"
+        assert metadata["series_total"] == "2"
+        metadata = mm_archive.get_info_from_archive(abspath(join(series_directory, "10.epub")))
+        assert metadata["title"] == "EPUB A"
+        assert metadata["series"] == "Series Test"
+        assert metadata["series_number"] == "0.5"
         assert metadata["series_total"] is None
-        assert metadata["title"] == "Book"
-        assert metadata["writers"] == "Name"
-        metadata = mm_archive.get_info_from_archive(comic_file)
-        assert metadata["series"] == "It's a Series!"
+        metadata = mm_archive.get_info_from_archive(abspath(join(series_directory, "2.cbz")))
+        assert metadata["title"] == "CBZ B"
+        assert metadata["series"] == "Series Test"
         assert metadata["series_number"] == "1.0"
         assert metadata["series_total"] == "2"
-        assert metadata["title"] == "Comic"
-        assert metadata["writers"] == "Person"
-        metadata = mm_archive.get_info_from_archive(other_file)
-        assert metadata["series"] == "It's a Series!"
-        assert metadata["series_number"] == "2.0"
+        metadata = mm_archive.get_info_from_archive(abspath(join(series_directory, "00A.cbz")))
+        assert metadata["title"] == "CBZ C"
+        assert metadata["series"] == "Series Test"
+        assert metadata["series_number"] == "1.25"
         assert metadata["series_total"] == "2"
-        assert metadata["title"] == "Other"
-        assert metadata["artists"] == "Blah"
+        metadata = mm_archive.get_info_from_archive(abspath(join(series_directory, "00B.epub")))
+        assert metadata["title"] == "EPUB B"
+        assert metadata["series"] == "Series Test"
+        assert metadata["series_number"] == "2.0"
+        assert metadata["series_total"] is None
 
 def test_write_series_single():
     """
     Tests the write_series_single function.
     """
+    # Test setting a CBZ file as a single archive
+    base_file = abspath(join(mm_test.ARCHIVE_SERIES_DIRECTORY, "00A.cbz"))
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Create test files
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "Book.txt")), "Text")
-        mm_file_tools.write_json_file(abspath(join(temp_dir, "Book.json")), {"title": "Book", "writer":"Name"})
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "Comic.jpg")), "Text")
-        mm_file_tools.write_json_file(abspath(join(temp_dir, "Comic.json")), {"title": "Comic", "writer":"Person"})
-        config = mm_config.DEFAULT_CONFIG
-        mm_bulk_archive.archive_all_media(temp_dir, config)
-        assert sorted(os.listdir(temp_dir)) == ["Book.epub", "Comic.cbz"]
-        book_file = abspath(join(temp_dir, "Book.epub"))
-        comic_file = abspath(join(temp_dir, "Comic.cbz"))
-        # Test setting the series info for epub
-        mm_series.write_series_single(book_file)
-        metadata = mm_archive.get_info_from_archive(book_file)
-        assert metadata["series"] == "Book"
-        assert metadata["series_number"] == "1.0"
-        assert metadata["series_total"] is None
-        assert metadata["title"] == "Book"
-        assert metadata["writers"] == "Name"
-        # Test setting the series info for cbz
-        mm_series.write_series_single(comic_file)
-        metadata = mm_archive.get_info_from_archive(comic_file)
-        assert metadata["series"] == "Comic"
+        cbz_file = abspath(join(temp_dir, "00A.cbz"))
+        shutil.copy(base_file, cbz_file)
+        mm_series.write_series_single(cbz_file)
+        metadata = mm_archive.get_info_from_archive(cbz_file)
+        assert metadata["title"] == "CBZ C"
+        assert metadata["series"] == "CBZ C"
         assert metadata["series_number"] == "1.0"
         assert metadata["series_total"] == "1"
-        assert metadata["title"] == "Comic"
-        assert metadata["writers"] == "Person"
+    # Test setting an EPUB file as a single archive
+    base_file = abspath(join(mm_test.ARCHIVE_SERIES_DIRECTORY, "00B.epub"))
+    with tempfile.TemporaryDirectory() as temp_dir:
+        epub_file = abspath(join(temp_dir, "00B.epub"))
+        shutil.copy(base_file, epub_file)
+        mm_series.write_series_single(epub_file)
+        metadata = mm_archive.get_info_from_archive(epub_file)
+        assert metadata["title"] == "EPUB B"
+        assert metadata["series"] == "EPUB B"
+        assert metadata["series_number"] == "1.0"
+        assert metadata["series_total"] is None
 
 def test_get_series_string():
     """

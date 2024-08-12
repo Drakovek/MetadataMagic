@@ -1,6 +1,7 @@
 import os
 import shutil
 import tempfile
+import metadata_magic.test as mm_test
 import metadata_magic.config as mm_config
 import metadata_magic.archive.epub as mm_epub
 import metadata_magic.file_tools as mm_file_tools
@@ -12,76 +13,66 @@ def test_get_default_chapters():
     """
     Tests the get_default_chapters function.
     """
-    with tempfile.TemporaryDirectory() as temp_dir:
-    # Test getting the default chapter information.
-        sub_dir = abspath(join(temp_dir, "sub"))
-        os.mkdir(sub_dir)
-        mm_file_tools.write_text_file(abspath(join(sub_dir, "sub.txt")), "TEXT")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "[1] 1.txt")), "TEXT")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "[2] 2.html")), "TEXT")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "[3] Thing.png")), "TEXT")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "[4] 4.thing")), "TEXT")
-        chapters = mm_epub.get_default_chapters(temp_dir)
-        assert len(chapters) == 3
-        assert chapters[0]["include"]
-        assert chapters[0]["title"] == "1"
-        assert len(chapters[0]["files"]) == 1
-        assert chapters[0]["files"][0]["id"] == "item0"
-        assert basename(chapters[0]["files"][0]["file"]) == "[1] 1.txt"
-        assert chapters[1]["include"]
-        assert chapters[1]["title"] == "2"
-        assert len(chapters[1]["files"]) == 1
-        assert chapters[1]["files"][0]["id"] == "item1"
-        assert basename(chapters[1]["files"][0]["file"]) == "[2] 2.html"
-        assert chapters[2]["include"]
-        assert chapters[2]["title"] == "Thing"
-        assert len(chapters[2]["files"]) == 1
-        assert chapters[2]["files"][0]["id"] == "item2"
-        assert basename(chapters[2]["files"][0]["file"]) == "[3] Thing.png"
-        # Test getting default chapter information for one text file with a title
-        chapters = mm_epub.get_default_chapters(sub_dir, "Title!")
-        assert len(chapters) == 1
-        assert chapters[0]["include"]
-        assert chapters[0]["title"] == "Title!"
-        assert chapters[0]["files"][0]["id"] == "item0"
-        assert basename(chapters[0]["files"][0]["file"]) == "sub.txt"
+    # Test getting default chapters with a single text file.
+    simple_dir = abspath(join(mm_test.EPUB_INTERNAL_DIRECTORY, "simple"))
+    chapters = mm_epub.get_default_chapters(simple_dir)
+    assert len(chapters) == 1
+    assert chapters[0]["include"]
+    assert chapters[0]["title"] == "text"
+    assert len(chapters[0]["files"]) == 1
+    assert chapters[0]["files"][0]["id"] == "item0"
+    assert basename(chapters[0]["files"][0]["file"]) == "text.txt"
+    # Test getting default chapters with multiple text and image files
+    multiple_dir = abspath(join(mm_test.EPUB_INTERNAL_DIRECTORY, "multiple"))
+    chapters = mm_epub.get_default_chapters(multiple_dir)
+    assert len(chapters) == 4
+    assert chapters[0]["include"]
+    assert chapters[0]["title"] == "Part 1"
+    assert len(chapters[0]["files"]) == 1
+    assert chapters[0]["files"][0]["id"] == "item0"
+    assert basename(chapters[0]["files"][0]["file"]) == "[AA] Part 1.TXT"
+    assert chapters[1]["include"]
+    assert chapters[1]["title"] == "Image 1"
+    assert len(chapters[1]["files"]) == 1
+    assert chapters[1]["files"][0]["id"] == "item1"
+    assert basename(chapters[1]["files"][0]["file"]) == "[BB] Image 1.PNG"
+    assert chapters[2]["include"]
+    assert chapters[2]["title"] == "Part 2"
+    assert len(chapters[2]["files"]) == 1
+    assert chapters[2]["files"][0]["id"] == "item2"
+    assert basename(chapters[2]["files"][0]["file"]) == "[CC] Part 2.htm"
+    assert chapters[3]["include"]
+    assert chapters[3]["title"] == "Image 2"
+    assert len(chapters[3]["files"]) == 1
+    assert chapters[3]["files"][0]["id"] == "item3"
+    assert basename(chapters[3]["files"][0]["file"]) == "[DD] Image 2.jpg"
 
 def test_add_cover_to_chapters():
     """
     Tests the add cover_to_chapters function
     """
+    # Test updating chapters and creating content files
+    simple_dir = abspath(join(mm_test.EPUB_INTERNAL_DIRECTORY, "simple"))
+    chapters = mm_epub.get_default_chapters(simple_dir)
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Get default chapter information
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "TEXT")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "Thing.html")), "TEXT")
-        chapters = mm_epub.get_default_chapters(temp_dir)
+        metadata = {"title":"Title", "writers":"Artist"}
+        chapters = mm_epub.add_cover_to_chapters(chapters, metadata, temp_dir)
         assert len(chapters) == 2
-        # Test adding a cover image to the chapter
-        metadata = {"title":"Some Title", "writers":"Artist Person"}
-        with tempfile.TemporaryDirectory() as image_dir:
-            chapters = mm_epub.add_cover_to_chapters(chapters, metadata, image_dir)
-            assert len(chapters) == 3
-            assert chapters[0]["include"]
-            assert chapters[0]["title"] == "Cover"
-            assert len(chapters[0]["files"]) == 1
-            assert chapters[0]["files"][0]["id"] == "cover"
-            assert basename(chapters[0]["files"][0]["file"]) == "cover_image.jpg"
-            assert abspath(join(chapters[0]["files"][0]["file"], os.pardir)) == image_dir
-            assert exists(chapters[0]["files"][0]["file"])
-            image = Image.open(chapters[0]["files"][0]["file"])
-            assert image.size == (900, 1200)
-            assert chapters[1]["include"]
-            assert chapters[1]["title"] == "1"
-            assert len(chapters[1]["files"]) == 1
-            assert chapters[1]["files"][0]["id"] == "item0"
-            assert basename(chapters[1]["files"][0]["file"]) == "1.txt"
-            assert exists(chapters[1]["files"][0]["file"])
-            assert chapters[2]["include"]
-            assert chapters[2]["title"] == "Thing"
-            assert len(chapters[2]["files"]) == 1
-            assert chapters[2]["files"][0]["id"] == "item1"
-            assert basename(chapters[2]["files"][0]["file"]) == "Thing.html"
-            assert exists(chapters[2]["files"][0]["file"])
+        assert chapters[0]["include"]
+        assert chapters[0]["title"] == "Cover"
+        assert len(chapters[0]["files"]) == 1
+        assert chapters[0]["files"][0]["id"] == "cover"
+        assert basename(chapters[0]["files"][0]["file"]) == "cover_image.jpg"
+        assert abspath(join(chapters[0]["files"][0]["file"], os.pardir)) == temp_dir
+        assert exists(chapters[0]["files"][0]["file"])
+        image = Image.open(chapters[0]["files"][0]["file"])
+        assert image.size == (900, 1200)
+        assert chapters[1]["include"]
+        assert chapters[1]["title"] == "text"
+        assert len(chapters[1]["files"]) == 1
+        assert chapters[1]["files"][0]["id"] == "item0"
+        assert basename(chapters[1]["files"][0]["file"]) == "text.txt"
+        assert exists(chapters[1]["files"][0]["file"])
 
 def test_group_chapters():
     """
@@ -233,216 +224,225 @@ def test_get_chapters_string():
     """
     Tests the get_chapters_string.
     """
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test get the default chapter information.
-        sub_dir = abspath(join(temp_dir, "sub"))
-        os.mkdir(sub_dir)
-        mm_file_tools.write_text_file(abspath(join(sub_dir, "sub.txt")), "TEXT")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "TEXT")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "2.htm")), "TEXT")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "3.txt")), "TEXT")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "4.thing")), "TEXT")
-        chapters = mm_epub.get_default_chapters(temp_dir)
-        # Test getting string from default chapter info
-        chapters_string = mm_epub.get_chapters_string(chapters)
-        compare = "ENTRY     TITLE    FILES"
-        compare = f"{compare}\n------------------------"
-        compare = f"{compare}\n001       1        1.txt"
-        compare = f"{compare}\n002       2        2.htm"
-        compare = f"{compare}\n003       3        3.txt"
-        assert chapters_string == compare
-        # Test getting string with modified titles
-        chapters[0]["title"] = "Cover Image"
-        chapters[1]["title"] = "Chapter 01"
-        chapters[2]["title"] = "Epilogue"
-        chapters_string = mm_epub.get_chapters_string(chapters)
-        compare = "ENTRY     TITLE          FILES"
-        compare = f"{compare}\n------------------------------"
-        compare = f"{compare}\n001       Cover Image    1.txt"
-        compare = f"{compare}\n002       Chapter 01     2.htm"
-        compare = f"{compare}\n003       Epilogue       3.txt"
-        assert chapters_string == compare
-        # Test getting string with some non-included chapters
-        chapters[1]["include"] = False
-        chapters[2]["include"] = False
-        chapters_string = mm_epub.get_chapters_string(chapters)
-        compare = "ENTRY     TITLE          FILES"
-        compare = f"{compare}\n------------------------------"
-        compare = f"{compare}\n001       Cover Image    1.txt"
-        compare = f"{compare}\n002*      Chapter 01     2.htm"
-        compare = f"{compare}\n003*      Epilogue       3.txt"
-        assert chapters_string == compare
-        # Test getting string with grouped files
-        files = chapters[1]["files"]
-        files.append({"id":"aaa", "file":"a.png"})
-        chapters[1]["files"] = files
-        chapters_string = mm_epub.get_chapters_string(chapters)
-        compare = "ENTRY     TITLE          FILES       "
-        compare = f"{compare}\n-------------------------------------"
-        compare = f"{compare}\n001       Cover Image    1.txt       "
-        compare = f"{compare}\n002*      Chapter 01     2.htm, a.png"
-        compare = f"{compare}\n003*      Epilogue       3.txt       "
-        assert chapters_string == compare
+    # Test getting the string from default chapter information
+    multiple_dir = abspath(join(mm_test.EPUB_INTERNAL_DIRECTORY, "multiple"))
+    chapters = mm_epub.get_default_chapters(multiple_dir)
+    chapters_string = mm_epub.get_chapters_string(chapters)
+    compare = "ENTRY     TITLE      FILES           "
+    compare = f"{compare}\n-------------------------------------"
+    compare = f"{compare}\n001       Part 1     [AA] Part 1.TXT "
+    compare = f"{compare}\n002       Image 1    [BB] Image 1.PNG"
+    compare = f"{compare}\n003       Part 2     [CC] Part 2.htm "
+    compare = f"{compare}\n004       Image 2    [DD] Image 2.jpg"
+    assert chapters_string == compare
+    # Test getting chapter string with modified chapter titles
+    chapters[0]["title"] = "Intro"
+    chapters[1]["title"] = "Cover"
+    chapters[2]["title"] = "Story"
+    chapters[3]["title"] = "Epilogue"
+    chapters_string = mm_epub.get_chapters_string(chapters)
+    compare = "ENTRY     TITLE       FILES           "
+    compare = f"{compare}\n--------------------------------------"
+    compare = f"{compare}\n001       Intro       [AA] Part 1.TXT "
+    compare = f"{compare}\n002       Cover       [BB] Image 1.PNG"
+    compare = f"{compare}\n003       Story       [CC] Part 2.htm "
+    compare = f"{compare}\n004       Epilogue    [DD] Image 2.jpg"
+    assert chapters_string == compare
+    # Test getting chapter string when not all chapters are included
+    chapters[1]["include"] = False
+    chapters[2]["include"] = False
+    chapters_string = mm_epub.get_chapters_string(chapters)
+    compare = "ENTRY     TITLE       FILES           "
+    compare = f"{compare}\n--------------------------------------"
+    compare = f"{compare}\n001       Intro       [AA] Part 1.TXT "
+    compare = f"{compare}\n002*      Cover       [BB] Image 1.PNG"
+    compare = f"{compare}\n003*      Story       [CC] Part 2.htm "
+    compare = f"{compare}\n004       Epilogue    [DD] Image 2.jpg"
+    assert chapters_string == compare
+    # Test getting chapter string if some of the chapters are grouped
+    chapters = mm_epub.get_default_chapters(multiple_dir)
+    chapters = mm_epub.group_chapters(chapters, [0,1])
+    chapters = mm_epub.group_chapters(chapters, [1,2])
+    chapters[1]["include"] = False
+    chapters_string = mm_epub.get_chapters_string(chapters)
+    print(chapters_string)
+    compare = "ENTRY     TITLE     FILES                            "
+    compare = f"{compare}\n-----------------------------------------------------"
+    compare = f"{compare}\n001       Part 1    [AA] Part 1.TXT, [BB] Image 1.PNG"
+    compare = f"{compare}\n002*      Part 2    [CC] Part 2.htm, [DD] Image 2.jpg"
+    assert chapters_string == compare
 
 def test_create_content_files():
     """
     Tests the create_content_files function.
     """
+    # Test updating chapters and creating content files
+    multiple_dir = abspath(join(mm_test.EPUB_INTERNAL_DIRECTORY, "multiple"))
+    chapters = mm_epub.get_default_chapters(multiple_dir)
     with tempfile.TemporaryDirectory() as temp_dir:
-        with tempfile.TemporaryDirectory() as output_dir:
-            # Create the default chapters list
-            mm_file_tools.write_text_file(abspath(join(temp_dir, "[01] 1.txt")), "Here's some text!\n\nAnd More!")
-            mm_file_tools.write_text_file(abspath(join(temp_dir, "[02] 2.html")), "<html><body><p>Word<p><p>Things!</p></body></html>")
-            image_file = abspath(join(temp_dir, "[03] 3's.jpg"))
-            image = Image.new("RGB", size=(500, 500), color="#ff0000")
-            image.save(image_file)
-            chapters = mm_epub.get_default_chapters(temp_dir)
-            # Test creating the content files from the given chapters
-            chapters[1]["title"] = "Chapter 2"
-            chapters[2]["title"] = "Final's"
-            chapters = mm_epub.create_content_files(chapters, output_dir)
-            assert len(chapters) == 3
-            assert chapters[0]["include"]
-            assert chapters[0]["id"] == "item0"
-            assert chapters[0]["title"] == "1"
-            assert chapters[0]["file"] == "content/[01] 1.xhtml"
-            assert chapters[1]["file"] == "content/[02] 2.xhtml"
-            assert chapters[2]["file"] == "content/[03] 3's.xhtml"
-            assert sorted(os.listdir(output_dir)) == ["content", "images"]
-            image_dir = abspath(join(output_dir, "images"))
-            assert sorted(os.listdir(image_dir)) == ["image1.jpg"]
-            content_dir = abspath(join(output_dir, "content"))
-            assert sorted(os.listdir(content_dir)) == ["[01] 1.xhtml", "[02] 2.xhtml", "[03] 3's.xhtml"]
-            text = mm_file_tools.read_text_file(abspath(join(content_dir, "[01] 1.xhtml")))
-            compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-            compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
-            compare = f"{compare}\n    <head>"
-            compare = f"{compare}\n        <title>1</title>"
-            compare = f"{compare}\n        <meta charset=\"utf-8\" />"
-            compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
-            compare = f"{compare}\n    </head>"
-            compare = f"{compare}\n    <body>"
-            compare = f"{compare}\n        <p>Here's some text!</p>"
-            compare = f"{compare}\n        <p>And More!</p>"
-            compare = f"{compare}\n    </body>"
-            compare = f"{compare}\n</html>"
-            assert text == compare
-            # Test that HTML based XHTML was created correctly
-            text = mm_file_tools.read_text_file(abspath(join(content_dir, "[02] 2.xhtml")))
-            compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-            compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
-            compare = f"{compare}\n    <head>"
-            compare = f"{compare}\n        <title>Chapter 2</title>"
-            compare = f"{compare}\n        <meta charset=\"utf-8\" />"
-            compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
-            compare = f"{compare}\n    </head>"
-            compare = f"{compare}\n    <body>"
-            compare = f"{compare}\n        <p>Word</p>"
-            compare = f"{compare}\n        <p>Things!</p>"
-            compare = f"{compare}\n    </body>"
-            compare = f"{compare}\n</html>"
-            assert text == compare
-            # Test that image XHTML was created correctly
-            text = mm_file_tools.read_text_file(abspath(join(content_dir, "[03] 3's.xhtml"))) 
-            compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-            compare = f"{compare}\n<html xmlns:svgns=\"http://www.w3.org/2000/svg\" "
-            compare = f"{compare}xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns=\"http://www.w3.org/1999/xhtml\">"
-            compare = f"{compare}\n    <head>"
-            compare = f"{compare}\n        <title>Final's</title>"
-            compare = f"{compare}\n        <meta charset=\"utf-8\" />"
-            compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
-            compare = f"{compare}\n    </head>"
-            compare = f"{compare}\n    <body>"
-            compare = f"{compare}\n        <div id=\"full-image-container\">"
-            compare = f"{compare}\n            <svgns:svg width=\"100%\" height=\"100%\" "
-            compare = f"{compare}viewBox=\"0 0 500 500\" preserveAspectRatio=\"xMidYMid meet\" version=\"1.1\">"
-            compare = f"{compare}\n                <svgns:title>Final's</svgns:title>"
-            compare = f"{compare}\n                <svgns:image xlink:href=\"../images/image1.jpg\" width=\"500\" height=\"500\" />"
-            compare = f"{compare}\n            </svgns:svg>"
-            compare = f"{compare}\n        </div>"
-            compare = f"{compare}\n    </body>"
-            compare = f"{compare}\n</html>"
-            assert text == compare
+        chapters[1]["title"] = "Vertical"
+        chapters[2]["title"] = "Chapter 2"
+        chapters = mm_epub.create_content_files(chapters, temp_dir)
+        assert len(chapters) == 4
+        assert chapters[0]["include"]
+        assert chapters[0]["id"] == "item0"
+        assert chapters[0]["title"] == "Part 1"
+        assert chapters[1]["title"] == "Vertical"
+        assert chapters[2]["title"] == "Chapter 2"
+        assert chapters[3]["title"] == "Image 2"
+        assert chapters[0]["file"] == "content/[AA] Part 1.xhtml"
+        assert chapters[1]["file"] == "content/[BB] Image 1.xhtml"
+        assert chapters[2]["file"] == "content/[CC] Part 2.xhtml"
+        assert chapters[3]["file"] == "content/[DD] Image 2.xhtml"
+        # Test that the files were created
+        assert sorted(os.listdir(temp_dir)) == ["content", "images"]
+        image_dir = abspath(join(temp_dir, "images"))
+        assert sorted(os.listdir(image_dir)) == ["image1.PNG", "image2.jpg"]
+        content_dir = abspath(join(temp_dir, "content"))
+        files = sorted(os.listdir(content_dir))
+        assert len(files) == 4
+        assert  files[0] == "[AA] Part 1.xhtml"
+        assert  files[1] == "[BB] Image 1.xhtml"
+        assert  files[2] == "[CC] Part 2.xhtml"
+        assert  files[3] == "[DD] Image 2.xhtml"
+        # Test the XHTML generated from plain text
+        contents = mm_file_tools.read_text_file(abspath(join(content_dir, "[AA] Part 1.xhtml")))
+        compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
+        compare = f"{compare}\n    <head>"
+        compare = f"{compare}\n        <title>Part 1</title>"
+        compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+        compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
+        compare = f"{compare}\n    </head>"
+        compare = f"{compare}\n    <body>"
+        compare = f"{compare}\n        <p>This is line 1.</p>"
+        compare = f"{compare}\n        <p>&amp; This is line 2!</p>"
+        compare = f"{compare}\n    </body>"
+        compare = f"{compare}\n</html>"
+        assert contents == compare
+        # Test the XHTML generated from HTML
+        contents = mm_file_tools.read_text_file(abspath(join(content_dir, "[CC] Part 2.xhtml")))
+        compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
+        compare = f"{compare}\n    <head>"
+        compare = f"{compare}\n        <title>Chapter 2</title>"
+        compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+        compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
+        compare = f"{compare}\n    </head>"
+        compare = f"{compare}\n    <body>"
+        compare = f"{compare}\n        <p>This is paragraph 1</p>"
+        compare = f"{compare}\n        <p>&amp; this is paragraph 2!</p>"
+        compare = f"{compare}\n    </body>"
+        compare = f"{compare}\n</html>"
+        assert contents == compare
+        # Test the XHTML generated from images
+        contents = mm_file_tools.read_text_file(abspath(join(content_dir, "[BB] Image 1.xhtml")))
+        compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        compare = f"{compare}\n<html xmlns:svgns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns=\"http://www.w3.org/1999/xhtml\">"
+        compare = f"{compare}\n    <head>"
+        compare = f"{compare}\n        <title>Vertical</title>"
+        compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+        compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
+        compare = f"{compare}\n    </head>"
+        compare = f"{compare}\n    <body>"
+        compare = f"{compare}\n        <div id=\"full-image-container\">"
+        compare = f"{compare}\n            <svgns:svg width=\"100%\" height=\"100%\" viewBox=\"0 0 20 100\" preserveAspectRatio=\"xMidYMid meet\" version=\"1.1\">"
+        compare = f"{compare}\n                <svgns:title>Vertical</svgns:title>"
+        compare = f"{compare}\n                <svgns:image xlink:href=\"../images/image1.PNG\" width=\"20\" height=\"100\" />"
+        compare = f"{compare}\n            </svgns:svg>"
+        compare = f"{compare}\n        </div>"
+        compare = f"{compare}\n    </body>"
+        compare = f"{compare}\n</html>"
+        assert contents == compare
+        contents = mm_file_tools.read_text_file(abspath(join(content_dir, "[DD] Image 2.xhtml")))
+        compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        compare = f"{compare}\n<html xmlns:svgns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns=\"http://www.w3.org/1999/xhtml\">"
+        compare = f"{compare}\n    <head>"
+        compare = f"{compare}\n        <title>Image 2</title>"
+        compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+        compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
+        compare = f"{compare}\n    </head>"
+        compare = f"{compare}\n    <body>"
+        compare = f"{compare}\n        <div id=\"full-image-container\">"
+        compare = f"{compare}\n            <svgns:svg width=\"100%\" height=\"100%\" viewBox=\"0 0 200 30\" preserveAspectRatio=\"xMidYMid meet\" version=\"1.1\">"
+        compare = f"{compare}\n                <svgns:title>Image 2</svgns:title>"
+        compare = f"{compare}\n                <svgns:image xlink:href=\"../images/image2.jpg\" width=\"200\" height=\"30\" />"
+        compare = f"{compare}\n            </svgns:svg>"
+        compare = f"{compare}\n        </div>"
+        compare = f"{compare}\n    </body>"
+        compare = f"{compare}\n</html>"
+        assert contents == compare
+    # Test creating content files while chapters are grouped
+    multiple_dir = abspath(join(mm_test.EPUB_INTERNAL_DIRECTORY, "multiple"))
+    chapters = mm_epub.get_default_chapters(multiple_dir)
+    chapters = mm_epub.group_chapters(chapters, [0,1,2,3])
     with tempfile.TemporaryDirectory() as temp_dir:
-        with tempfile.TemporaryDirectory() as output_dir:
-            # Test if chapters are grouped
-            chapters = mm_epub.get_default_chapters(temp_dir)
-            text_file = abspath(join(temp_dir, "A.txt"))
-            html_file = abspath(join(temp_dir, "C.html"))
-            image_file = abspath(join(temp_dir, "B.jpg"))
-            mm_file_tools.write_text_file(text_file, "Some text here!")
-            mm_file_tools.write_text_file(html_file, "<html><body><p>Different</p><p>Thing</p></body></html>")
-            image = Image.new("RGB", size=(100, 300), color="#ff0000")
-            image.save(image_file)
-            assert exists(text_file)
-            assert exists(html_file)
-            assert exists(image_file)
-            chapters = mm_epub.get_default_chapters(temp_dir)
-            chapters = mm_epub.group_chapters(chapters, [0,1,2])
-            chapters[0]["title"] = "Grouped"
-            chapters = mm_epub.create_content_files(chapters, output_dir)
-            assert len(chapters) == 1
-            assert chapters[0]["include"]
-            assert chapters[0]["id"] == "item0"
-            assert chapters[0]["title"] == "Grouped"
-            assert chapters[0]["file"] == "content/A.xhtml"
-            content_dir = abspath(join(output_dir, "content"))
-            assert sorted(os.listdir(content_dir)) == ["A.xhtml"]
-            text = mm_file_tools.read_text_file(abspath(join(content_dir, "A.xhtml")))
-            compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-            compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
-            compare = f"{compare}\n    <head>"
-            compare = f"{compare}\n        <title>Grouped</title>"
-            compare = f"{compare}\n        <meta charset=\"utf-8\" />"
-            compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
-            compare = f"{compare}\n    </head>"
-            compare = f"{compare}\n    <body>"
-            compare = f"{compare}\n        <p>Some text here!</p>"
-            compare = f"{compare}\n        <div>"
-            compare = f"{compare}\n            <img src=\"../images/image1.jpg\" alt=\"B\" width=\"100\" height=\"300\" />"
-            compare = f"{compare}\n        </div>"
-            compare = f"{compare}\n        <p>Different</p>"
-            compare = f"{compare}\n        <p>Thing</p>"
-            compare = f"{compare}\n    </body>"
-            compare = f"{compare}\n</html>"
-            assert text == compare
+        chapters[0]["title"] = "Grouped"
+        chapters = mm_epub.create_content_files(chapters, temp_dir)
+        assert len(chapters) == 1
+        assert chapters[0]["include"]
+        assert chapters[0]["id"] == "item0"
+        assert chapters[0]["title"] == "Grouped"
+        assert chapters[0]["file"] == "content/[AA] Part 1.xhtml"
+        # Test that the files were created
+        assert sorted(os.listdir(temp_dir)) == ["content", "images"]
+        image_dir = abspath(join(temp_dir, "images"))
+        assert sorted(os.listdir(image_dir)) == ["image1.PNG", "image2.jpg"]
+        content_dir = abspath(join(temp_dir, "content"))
+        assert os.listdir(content_dir) == ["[AA] Part 1.xhtml"]
+        # Test the XHTML from combined sources
+        contents = mm_file_tools.read_text_file(abspath(join(content_dir, "[AA] Part 1.xhtml")))
+        compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
+        compare = f"{compare}\n    <head>"
+        compare = f"{compare}\n        <title>Grouped</title>"
+        compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+        compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
+        compare = f"{compare}\n    </head>"
+        compare = f"{compare}\n    <body>"
+        compare = f"{compare}\n        <p>This is line 1.</p>"
+        compare = f"{compare}\n        <p>&amp; This is line 2!</p>"
+        compare = f"{compare}\n        <div>"
+        compare = f"{compare}\n            <img src=\"../images/image1.PNG\" alt=\"Image 1\" width=\"20\" height=\"100\" />"
+        compare = f"{compare}\n        </div>"
+        compare = f"{compare}\n        <p>This is paragraph 1</p>"
+        compare = f"{compare}\n        <p>&amp; this is paragraph 2!</p>"
+        compare = f"{compare}\n        <div>"
+        compare = f"{compare}\n            <img src=\"../images/image2.jpg\" alt=\"Image 2\" width=\"200\" height=\"30\" />"
+        compare = f"{compare}\n        </div>"
+        compare = f"{compare}\n    </body>"
+        compare = f"{compare}\n</html>"
+        assert contents == compare
 
 def test_copy_original_files():
     """
     Tests the copy_original_files function.
     """
+    # Test copying all files from a directory to the given directory, including subdirectories
     with tempfile.TemporaryDirectory() as temp_dir:
-        with tempfile.TemporaryDirectory() as output_dir:
-            # Test copying files originating from the given directory
-            mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "BLAH")
-            mm_file_tools.write_text_file(abspath(join(temp_dir, "2.png")), "BLAH")
-            mm_file_tools.write_text_file(abspath(join(temp_dir, "3.json")), "BLAH")
-            mm_epub.copy_original_files(temp_dir, output_dir)
-            assert os.listdir(output_dir) == ["original"]
-            original_dir = abspath(join(output_dir, "original"))
-            assert sorted(os.listdir(original_dir)) == ["1.txt", "2.png", "3.json"]
-        with tempfile.TemporaryDirectory() as output_dir:
-            # Test copying files from a designated "original" directory
-            sub_dir = abspath(join(temp_dir, "Original"))
-            os.mkdir(sub_dir)
-            mm_file_tools.write_text_file(abspath(join(sub_dir, "other.txt")), "BLAH")
-            mm_file_tools.write_text_file(abspath(join(sub_dir, "things.png")), "BLAH")
-            mm_epub.copy_original_files(temp_dir, output_dir)
-            assert os.listdir(output_dir) == ["original"]
-            original_dir = abspath(join(output_dir, "original"))
-            assert sorted(os.listdir(original_dir)) == ["other.txt", "things.png"]
-        with tempfile.TemporaryDirectory() as output_dir:
-            # Test copying files included in subdirectories
-            sub_dir = abspath(join(sub_dir, "more"))
-            os.mkdir(sub_dir)
-            mm_file_tools.write_text_file(abspath(join(sub_dir, "yet.txt")), "BLAH")
-            mm_file_tools.write_text_file(abspath(join(sub_dir, "more.png")), "BLAH")
-            mm_epub.copy_original_files(temp_dir, output_dir)
-            assert os.listdir(output_dir) == ["original"]
-            original_dir = abspath(join(output_dir, "original"))
-            assert sorted(os.listdir(original_dir)) == ["more", "other.txt", "things.png"]
-            new_sub = abspath(join(original_dir, "more"))
-            assert sorted(os.listdir(new_sub)) == ["more.png", "yet.txt"]
+        base_dir = abspath(join(mm_test.EPUB_INTERNAL_DIRECTORY, "multiple"))
+        mm_epub.copy_original_files(base_dir, temp_dir)
+        assert os.listdir(temp_dir) == ["original"]
+        original_dir = abspath(join(temp_dir, "original"))
+        files = sorted(os.listdir(original_dir))
+        assert len(files) == 10
+        assert files[0] == ".test"
+        assert files[1] == "[AA] Part 1.TXT"
+        assert files[2] == "[AA] Part 1.json"
+        assert files[3] == "[BB] Image 1.PNG"
+        assert files[4] == "[BB] Image 1.json"
+        assert files[5] == "[CC] Part 2.htm"
+        assert files[6] == "[CC] Part 2.json"
+        assert files[7] == "[DD] Image 2.jpg"
+        assert files[8] == "[DD] Image 2.json"
+        assert files[9] == "ignore"
+        assert os.listdir(abspath(join(original_dir, "ignore"))) == ["sub.txt"]
+    # Test copying all files from a designated directory labeled as "original"
+    with tempfile.TemporaryDirectory() as temp_dir:
+        base_dir = abspath(join(mm_test.EPUB_INTERNAL_DIRECTORY, "simple"))
+        mm_epub.copy_original_files(base_dir, temp_dir)
+        assert os.listdir(temp_dir) == ["original"]
+        assert os.listdir(abspath(join(temp_dir, "original"))) == ["Original.pdf"]
     
 def test_create_style_file():
     """
@@ -480,159 +480,163 @@ def test_create_nav_file():
     """
     Test the create_nav_file function.
     """
+    # Test Creating a nav file
+    multiple_dir = abspath(join(mm_test.EPUB_INTERNAL_DIRECTORY, "multiple"))
+    chapters = mm_epub.get_default_chapters(multiple_dir)
     with tempfile.TemporaryDirectory() as temp_dir:
-        with tempfile.TemporaryDirectory() as output_dir:
-            # Create content files to list in the contents
-            mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "Here's some text!")
-            mm_file_tools.write_text_file(abspath(join(temp_dir, "2.htm")), "And")
-            mm_file_tools.write_text_file(abspath(join(temp_dir, "3.txt")), "Stuff")
-            chapters = mm_epub.get_default_chapters(temp_dir)
-            chapters = mm_epub.create_content_files(chapters, output_dir)
-            # Test creating the nav file
-            mm_epub.create_nav_file(chapters, "Title!", output_dir)
-            assert sorted(os.listdir(output_dir)) == ["content", "images", "nav.xhtml"]
-            nav_file = abspath(join(output_dir, "nav.xhtml"))
-            nav_contents = mm_file_tools.read_text_file(nav_file)
-            compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-            compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\" "
-            compare = f"{compare}xmlns:epub=\"http://www.idpf.org/2007/ops\" lang=\"en\" xml:lang=\"en\">"
-            compare = f"{compare}\n    <head>"
-            compare = f"{compare}\n        <title>Title!</title>"
-            compare = f"{compare}\n    </head>"
-            compare = f"{compare}\n    <body>"
-            compare = f"{compare}\n        <nav epub:type=\"toc\" id=\"id\" role=\"doc-toc\">"
-            compare = f"{compare}\n            <h2>Title!</h2>"
-            compare = f"{compare}\n            <ol>"
-            compare = f"{compare}\n                <il>"
-            compare = f"{compare}\n                    <a href=\"content/1.xhtml\">1</a>"
-            compare = f"{compare}\n                </il>"
-            compare = f"{compare}\n                <il>"
-            compare = f"{compare}\n                    <a href=\"content/2.xhtml\">2</a>"
-            compare = f"{compare}\n                </il>"
-            compare = f"{compare}\n                <il>"
-            compare = f"{compare}\n                    <a href=\"content/3.xhtml\">3</a>"
-            compare = f"{compare}\n                </il>"
-            compare = f"{compare}\n            </ol>"
-            compare = f"{compare}\n        </nav>"
-            compare = f"{compare}\n    </body>"
-            compare = f"{compare}\n</html>"
-            assert nav_contents == compare
-            # Test not including chapters
-            chapters[0]["title"] = "Cover"
-            chapters[1]["include"] = False
-            chapters[2]["title"] = "Chapter 2"
-            mm_epub.create_nav_file(chapters, "Not the Same", output_dir)
-            assert sorted(os.listdir(output_dir)) == ["content", "images", "nav.xhtml"]
-            nav_file = abspath(join(output_dir, "nav.xhtml"))
-            nav_contents = mm_file_tools.read_text_file(nav_file)
-            compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-            compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\" "
-            compare = f"{compare}xmlns:epub=\"http://www.idpf.org/2007/ops\" lang=\"en\" xml:lang=\"en\">"
-            compare = f"{compare}\n    <head>"
-            compare = f"{compare}\n        <title>Not the Same</title>"
-            compare = f"{compare}\n    </head>"
-            compare = f"{compare}\n    <body>"
-            compare = f"{compare}\n        <nav epub:type=\"toc\" id=\"id\" role=\"doc-toc\">"
-            compare = f"{compare}\n            <h2>Not the Same</h2>"
-            compare = f"{compare}\n            <ol>"
-            compare = f"{compare}\n                <il>"
-            compare = f"{compare}\n                    <a href=\"content/1.xhtml\">Cover</a>"
-            compare = f"{compare}\n                </il>"
-            compare = f"{compare}\n                <il>"
-            compare = f"{compare}\n                    <a href=\"content/3.xhtml\">Chapter 2</a>"
-            compare = f"{compare}\n                </il>"
-            compare = f"{compare}\n            </ol>"
-            compare = f"{compare}\n        </nav>"
-            compare = f"{compare}\n    </body>"
-            compare = f"{compare}\n</html>"
-            assert nav_contents == compare
+        chapters = mm_epub.create_content_files(chapters, temp_dir)
+        mm_epub.create_nav_file(chapters, "Title!", temp_dir)
+        assert sorted(os.listdir(temp_dir)) == ["content", "images", "nav.xhtml"]
+        nav_file = abspath(join(temp_dir, "nav.xhtml"))
+        contents = mm_file_tools.read_text_file(nav_file)
+        compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\" xmlns:epub=\"http://www.idpf.org/2007/ops\" lang=\"en\" xml:lang=\"en\">"
+        compare = f"{compare}\n    <head>"
+        compare = f"{compare}\n        <title>Title!</title>"
+        compare = f"{compare}\n    </head>"
+        compare = f"{compare}\n    <body>"
+        compare = f"{compare}\n        <nav epub:type=\"toc\" id=\"id\" role=\"doc-toc\">"
+        compare = f"{compare}\n            <h2>Title!</h2>"
+        compare = f"{compare}\n            <ol>"
+        compare = f"{compare}\n                <il>"
+        compare = f"{compare}\n                    <a href=\"content/[AA] Part 1.xhtml\">Part 1</a>"
+        compare = f"{compare}\n                </il>"
+        compare = f"{compare}\n                <il>"
+        compare = f"{compare}\n                    <a href=\"content/[BB] Image 1.xhtml\">Image 1</a>"
+        compare = f"{compare}\n                </il>"
+        compare = f"{compare}\n                <il>"
+        compare = f"{compare}\n                    <a href=\"content/[CC] Part 2.xhtml\">Part 2</a>"
+        compare = f"{compare}\n                </il>"
+        compare = f"{compare}\n                <il>"
+        compare = f"{compare}\n                    <a href=\"content/[DD] Image 2.xhtml\">Image 2</a>"
+        compare = f"{compare}\n                </il>"
+        compare = f"{compare}\n            </ol>"
+        compare = f"{compare}\n        </nav>"
+        compare = f"{compare}\n    </body>"
+        compare = f"{compare}\n</html>"
+        assert contents == compare
+    # Test if not all chapters are listed as included
+    chapters = mm_epub.get_default_chapters(multiple_dir)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        chapters = mm_epub.create_content_files(chapters, temp_dir)
+        chapters[0]["title"] = "Start"
+        chapters[1]["include"] = False
+        chapters[2]["include"] = False
+        mm_epub.create_nav_file(chapters, "Grouped", temp_dir)
+        assert sorted(os.listdir(temp_dir)) == ["content", "images", "nav.xhtml"]
+        nav_file = abspath(join(temp_dir, "nav.xhtml"))
+        contents = mm_file_tools.read_text_file(nav_file)
+        compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\" xmlns:epub=\"http://www.idpf.org/2007/ops\" lang=\"en\" xml:lang=\"en\">"
+        compare = f"{compare}\n    <head>"
+        compare = f"{compare}\n        <title>Grouped</title>"
+        compare = f"{compare}\n    </head>"
+        compare = f"{compare}\n    <body>"
+        compare = f"{compare}\n        <nav epub:type=\"toc\" id=\"id\" role=\"doc-toc\">"
+        compare = f"{compare}\n            <h2>Grouped</h2>"
+        compare = f"{compare}\n            <ol>"
+        compare = f"{compare}\n                <il>"
+        compare = f"{compare}\n                    <a href=\"content/[AA] Part 1.xhtml\">Start</a>"
+        compare = f"{compare}\n                </il>"
+        compare = f"{compare}\n                <il>"
+        compare = f"{compare}\n                    <a href=\"content/[DD] Image 2.xhtml\">Image 2</a>"
+        compare = f"{compare}\n                </il>"
+        compare = f"{compare}\n            </ol>"
+        compare = f"{compare}\n        </nav>"
+        compare = f"{compare}\n    </body>"
+        compare = f"{compare}\n</html>"
+        assert contents == compare
 
 def test_create_ncx_file():
     """
     Tests the create_ncx_file function.
     """
+    # Test Creating a nav file
+    multiple_dir = abspath(join(mm_test.EPUB_INTERNAL_DIRECTORY, "multiple"))
+    chapters = mm_epub.get_default_chapters(multiple_dir)
     with tempfile.TemporaryDirectory() as temp_dir:
-        with tempfile.TemporaryDirectory() as output_dir:
-            # Create content files to list in the contents
-            mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "Here's some text!")
-            mm_file_tools.write_text_file(abspath(join(temp_dir, "2.html")), "And")
-            mm_file_tools.write_text_file(abspath(join(temp_dir, "3.txt")), "Stuff")
-            chapters = mm_epub.get_default_chapters(temp_dir)
-            chapters = mm_epub.create_content_files(chapters, output_dir)
-            # Test creating the nav file
-            mm_epub.create_ncx_file(chapters, "Title!", "/page/url/", output_dir)
-            assert sorted(os.listdir(output_dir)) == ["content", "images", "toc.ncx"]
-            ncx_file = abspath(join(output_dir, "toc.ncx"))
-            ncx_contents = mm_file_tools.read_text_file(ncx_file)
-            compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-            compare = f"{compare}\n<ncx xmlns=\"http://www.daisy.org/z3986/2005/ncx/\" version=\"2005-1\">"
-            compare = f"{compare}\n    <head>"
-            compare = f"{compare}\n        <meta name=\"dtb:uid\" content=\"/page/url/\" />"
-            compare = f"{compare}\n        <meta name=\"dtb:depth\" content=\"1\" />"
-            compare = f"{compare}\n        <meta name=\"dtb:totalPageCount\" content=\"0\" />"
-            compare = f"{compare}\n        <meta name=\"dtb:maxPageNumber\" content=\"0\" />"
-            compare = f"{compare}\n    </head>"
-            compare = f"{compare}\n    <docTitle>"
-            compare = f"{compare}\n        <text>Title!</text>"
-            compare = f"{compare}\n    </docTitle>"
-            compare = f"{compare}\n    <navMap>"
-            compare = f"{compare}\n        <navPoint id=\"item0\">"
-            compare = f"{compare}\n            <navLabel>"
-            compare = f"{compare}\n                <text>1</text>"
-            compare = f"{compare}\n            </navLabel>"
-            compare = f"{compare}\n            <content src=\"content/1.xhtml\" />"
-            compare = f"{compare}\n        </navPoint>"
-            compare = f"{compare}\n        <navPoint id=\"item1\">"
-            compare = f"{compare}\n            <navLabel>"
-            compare = f"{compare}\n                <text>2</text>"
-            compare = f"{compare}\n            </navLabel>"
-            compare = f"{compare}\n            <content src=\"content/2.xhtml\" />"
-            compare = f"{compare}\n        </navPoint>"
-            compare = f"{compare}\n        <navPoint id=\"item2\">"
-            compare = f"{compare}\n            <navLabel>"
-            compare = f"{compare}\n                <text>3</text>"
-            compare = f"{compare}\n            </navLabel>"
-            compare = f"{compare}\n            <content src=\"content/3.xhtml\" />"
-            compare = f"{compare}\n        </navPoint>"
-            compare = f"{compare}\n    </navMap>"
-            compare = f"{compare}\n</ncx>"
-            print(ncx_contents)
-            assert ncx_contents == compare
-            # Test not including chapters
-            chapters[0]["title"] = "Cover"
-            chapters[1]["include"] = False
-            chapters[2]["title"] = "Chapter 2"
-            mm_epub.create_ncx_file(chapters, "Not the Same", None, output_dir)
-            assert sorted(os.listdir(output_dir)) == ["content", "images", "toc.ncx"]
-            ncx_file = abspath(join(output_dir, "toc.ncx"))
-            ncx_contents = mm_file_tools.read_text_file(ncx_file)
-            compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-            compare = f"{compare}\n<ncx xmlns=\"http://www.daisy.org/z3986/2005/ncx/\" version=\"2005-1\">"
-            compare = f"{compare}\n    <head>"
-            compare = f"{compare}\n        <meta name=\"dtb:uid\" content=\"Not the Same\" />"
-            compare = f"{compare}\n        <meta name=\"dtb:depth\" content=\"1\" />"
-            compare = f"{compare}\n        <meta name=\"dtb:totalPageCount\" content=\"0\" />"
-            compare = f"{compare}\n        <meta name=\"dtb:maxPageNumber\" content=\"0\" />"
-            compare = f"{compare}\n    </head>"
-            compare = f"{compare}\n    <docTitle>"
-            compare = f"{compare}\n        <text>Not the Same</text>"
-            compare = f"{compare}\n    </docTitle>"
-            compare = f"{compare}\n    <navMap>"
-            compare = f"{compare}\n        <navPoint id=\"item0\">"
-            compare = f"{compare}\n            <navLabel>"
-            compare = f"{compare}\n                <text>Cover</text>"
-            compare = f"{compare}\n            </navLabel>"
-            compare = f"{compare}\n            <content src=\"content/1.xhtml\" />"
-            compare = f"{compare}\n        </navPoint>"
-            compare = f"{compare}\n        <navPoint id=\"item2\">"
-            compare = f"{compare}\n            <navLabel>"
-            compare = f"{compare}\n                <text>Chapter 2</text>"
-            compare = f"{compare}\n            </navLabel>"
-            compare = f"{compare}\n            <content src=\"content/3.xhtml\" />"
-            compare = f"{compare}\n        </navPoint>"
-            compare = f"{compare}\n    </navMap>"
-            compare = f"{compare}\n</ncx>"
-            assert ncx_contents == compare
+        chapters = mm_epub.create_content_files(chapters, temp_dir)
+        mm_epub.create_ncx_file(chapters, "Title!", "/page/url/", temp_dir)
+        assert sorted(os.listdir(temp_dir)) == ["content", "images", "toc.ncx"]
+        ncx_file = abspath(join(temp_dir, "toc.ncx"))
+        contents = mm_file_tools.read_text_file(ncx_file)
+        compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        compare = f"{compare}\n<ncx xmlns=\"http://www.daisy.org/z3986/2005/ncx/\" version=\"2005-1\">"
+        compare = f"{compare}\n    <head>"
+        compare = f"{compare}\n        <meta name=\"dtb:uid\" content=\"/page/url/\" />"
+        compare = f"{compare}\n        <meta name=\"dtb:depth\" content=\"1\" />"
+        compare = f"{compare}\n        <meta name=\"dtb:totalPageCount\" content=\"0\" />"
+        compare = f"{compare}\n        <meta name=\"dtb:maxPageNumber\" content=\"0\" />"
+        compare = f"{compare}\n    </head>"
+        compare = f"{compare}\n    <docTitle>"
+        compare = f"{compare}\n        <text>Title!</text>"
+        compare = f"{compare}\n    </docTitle>"
+        compare = f"{compare}\n    <navMap>"
+        compare = f"{compare}\n        <navPoint id=\"item0\">"
+        compare = f"{compare}\n            <navLabel>"
+        compare = f"{compare}\n                <text>Part 1</text>"
+        compare = f"{compare}\n            </navLabel>"
+        compare = f"{compare}\n            <content src=\"content/[AA] Part 1.xhtml\" />"
+        compare = f"{compare}\n        </navPoint>"
+        compare = f"{compare}\n        <navPoint id=\"item1\">"
+        compare = f"{compare}\n            <navLabel>"
+        compare = f"{compare}\n                <text>Image 1</text>"
+        compare = f"{compare}\n            </navLabel>"
+        compare = f"{compare}\n            <content src=\"content/[BB] Image 1.xhtml\" />"
+        compare = f"{compare}\n        </navPoint>"
+        compare = f"{compare}\n        <navPoint id=\"item2\">"
+        compare = f"{compare}\n            <navLabel>"
+        compare = f"{compare}\n                <text>Part 2</text>"
+        compare = f"{compare}\n            </navLabel>"
+        compare = f"{compare}\n            <content src=\"content/[CC] Part 2.xhtml\" />"
+        compare = f"{compare}\n        </navPoint>"
+        compare = f"{compare}\n        <navPoint id=\"item3\">"
+        compare = f"{compare}\n            <navLabel>"
+        compare = f"{compare}\n                <text>Image 2</text>"
+        compare = f"{compare}\n            </navLabel>"
+        compare = f"{compare}\n            <content src=\"content/[DD] Image 2.xhtml\" />"
+        compare = f"{compare}\n        </navPoint>"
+        compare = f"{compare}\n    </navMap>"
+        compare = f"{compare}\n</ncx>"
+        assert contents == compare
+    # Test if not all chapters are listed as included
+    chapters = mm_epub.get_default_chapters(multiple_dir)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        chapters = mm_epub.create_content_files(chapters, temp_dir)
+        chapters[0]["title"] = "Start"
+        chapters[1]["include"] = False
+        chapters[2]["include"] = False
+        mm_epub.create_ncx_file(chapters, "Group", "/other/", temp_dir)
+        assert sorted(os.listdir(temp_dir)) == ["content", "images", "toc.ncx"]
+        ncx_file = abspath(join(temp_dir, "toc.ncx"))
+        contents = mm_file_tools.read_text_file(ncx_file)
+        compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        compare = f"{compare}\n<ncx xmlns=\"http://www.daisy.org/z3986/2005/ncx/\" version=\"2005-1\">"
+        compare = f"{compare}\n    <head>"
+        compare = f"{compare}\n        <meta name=\"dtb:uid\" content=\"/other/\" />"
+        compare = f"{compare}\n        <meta name=\"dtb:depth\" content=\"1\" />"
+        compare = f"{compare}\n        <meta name=\"dtb:totalPageCount\" content=\"0\" />"
+        compare = f"{compare}\n        <meta name=\"dtb:maxPageNumber\" content=\"0\" />"
+        compare = f"{compare}\n    </head>"
+        compare = f"{compare}\n    <docTitle>"
+        compare = f"{compare}\n        <text>Group</text>"
+        compare = f"{compare}\n    </docTitle>"
+        compare = f"{compare}\n    <navMap>"
+        compare = f"{compare}\n        <navPoint id=\"item0\">"
+        compare = f"{compare}\n            <navLabel>"
+        compare = f"{compare}\n                <text>Start</text>"
+        compare = f"{compare}\n            </navLabel>"
+        compare = f"{compare}\n            <content src=\"content/[AA] Part 1.xhtml\" />"
+        compare = f"{compare}\n        </navPoint>"
+        compare = f"{compare}\n        <navPoint id=\"item3\">"
+        compare = f"{compare}\n            <navLabel>"
+        compare = f"{compare}\n                <text>Image 2</text>"
+        compare = f"{compare}\n            </navLabel>"
+        compare = f"{compare}\n            <content src=\"content/[DD] Image 2.xhtml\" />"
+        compare = f"{compare}\n        </navPoint>"
+        compare = f"{compare}\n    </navMap>"
+        compare = f"{compare}\n</ncx>"
+        assert contents == compare
 
 def test_get_metadata_xml():
     """
@@ -651,7 +655,7 @@ def test_get_metadata_xml():
     compare = f"{compare}\n</metadata>"
     assert xml == compare
     # Test url metadata
-    metadata["title"] = "Title."
+    metadata["title"] = None
     metadata["url"] = "this/is/a/test"
     xml = mm_epub.get_metadata_xml(metadata)
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
@@ -659,11 +663,12 @@ def test_get_metadata_xml():
     compare = f"{compare}\n    <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
     compare = f"{compare}\n    <dc:identifier id=\"id\">this/is/a/test</dc:identifier>"
     compare = f"{compare}\n    <dc:date>0000-00-00T00:00:00+00:00</dc:date>"
-    compare = f"{compare}\n    <dc:title>Title.</dc:title>"
+    compare = f"{compare}\n    <dc:title />"
     compare = f"{compare}\n    <dc:source>this/is/a/test</dc:source>"
     compare = f"{compare}\n</metadata>"
     assert xml == compare
     # Test date metadata
+    metadata["title"] = "Title."
     metadata["date"] = "2023-01-15"
     xml = mm_epub.get_metadata_xml(metadata)
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
@@ -689,7 +694,7 @@ def test_get_metadata_xml():
     compare = f"{compare}\n</metadata>"
     assert xml == compare
     # Test writer metadata
-    metadata["writers"] = "Person!"
+    metadata["writers"] = ["Person!"]
     xml = mm_epub.get_metadata_xml(metadata)
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
@@ -704,7 +709,7 @@ def test_get_metadata_xml():
     compare = f"{compare}\n</metadata>"
     assert xml == compare
     metadata["url"] = None
-    metadata["writers"] = "Multiple,People"
+    metadata["writers"] = ["Multiple", "People"]
     xml = mm_epub.get_metadata_xml(metadata)
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
@@ -721,7 +726,7 @@ def test_get_metadata_xml():
     assert xml == compare
     # Test cover artist metadata
     metadata["writers"] = None
-    metadata["cover_artists"] = "Guest"
+    metadata["cover_artists"] = ["Guest"]
     xml = mm_epub.get_metadata_xml(metadata)
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
@@ -735,7 +740,7 @@ def test_get_metadata_xml():
     compare = f"{compare}\n</metadata>"
     assert xml == compare
     metadata["writer"] = None
-    metadata["cover_artists"] = "Other,Folks"
+    metadata["cover_artists"] = ["Other", "Folks"]
     xml = mm_epub.get_metadata_xml(metadata)
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
@@ -752,7 +757,7 @@ def test_get_metadata_xml():
     assert xml == compare
     # Test illustrator metadata
     metadata["cover_artists"] = None
-    metadata["artists"] = "Bleh"
+    metadata["artists"] = ["New Person"]
     xml = mm_epub.get_metadata_xml(metadata)
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
@@ -761,11 +766,11 @@ def test_get_metadata_xml():
     compare = f"{compare}\n    <dc:date>2023-01-15T00:00:00+00:00</dc:date>"
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
     compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
-    compare = f"{compare}\n    <dc:creator id=\"illustrator-0\">Bleh</dc:creator>"
+    compare = f"{compare}\n    <dc:creator id=\"illustrator-0\">New Person</dc:creator>"
     compare = f"{compare}\n    <meta refines=\"illustrator-0\" property=\"role\" scheme=\"marc:relators\">ill</meta>"
     compare = f"{compare}\n</metadata>"
     assert xml == compare
-    metadata["artists"] = "Other,Name"
+    metadata["artists"] = ["Other", "Name"]
     xml = mm_epub.get_metadata_xml(metadata)
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
@@ -830,7 +835,7 @@ def test_get_metadata_xml():
     # Test metadata tags
     metadata["series"] = None
     metadata["series_number"] = None
-    metadata["tags"] = "Some,Tags,&,stuff"
+    metadata["tags"] = ["Some", "Tags", "&", "stuff"]
     xml = mm_epub.get_metadata_xml(metadata)
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
@@ -957,107 +962,96 @@ def test_get_manifest_xml():
     """
     Tests the get_manifest_xml function.
     """
+    # Test creating a manifest xml section
+    multiple_dir = abspath(join(mm_test.EPUB_INTERNAL_DIRECTORY, "multiple"))
+    chapters = mm_epub.get_default_chapters(multiple_dir)
     with tempfile.TemporaryDirectory() as temp_dir:
-        with tempfile.TemporaryDirectory() as output_dir:
-            # Create content files
-            mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "Here's some text!")
-            mm_file_tools.write_text_file(abspath(join(temp_dir, "2.txt")), "And")
-            mm_file_tools.write_text_file(abspath(join(temp_dir, "3.html")), "Stuff")
-            mm_file_tools.write_text_file(abspath(join(temp_dir, "4.png")), "Image")
-            mm_file_tools.write_text_file(abspath(join(temp_dir, "5.jpeg")), "Image2")
-            chapters = mm_epub.get_default_chapters(temp_dir)
-            chapters = mm_epub.create_content_files(chapters, output_dir)
-            # Get manifest xml
-            xml = mm_epub.get_manifest_xml(chapters, output_dir)
-            compare = ""
-            compare = f"{compare}<manifest>"
-            compare = f"{compare}\n    <item href=\"content/1.xhtml\" id=\"item0\" media-type=\"application/xhtml+xml\" />"
-            compare = f"{compare}\n    <item href=\"content/2.xhtml\" id=\"item1\" media-type=\"application/xhtml+xml\" />"
-            compare = f"{compare}\n    <item href=\"content/3.xhtml\" id=\"item2\" media-type=\"application/xhtml+xml\" />"
-            compare = f"{compare}\n    <item href=\"content/4.xhtml\" id=\"item3\" media-type=\"application/xhtml+xml\" />"
-            compare = f"{compare}\n    <item href=\"content/5.xhtml\" id=\"item4\" media-type=\"application/xhtml+xml\" />"
-            compare = f"{compare}\n    <item href=\"images/image1.png\" id=\"image1\" media-type=\"image/png\" />"
-            compare = f"{compare}\n    <item href=\"images/image2.jpeg\" id=\"image2\" media-type=\"image/jpeg\" />"
-            compare = f"{compare}\n    <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
-            compare = f"{compare}\n    <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
-            compare = f"{compare}\n    <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"
-            compare = f"{compare}\n</manifest>"
-            assert xml == compare
+        chapters = mm_epub.create_content_files(chapters, temp_dir)
+        xml = mm_epub.get_manifest_xml(chapters, temp_dir)
+        compare = "<manifest>"
+        compare = f"{compare}\n    <item href=\"content/[AA] Part 1.xhtml\" id=\"item0\" media-type=\"application/xhtml+xml\" />"
+        compare = f"{compare}\n    <item href=\"content/[BB] Image 1.xhtml\" id=\"item1\" media-type=\"application/xhtml+xml\" />"
+        compare = f"{compare}\n    <item href=\"content/[CC] Part 2.xhtml\" id=\"item2\" media-type=\"application/xhtml+xml\" />"
+        compare = f"{compare}\n    <item href=\"content/[DD] Image 2.xhtml\" id=\"item3\" media-type=\"application/xhtml+xml\" />"
+        compare = f"{compare}\n    <item href=\"images/image1.PNG\" id=\"image1\" media-type=\"image/png\" />"
+        compare = f"{compare}\n    <item href=\"images/image2.jpg\" id=\"image2\" media-type=\"image/jpeg\" />"
+        compare = f"{compare}\n    <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
+        compare = f"{compare}\n    <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
+        compare = f"{compare}\n    <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"
+        compare = f"{compare}\n</manifest>"
+        assert xml == compare
 
 def test_create_content_opf():
     """
     Tests the create_content_opf function.
     """
+    # Test creating an opf file
+    multiple_dir = abspath(join(mm_test.EPUB_INTERNAL_DIRECTORY, "multiple"))
+    chapters = mm_epub.get_default_chapters(multiple_dir)
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Create content files
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "Here's some text!")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "2.html")), "And")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "3.jpg")), "Stuff")
-        chapters = mm_epub.get_default_chapters(temp_dir)
-        with tempfile.TemporaryDirectory() as output_dir:
-            chapters = mm_epub.create_content_files(chapters, output_dir)
-            # Test creating the opf file
-            metadata = mm_archive.get_empty_metadata()
-            metadata["title"] = "Thing!"
-            mm_epub.create_content_opf(chapters, metadata, output_dir)
-            assert sorted(os.listdir(output_dir)) == ["content", "content.opf", "images"]
-            opf_file = abspath(join(output_dir, "content.opf"))
-            opf_contents = mm_file_tools.read_text_file(opf_file)
-            compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-            compare = f"{compare}\n<package xmlns:dc=\"http://purl.org/dc/elements/1.1/\" "
-            compare = f"{compare}xmlns=\"http://www.idpf.org/2007/opf\" unique-identifier=\"id\" "
-            compare = f"{compare}version=\"3.0\" prefix=\"http://www.idpf.org/vocab/rendition/#\">"
-            compare = f"{compare}\n    <metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
-            compare = f"{compare}\n        <dc:language>en</dc:language>"
-            compare = f"{compare}\n        <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
-            compare = f"{compare}\n        <dc:identifier id=\"id\">Thing!</dc:identifier>"
-            compare = f"{compare}\n        <dc:date>0000-00-00T00:00:00+00:00</dc:date>"
-            compare = f"{compare}\n        <dc:title>Thing!</dc:title>"
-            compare = f"{compare}\n        <meta name=\"cover\" content=\"image1\" />"
-            compare = f"{compare}\n    </metadata>"
-            compare = f"{compare}\n    <manifest>"
-            compare = f"{compare}\n        <item href=\"content/1.xhtml\" id=\"item0\" media-type=\"application/xhtml+xml\" />"
-            compare = f"{compare}\n        <item href=\"content/2.xhtml\" id=\"item1\" media-type=\"application/xhtml+xml\" />"
-            compare = f"{compare}\n        <item href=\"content/3.xhtml\" id=\"item2\" media-type=\"application/xhtml+xml\" />"
-            compare = f"{compare}\n        <item href=\"images/image1.jpg\" id=\"image1\" media-type=\"image/jpeg\" />"
-            compare = f"{compare}\n        <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
-            compare = f"{compare}\n        <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
-            compare = f"{compare}\n        <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"
-            compare = f"{compare}\n    </manifest>"
-            compare = f"{compare}\n    <spine toc=\"ncx\">"
-            compare = f"{compare}\n        <itemref idref=\"item0\" />"
-            compare = f"{compare}\n        <itemref idref=\"item1\" />"
-            compare = f"{compare}\n        <itemref idref=\"item2\" />"
-            compare = f"{compare}\n    </spine>"
-            compare = f"{compare}\n</package>"
-            assert opf_contents == compare
+        chapters = mm_epub.create_content_files(chapters, temp_dir)
+        metadata = mm_archive.get_empty_metadata()
+        metadata["title"] = "Thing!"
+        mm_epub.create_content_opf(chapters, metadata, temp_dir)
+        assert sorted(os.listdir(temp_dir)) == ["content", "content.opf", "images"]
+        opf_file = abspath(join(temp_dir, "content.opf"))
+        contents = mm_file_tools.read_text_file(opf_file)
+        compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        compare = f"{compare}\n<package xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns=\"http://www.idpf.org/2007/opf\" unique-identifier=\"id\" version=\"3.0\" prefix=\"http://www.idpf.org/vocab/rendition/#\">"
+        compare = f"{compare}\n    <metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
+        compare = f"{compare}\n        <dc:language>en</dc:language>"
+        compare = f"{compare}\n        <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
+        compare = f"{compare}\n        <dc:identifier id=\"id\">Thing!</dc:identifier>"
+        compare = f"{compare}\n        <dc:date>0000-00-00T00:00:00+00:00</dc:date>"
+        compare = f"{compare}\n        <dc:title>Thing!</dc:title>"
+        compare = f"{compare}\n        <meta name=\"cover\" content=\"image1\" />"
+        compare = f"{compare}\n    </metadata>"
+        compare = f"{compare}\n    <manifest>"
+        compare = f"{compare}\n        <item href=\"content/[AA] Part 1.xhtml\" id=\"item0\" media-type=\"application/xhtml+xml\" />"
+        compare = f"{compare}\n        <item href=\"content/[BB] Image 1.xhtml\" id=\"item1\" media-type=\"application/xhtml+xml\" />"
+        compare = f"{compare}\n        <item href=\"content/[CC] Part 2.xhtml\" id=\"item2\" media-type=\"application/xhtml+xml\" />"
+        compare = f"{compare}\n        <item href=\"content/[DD] Image 2.xhtml\" id=\"item3\" media-type=\"application/xhtml+xml\" />"
+        compare = f"{compare}\n        <item href=\"images/image1.PNG\" id=\"image1\" media-type=\"image/png\" />"
+        compare = f"{compare}\n        <item href=\"images/image2.jpg\" id=\"image2\" media-type=\"image/jpeg\" />"
+        compare = f"{compare}\n        <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
+        compare = f"{compare}\n        <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
+        compare = f"{compare}\n        <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"
+        compare = f"{compare}\n    </manifest>"
+        compare = f"{compare}\n    <spine toc=\"ncx\">"
+        compare = f"{compare}\n        <itemref idref=\"item0\" />"
+        compare = f"{compare}\n        <itemref idref=\"item1\" />"
+        compare = f"{compare}\n        <itemref idref=\"item2\" />"
+        compare = f"{compare}\n        <itemref idref=\"item3\" />"
+        compare = f"{compare}\n    </spine>"
+        compare = f"{compare}\n</package>"
+        assert contents == compare
 
 def test_create_epub():
     """
     Tests the create_epub function.
     """
+    # Create an EPUB file
+    multiple_dir = abspath(join(mm_test.EPUB_INTERNAL_DIRECTORY, "multiple"))
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Create content files
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "Here's some text!")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "2.html")), "And")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "3.pdf")), "Stuff")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "a.png")), "image")
-        chapters = mm_epub.get_default_chapters(temp_dir)
-        # Create the epub file
+        copy_dir = abspath(join(temp_dir, "copy"))
+        shutil.copytree(multiple_dir, copy_dir)
+        chapters = mm_epub.get_default_chapters(copy_dir)
+        chapters = mm_epub.group_chapters(chapters, [2,3])
         metadata = mm_archive.get_empty_metadata()
-        metadata["title"] = "Name"
-        epub_file = mm_epub.create_epub(chapters, metadata, temp_dir)
+        metadata["title"] = "Generated"
+        epub_file = mm_epub.create_epub(chapters, metadata, copy_dir)
         assert exists(epub_file)
-        assert basename(epub_file) == "Name.epub"
+        assert basename(epub_file) == "Generated.epub"
+        assert abspath(join(epub_file, os.pardir)) == abspath(copy_dir)
         # Extract the epub file to see contents
-        extracted = abspath(join(temp_dir, "extracted"))
-        os.mkdir(extracted)
-        assert mm_file_tools.extract_zip(epub_file, extracted)
-        assert sorted(os.listdir(extracted)) == ["EPUB", "META-INF", "mimetype"]
+        extract_dir = abspath(join(temp_dir, "extracted"))
+        os.mkdir(extract_dir)
+        assert mm_file_tools.extract_zip(epub_file, extract_dir)
+        assert sorted(os.listdir(extract_dir)) == ["EPUB", "META-INF", "mimetype"]
         # Check the mimetype contents
-        assert mm_file_tools.read_text_file(abspath(join(extracted, "mimetype"))) == "application/epub+zip"
+        assert mm_file_tools.read_text_file(abspath(join(extract_dir, "mimetype"))) == "application/epub+zip"
         # Check the contents of the meta folder
-        meta_directory = abspath(join(extracted, "META-INF"))
+        meta_directory = abspath(join(extract_dir, "META-INF"))
         assert sorted(os.listdir(meta_directory)) == ["container.xml"]
         container = mm_file_tools.read_text_file(abspath(join(meta_directory, "container.xml")))
         compare = ""
@@ -1069,20 +1063,30 @@ def test_create_epub():
         compare = f"{compare}\n</container>"
         assert container == compare
         # Check the contents of the epub folder
-        epub_directory = abspath(join(extracted, "EPUB"))
+        epub_directory = abspath(join(extract_dir, "EPUB"))
         assert sorted(os.listdir(epub_directory)) == ["content", "content.opf", "images", "nav.xhtml", "original", "style", "toc.ncx"]
         # Check the contents of the content folder
         content_directory = abspath(join(epub_directory, "content"))
-        assert sorted(os.listdir(content_directory)) == ["1.xhtml", "2.xhtml", "a.xhtml"]
+        assert sorted(os.listdir(content_directory)) == ["[AA] Part 1.xhtml", "[BB] Image 1.xhtml", "[CC] Part 2.xhtml"]
         # Check the contents of the original directory
         original_directory = abspath(join(epub_directory, "original"))
-        assert sorted(os.listdir(original_directory)) == ["1.txt", "2.html", "3.pdf", "a.png"]
+        original_files = sorted(os.listdir(original_directory))
+        assert len(original_files) == 9
+        assert original_files[0] == "[AA] Part 1.TXT"
+        assert original_files[1] == "[AA] Part 1.json"
+        assert original_files[2] == "[BB] Image 1.PNG"
+        assert original_files[3] == "[BB] Image 1.json"
+        assert original_files[4] == "[CC] Part 2.htm"
+        assert original_files[5] == "[CC] Part 2.json"
+        assert original_files[6] == "[DD] Image 2.jpg"
+        assert original_files[7] == "[DD] Image 2.json"
+        assert original_files[8] == "ignore"
         # Check the contents of the style directory
         style_directory = abspath(join(epub_directory, "style"))
         assert sorted(os.listdir(style_directory)) == ["epubstyle.css"]
         # Check the contents of the images directory
         style_directory = abspath(join(epub_directory, "images"))
-        assert sorted(os.listdir(style_directory)) == ["image1.png"]
+        assert sorted(os.listdir(style_directory)) == ["image1.PNG", "image2.jpg"]
         # Check the contents of the content.opf file
         content = mm_file_tools.read_text_file(abspath(join(epub_directory, "content.opf")))
         compare = ""
@@ -1093,16 +1097,17 @@ def test_create_epub():
         compare = f"{compare}\n    <metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
         compare = f"{compare}\n        <dc:language>en</dc:language>"
         compare = f"{compare}\n        <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
-        compare = f"{compare}\n        <dc:identifier id=\"id\">Name</dc:identifier>"
+        compare = f"{compare}\n        <dc:identifier id=\"id\">Generated</dc:identifier>"
         compare = f"{compare}\n        <dc:date>0000-00-00T00:00:00+00:00</dc:date>"
-        compare = f"{compare}\n        <dc:title>Name</dc:title>"
+        compare = f"{compare}\n        <dc:title>Generated</dc:title>"
         compare = f"{compare}\n        <meta name=\"cover\" content=\"image1\" />"
         compare = f"{compare}\n    </metadata>"
         compare = f"{compare}\n    <manifest>"
-        compare = f"{compare}\n        <item href=\"content/1.xhtml\" id=\"item0\" media-type=\"application/xhtml+xml\" />"
-        compare = f"{compare}\n        <item href=\"content/2.xhtml\" id=\"item1\" media-type=\"application/xhtml+xml\" />"
-        compare = f"{compare}\n        <item href=\"content/a.xhtml\" id=\"item2\" media-type=\"application/xhtml+xml\" />"
-        compare = f"{compare}\n        <item href=\"images/image1.png\" id=\"image1\" media-type=\"image/png\" />"
+        compare = f"{compare}\n        <item href=\"content/[AA] Part 1.xhtml\" id=\"item0\" media-type=\"application/xhtml+xml\" />"
+        compare = f"{compare}\n        <item href=\"content/[BB] Image 1.xhtml\" id=\"item1\" media-type=\"application/xhtml+xml\" />"
+        compare = f"{compare}\n        <item href=\"content/[CC] Part 2.xhtml\" id=\"item2\" media-type=\"application/xhtml+xml\" />"
+        compare = f"{compare}\n        <item href=\"images/image1.PNG\" id=\"image1\" media-type=\"image/png\" />"
+        compare = f"{compare}\n        <item href=\"images/image2.jpg\" id=\"image2\" media-type=\"image/jpeg\" />"
         compare = f"{compare}\n        <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
         compare = f"{compare}\n        <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
         compare = f"{compare}\n        <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"
@@ -1119,37 +1124,29 @@ def test_create_epub_from_description():
     """
     Tests the create_epub_from_description function.
     """
+    # Create an EPUB file from the description of an image-JSON pair
+    config = mm_config.DEFAULT_CONFIG
+    image_file = abspath(join(mm_test.PAIR_IMAGE_DIRECTORY, "long.JPG"))
+    json_file = abspath(join(mm_test.PAIR_IMAGE_DIRECTORY, "long.JSON"))
+    metadata = mm_archive.get_empty_metadata()
+    metadata["title"] = "Description"
+    metadata["writers"] = ["Person"]
+    metadata["url"] = "/some/page"
+    metadata["description"] = "Not text"
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Create base files
-        json_file = abspath(join(temp_dir, "test.json"))
-        image_file = abspath(join(temp_dir, "test.png"))
-        image = Image.new("RGB", size=(100, 100), color="#ff0000")
-        image.save(image_file)
-        summary = "<div class=\"blah\">These are<br/>\n\rall lines.<br /><br/>And<br/>such."
-        mm_file_tools.write_json_file(json_file, {"title":"doesn't matter","caption":summary})
-        assert exists(json_file)
-        assert exists(image_file)
-        # Create the epub file
-        metadata = mm_archive.get_empty_metadata()
-        metadata["title"] = "This is a Title"
-        metadata["writers"] = "Person"
-        metadata["url"] = "/thing/"
-        metadata["date"] = "2021-01-01"
-        metadata["description"] = "Something Else"
-        config = mm_config.DEFAULT_CONFIG
         epub_file = mm_epub.create_epub_from_description(json_file, image_file, metadata, temp_dir, config)
-        assert basename(epub_file) == "This is a Title.epub"
+        assert basename(epub_file) == "Description.epub"
         assert abspath(join(epub_file, os.pardir)) == temp_dir
         assert exists(epub_file)
         # Extract the epub file to see contents
-        extracted = abspath(join(temp_dir, "extracted"))
-        os.mkdir(extracted)
-        assert mm_file_tools.extract_zip(epub_file, extracted)
-        assert sorted(os.listdir(extracted)) == ["EPUB", "META-INF", "mimetype"]
+        extract_dir = abspath(join(temp_dir, "extracted"))
+        os.mkdir(extract_dir)
+        assert mm_file_tools.extract_zip(epub_file, extract_dir)
+        assert sorted(os.listdir(extract_dir)) == ["EPUB", "META-INF", "mimetype"]
         # Check the mimetype contents
-        assert mm_file_tools.read_text_file(abspath(join(extracted, "mimetype"))) == "application/epub+zip"
-        # Check the contents of the meta folder
-        meta_directory = abspath(join(extracted, "META-INF"))
+        assert mm_file_tools.read_text_file(abspath(join(extract_dir, "mimetype"))) == "application/epub+zip"
+        # Check the contents of the META-INF directory
+        meta_directory = abspath(join(extract_dir, "META-INF"))
         assert sorted(os.listdir(meta_directory)) == ["container.xml"]
         container = mm_file_tools.read_text_file(abspath(join(meta_directory, "container.xml")))
         compare = ""
@@ -1160,21 +1157,21 @@ def test_create_epub_from_description():
         compare = f"{compare}\n    </rootfiles>"
         compare = f"{compare}\n</container>"
         assert container == compare
-        # Check the contents of the epub folder
-        epub_directory = abspath(join(extracted, "EPUB"))
+        # Check the contents of the epub directory
+        epub_directory = abspath(join(extract_dir, "EPUB"))
         assert sorted(os.listdir(epub_directory)) == ["content", "content.opf", "images", "nav.xhtml", "original", "style", "toc.ncx"]
         # Check the contents of the content folder
         content_directory = abspath(join(epub_directory, "content"))
-        assert sorted(os.listdir(content_directory)) == ["dvk-cover.xhtml", "test.xhtml"]
+        assert sorted(os.listdir(content_directory)) == ["cover_image.xhtml", "long.xhtml"]
         # Check the contents of the original directory
         original_directory = abspath(join(epub_directory, "original"))
-        assert sorted(os.listdir(original_directory)) == ["test.json", "test.png"]
+        assert sorted(os.listdir(original_directory)) == ["long.JPG", "long.JSON"]
         # Check the contents of the style directory
         style_directory = abspath(join(epub_directory, "style"))
         assert sorted(os.listdir(style_directory)) == ["epubstyle.css"]
         # Check the contents of the images directory
         style_directory = abspath(join(epub_directory, "images"))
-        assert sorted(os.listdir(style_directory)) == ["image1.png"]
+        assert sorted(os.listdir(style_directory)) == ["image1.JPG"]
         # Check the contents of the content.opf file
         content = mm_file_tools.read_text_file(abspath(join(epub_directory, "content.opf")))
         compare = ""
@@ -1185,20 +1182,20 @@ def test_create_epub_from_description():
         compare = f"{compare}\n    <metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
         compare = f"{compare}\n        <dc:language>en</dc:language>"
         compare = f"{compare}\n        <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
-        compare = f"{compare}\n        <dc:identifier id=\"id\">/thing/</dc:identifier>"
-        compare = f"{compare}\n        <dc:date>2021-01-01T00:00:00+00:00</dc:date>"
-        compare = f"{compare}\n        <dc:title>This is a Title</dc:title>"
-        compare = f"{compare}\n        <dc:source>/thing/</dc:source>"
-        compare = f"{compare}\n        <dc:description>Something Else</dc:description>"
+        compare = f"{compare}\n        <dc:identifier id=\"id\">/some/page</dc:identifier>"
+        compare = f"{compare}\n        <dc:date>0000-00-00T00:00:00+00:00</dc:date>"
+        compare = f"{compare}\n        <dc:title>Description</dc:title>"
+        compare = f"{compare}\n        <dc:source>/some/page</dc:source>"
+        compare = f"{compare}\n        <dc:description>Not text</dc:description>"
         compare = f"{compare}\n        <dc:creator id=\"author-0\">Person</dc:creator>"
         compare = f"{compare}\n        <meta refines=\"author-0\" property=\"role\" scheme=\"marc:relators\">aut</meta>"
         compare = f"{compare}\n        <meta name=\"cover\" content=\"image1\" />"
         compare = f"{compare}\n    </metadata>"
         compare = f"{compare}\n    <manifest>"
-        compare = f"{compare}\n        <item href=\"content/dvk-cover.xhtml\" id=\"item_cover\" media-type=\"application/xhtml+xml\" />"
-        compare = f"{compare}\n        <item href=\"content/test.xhtml\" id=\"item_text\" media-type=\"application/xhtml+xml\" />"
-        compare = f"{compare}\n        <item href=\"content/dvk-cover.xhtml\" id=\"back_cover\" media-type=\"application/xhtml+xml\" />"
-        compare = f"{compare}\n        <item href=\"images/image1.png\" id=\"image1\" media-type=\"image/png\" />"
+        compare = f"{compare}\n        <item href=\"content/cover_image.xhtml\" id=\"item_cover\" media-type=\"application/xhtml+xml\" />"
+        compare = f"{compare}\n        <item href=\"content/long.xhtml\" id=\"item_text\" media-type=\"application/xhtml+xml\" />"
+        compare = f"{compare}\n        <item href=\"content/cover_image.xhtml\" id=\"back_cover\" media-type=\"application/xhtml+xml\" />"
+        compare = f"{compare}\n        <item href=\"images/image1.JPG\" id=\"image1\" media-type=\"image/jpeg\" />"
         compare = f"{compare}\n        <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
         compare = f"{compare}\n        <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
         compare = f"{compare}\n        <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"
@@ -1210,28 +1207,133 @@ def test_create_epub_from_description():
         compare = f"{compare}\n    </spine>"
         compare = f"{compare}\n</package>"
         assert content == compare
-        # Check the contents of the generated XHTML
-        content = mm_file_tools.read_text_file(abspath(join(content_directory, "test.xhtml")))
+        # Check the contents of the XHTML generated from the description
+        content = mm_file_tools.read_text_file(abspath(join(content_directory, "long.xhtml")))
         compare = ""
         compare = f"{compare}<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
         compare = f"{compare}\n    <head>"
-        compare = f"{compare}\n        <title>This is a Title</title>"
+        compare = f"{compare}\n        <title>Description</title>"
         compare = f"{compare}\n        <meta charset=\"utf-8\" />"
         compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
         compare = f"{compare}\n    </head>"
         compare = f"{compare}\n    <body>"
-        compare = f"{compare}\n        <p>These are all lines.</p>"
-        compare = f"{compare}\n        <p>And such.</p>"
+        compare = f"{compare}\n        <p>Lorem ipsum odor amet, consectetuer adipiscing elit. "
+        compare = f"{compare}Malesuada magna libero vestibulum habitant lobortis laoreet. Lectus mus fermentum "
+        compare = f"{compare}maximus mattis in vel viverra eleifend. Suscipit pulvinar montes aenean, molestie "
+        compare = f"{compare}hendrerit neque. Per semper feugiat et velit eu ante fringilla cursus conubia! Ornare "
+        compare = f"{compare}fames enim tempus; mattis luctus elit vel suspendisse.</p>"
+        compare = f"{compare}\n        <p>Auctor neque tortor dolor lacus mus quisque massa leo. Porta vehicula "
+        compare = f"{compare}sagittis cras penatibus tortor litora. Et efficitur leo consequat platea; consectetur "
+        compare = f"{compare}ad vel. Hac himenaeos curae cubilia nec tempor. Commodo et eros nam primis sem congue. "
+        compare = f"{compare}Tortor suscipit amet platea himenaeos consequat consectetur cras sodales. Mus maximus "
+        compare = f"{compare}tempus faucibus commodo tortor eleifend dis. Praesent enim odio nec ornare ante senectus mus.</p>"
+        compare = f"{compare}\n        <p>Vivamus lacinia luctus dapibus suspendisse habitasse, felis non at. Rutrum "
+        compare = f"{compare}habitasse malesuada vulputate fringilla felis pretium mauris. Potenti vel integer lacus lectus, "
+        compare = f"{compare}class conubia senectus. Et nisl feugiat dignissim iaculis ligula amet finibus condimentum "
+        compare = f"{compare}conubia. Tempor mauris laoreet est, adipiscing nisi neque commodo curae porta. Cubilia amet "
+        compare = f"{compare}vivamus pellentesque fermentum ligula etiam dolor nam. Massa eros metus urna sodales egestas "
+        compare = f"{compare}dictum. Sagittis morbi orci viverra eros elementum arcu. Ullamcorper velit hendrerit class "
+        compare = f"{compare}class dolor convallis dapibus?</p>"
         compare = f"{compare}\n    </body>"
         compare = f"{compare}\n</html>"
         assert content == compare
-        # Check the contents of the cover XHTML
-        content = mm_file_tools.read_text_file(abspath(join(content_directory, "dvk-cover.xhtml")))
-        compare = ""
-        compare = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-        compare = f"{compare}\n<html xmlns:svgns=\"http://www.w3.org/2000/svg\" "
-        compare = f"{compare}xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns=\"http://www.w3.org/1999/xhtml\">"
+
+def test_get_info_from_epub():
+    """
+    Tests the get_info_from_epub function.
+    """
+    # Test getting metadata info from a EPUB file
+    epub_file = abspath(join(mm_test.ARCHIVE_EPUB_DIRECTORY, "basic.epub"))
+    metadata = mm_epub.get_info_from_epub(epub_file)
+    assert metadata["title"] == "Básic EPUB"
+    assert metadata["series"] == "Books"
+    assert metadata["series_number"] == "0.5"
+    assert metadata["series_total"] is None
+    assert metadata["description"] == "Simple Description"
+    assert metadata["date"] == "2020-01-01"
+    assert metadata["writers"] == ["Multiple", "Writers"]
+    assert metadata["artists"] == ["Different", "Artists"]
+    assert metadata["cover_artists"] == ["Cover", "Artists"]
+    assert metadata["publisher"] == "BookCo"
+    assert metadata["tags"] == ["This", "&", "That"]
+    assert metadata["url"] == "/placeholder/"
+    assert metadata["age_rating"] == "Everyone"
+    assert metadata["score"] == "4"
+    assert metadata["page_count"] == "1"
+    assert metadata["cover_id"] is None
+    # Test getting metadata from EPUB with higher page count and less metadata
+    epub_file = abspath(join(mm_test.ARCHIVE_EPUB_DIRECTORY, "long.EPUB"))
+    metadata = mm_epub.get_info_from_epub(epub_file)
+    assert metadata["title"] == "Long Book"
+    assert metadata["series"] is None
+    assert metadata["series_number"] is None
+    assert metadata["series_total"] is None
+    assert metadata["description"].startswith("Lorem ipsum odor amet, consectetuer adipiscing")
+    assert metadata["date"] == "2012-01-20"
+    assert metadata["writers"] == ["Author"]
+    assert metadata["artists"] == ["Single Artist"]
+    assert metadata["cover_artists"] == ["Cover"]
+    assert metadata["publisher"] is None
+    assert metadata["tags"] == ["One Tag"]
+    assert metadata["url"] is None
+    assert metadata["age_rating"] == "Unknown"
+    assert metadata["score"] is None
+    assert metadata["page_count"] == "3"
+    assert metadata["cover_id"] == "image1"
+    # Test getting metadata from EPUB with no title
+    epub_file = abspath(join(mm_test.ARCHIVE_EPUB_DIRECTORY, "small.epub"))
+    metadata = mm_epub.get_info_from_epub(epub_file)
+    assert metadata["title"] is None
+    assert metadata["series"] is None
+    assert metadata["series_number"] is None
+    assert metadata["series_total"] is None
+    assert metadata["description"] == "Small Cover"
+    assert metadata["date"] is None
+    assert metadata["writers"] == ["Writer"]
+    assert metadata["artists"] is None
+    assert metadata["cover_artists"] is None
+    assert metadata["publisher"] is None
+    assert metadata["tags"] is None
+    assert metadata["url"] is None
+    assert metadata["age_rating"] is None
+    assert metadata["score"] is None
+    assert metadata["page_count"] == "1"
+    assert metadata["cover_id"] == "image1"
+    # Test getting info from a non-epub file
+    cbz_file = abspath(join(mm_test.ARCHIVE_CBZ_DIRECTORY, "basic.cbz"))
+    assert mm_epub.get_info_from_epub(cbz_file) == mm_archive.get_empty_metadata()
+    text_file = abspath(join(mm_test.BASIC_TEXT_DIRECTORY, "unicode.txt"))
+    assert mm_epub.get_info_from_epub(text_file) == mm_archive.get_empty_metadata()
+
+def test_update_epub_info():
+    """
+    Tests the update_epub_info function.
+    """
+    # Test updating EPUB metadata while leaving cover intact
+    base_file = abspath(join(mm_test.ARCHIVE_EPUB_DIRECTORY, "small.epub"))
+    with tempfile.TemporaryDirectory() as temp_dir:
+        epub_file = abspath(join(temp_dir, "small.epub"))
+        shutil.copy(base_file, epub_file)
+        metadata = mm_archive.get_empty_metadata()
+        metadata["title"] = "New Title"
+        metadata["artists"] = ["Other", "People"]
+        metadata["cover_id"] = "image1"
+        mm_epub.update_epub_info(epub_file, metadata)
+        # Check that EPUB structure is intact
+        assert mm_file_tools.extract_zip(epub_file, temp_dir)
+        assert sorted(os.listdir(temp_dir)) == ["EPUB", "META-INF", "mimetype", "small.epub"]
+        epub_dir = abspath(join(temp_dir, "EPUB"))
+        assert sorted(os.listdir(epub_dir)) == ["content", "content.opf", "images", "nav.xhtml", "original", "style", "toc.ncx"]
+        content_dir = abspath(join(epub_dir, "content"))
+        assert sorted(os.listdir(content_dir)) == ["Text.xhtml", "cover_image.xhtml"]
+        image_dir = abspath(join(epub_dir, "images"))
+        assert sorted(os.listdir(image_dir)) == ["image1.jpg"]
+        # Check that the cover image hasn't been changed
+        assert os.stat(abspath(join(image_dir, "image1.jpg"))).st_size == 1196
+        contents = mm_file_tools.read_text_file(abspath(join(content_dir, "cover_image.xhtml")))
+        compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        compare = f"{compare}\n<html xmlns:svgns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns=\"http://www.w3.org/1999/xhtml\">"
         compare = f"{compare}\n    <head>"
         compare = f"{compare}\n        <title>Cover</title>"
         compare = f"{compare}\n        <meta charset=\"utf-8\" />"
@@ -1239,311 +1341,34 @@ def test_create_epub_from_description():
         compare = f"{compare}\n    </head>"
         compare = f"{compare}\n    <body>"
         compare = f"{compare}\n        <div id=\"full-image-container\">"
-        compare = f"{compare}\n            <svgns:svg width=\"100%\" height=\"100%\" viewBox=\"0 0 100 100\" "
-        compare = f"{compare}preserveAspectRatio=\"xMidYMid meet\" version=\"1.1\">"
-        compare = f"{compare}\n            <svgns:title>Cover</svgns:title>"
-        compare = f"{compare}\n            <svgns:image xlink:href=\"../images/image1.png\" width=\"100\" height=\"100\" />"
+        compare = f"{compare}\n            <svgns:svg width=\"100%\" height=\"100%\" viewBox=\"0 0 100 150\" preserveAspectRatio=\"xMidYMid meet\" version=\"1.1\">"
+        compare = f"{compare}\n                <svgns:title>Cover</svgns:title>"
+        compare = f"{compare}\n                <svgns:image xlink:href=\"../images/image1.jpg\" width=\"100\" height=\"150\" />"
         compare = f"{compare}\n            </svgns:svg>"
         compare = f"{compare}\n        </div>"
         compare = f"{compare}\n    </body>"
         compare = f"{compare}\n</html>"
-
-def test_get_info_from_epub():
-    """
-    Tests the get_info_from_epub function.
-    """
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Create content files
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "AAA " * 2000)
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "2.txt")), "And")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "3.pdf")), "Stuff")
-        chapters = mm_epub.get_default_chapters(temp_dir)
-        metadata = mm_archive.get_empty_metadata()
-        # Test Getting the title
-        metadata["title"] = "This is a title!\\'"
-        epub_file = mm_epub.create_epub(chapters, metadata, temp_dir)
-        assert exists(epub_file)
-        read_meta = mm_epub.get_info_from_epub(epub_file)
-        assert read_meta["title"] == "This is a title!\\'"
-        assert read_meta["url"] is None
-        assert read_meta["description"] is None
-        # Test Getting the page count
-        assert read_meta["page_count"] == "7"
-        # Test getting the URL
-        os.remove(epub_file)
-        metadata["title"] = "New Title"
-        metadata["url"] = "https://www.notrealsite"
-        epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
-        assert exists(epub_file)
-        read_meta = mm_epub.get_info_from_epub(epub_file)
-        assert read_meta["title"] == "New Title"
-        assert read_meta["url"] == "https://www.notrealsite"
-        assert read_meta["date"] is None
-        assert read_meta["description"] is None
-        # Test getting the date
-        os.remove(epub_file)
-        metadata["url"] = "http://www.alsofake"
-        metadata["date"] = "2012-12-21"
-        epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
-        assert exists(epub_file)
-        read_meta = mm_epub.get_info_from_epub(epub_file)
-        assert read_meta["title"] == "New Title"
-        assert read_meta["url"] == "http://www.alsofake"
-        assert read_meta["date"] == "2012-12-21"
-        assert read_meta["description"] is None
-        # Test getting the description
-        os.remove(epub_file)
-        metadata["url"] = "www.alsofake"
-        metadata["date"] = "2012-12-21"
-        metadata["description"] = "This & That."
-        epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
-        assert exists(epub_file)
-        read_meta = mm_epub.get_info_from_epub(epub_file)
-        assert read_meta["title"] == "New Title"
-        assert read_meta["url"] == "www.alsofake"
-        assert read_meta["date"] == "2012-12-21"
-        assert read_meta["description"] == "This & That."
-        assert read_meta["writers"] is None
-        assert read_meta["artists"] is None
-        assert read_meta["cover_artists"] is None
-        # Test getting writers and artists
-        os.remove(epub_file)
-        metadata["artists"] = "Some,Artist,Folks"
-        metadata["writers"] = "The,Author"
-        metadata["cover_artists"] = "Last,People"
-        epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
-        assert exists(epub_file)
-        read_meta = mm_epub.get_info_from_epub(epub_file)
-        assert read_meta["title"] == "New Title"
-        assert read_meta["url"] == "www.alsofake"
-        assert read_meta["date"] == "2012-12-21"
-        assert read_meta["description"] == "This & That."
-        assert read_meta["writers"] == "The,Author"
-        assert read_meta["artists"] == "Some,Artist,Folks"
-        assert read_meta["cover_artists"] == "Last,People"
-        assert read_meta["publisher"] is None
-        # Test getting the publisher
-        os.remove(epub_file)
-        metadata["publisher"] = "Book People"
-        epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
-        assert exists(epub_file)
-        read_meta = mm_epub.get_info_from_epub(epub_file)
-        assert read_meta["title"] == "New Title"
-        assert read_meta["url"] == "www.alsofake"
-        assert read_meta["date"] == "2012-12-21"
-        assert read_meta["description"] == "This & That."
-        assert read_meta["publisher"] == "Book People"
-        assert read_meta["series"] is None
-        assert read_meta["series_number"] is None
-        assert read_meta["series_total"] is None
-        # Test getting series metadata
-        os.remove(epub_file)
-        metadata["series"] = "The EPUB Chronicles."
-        metadata["series_number"] = "3.5"
-        epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
-        assert exists(epub_file)
-        read_meta = mm_epub.get_info_from_epub(epub_file)
-        assert read_meta["title"] == "New Title"
-        assert read_meta["url"] == "www.alsofake"
-        assert read_meta["date"] == "2012-12-21"
-        assert read_meta["description"] == "This & That."
-        assert read_meta["publisher"] == "Book People"
-        assert read_meta["series"] == "The EPUB Chronicles."
-        assert read_meta["series_number"] == "3.5"
-        assert read_meta["series_total"] is None
-        assert read_meta["tags"] is None
-        # Test getting the tags
-        os.remove(epub_file)
-        metadata["tags"] = "Some,Tags,&,Stuff"
-        epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
-        assert exists(epub_file)
-        read_meta = mm_epub.get_info_from_epub(epub_file)
-        assert read_meta["title"] == "New Title"
-        assert read_meta["tags"] == "Some,Tags,&,Stuff"
-        assert read_meta["age_rating"] is None
-        # Test getting the age rating
-        os.remove(epub_file)
-        metadata["age_rating"] = "Teen"
-        epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
-        assert exists(epub_file)
-        read_meta = mm_epub.get_info_from_epub(epub_file)
-        assert read_meta["title"] == "New Title"
-        assert read_meta["tags"] == "Some,Tags,&,Stuff"
-        assert read_meta["age_rating"] == "Teen"
-        assert read_meta["score"] is None
-        # Test getting the score
-        os.remove(epub_file)
-        metadata["score"] = "3"
-        epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
-        assert exists(epub_file)
-        read_meta = mm_epub.get_info_from_epub(epub_file)
-        assert read_meta["title"] == "New Title"
-        assert read_meta["tags"] == "Some,Tags,&,Stuff"
-        assert read_meta["age_rating"] == "Teen"
-        assert read_meta["score"] == "3"
-        metadata["score"] = "1"
-        epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
-        assert exists(epub_file)
-        read_meta = mm_epub.get_info_from_epub(epub_file)
-        assert read_meta["title"] == "New Title"
-        assert read_meta["tags"] == "Some,Tags,&,Stuff"
-        assert read_meta["age_rating"] == "Teen"
-        assert read_meta["score"] == "1"
-        metadata["score"] = "5"
-        epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
-        assert exists(epub_file)
-        read_meta = mm_epub.get_info_from_epub(epub_file)
-        assert read_meta["title"] == "New Title"
-        assert read_meta["tags"] == "Some,Tags,&,Stuff"
-        assert read_meta["age_rating"] == "Teen"
-        assert read_meta["score"] == "5"
-        metadata["score"] = "0"
-        epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
-        assert exists(epub_file)
-        read_meta = mm_epub.get_info_from_epub(epub_file)
-        assert read_meta["title"] == "New Title"
-        assert read_meta["tags"] == "Some,Tags,&,Stuff"
-        assert read_meta["age_rating"] == "Teen"
-        assert read_meta["score"] == "0"
-        # Test getting score that is invalid
-        metadata["score"] = "6"
-        epub_file = mm_epub.create_epub(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
-        assert exists(epub_file)
-        read_meta = mm_epub.get_info_from_epub(epub_file)
-        assert read_meta["title"] == "New Title"
-        assert read_meta["tags"] == "Some,Tags,&,Stuff"
-        assert read_meta["age_rating"] == "Teen"
-        assert read_meta["score"] is None
-        assert read_meta["cover_id"] is None
-        # Test getting the cover id from the epub file
-        chapters = mm_epub.add_cover_to_chapters(mm_epub.get_default_chapters(temp_dir), metadata, temp_dir)
-        epub_file = mm_epub.create_epub(chapters, metadata, temp_dir)
-        assert exists(epub_file)
-        read_meta = mm_epub.get_info_from_epub(epub_file)
-        assert read_meta["title"] == "New Title"
-        assert read_meta["tags"] == "Some,Tags,&,Stuff"
-        assert read_meta["age_rating"] == "Teen"
-        assert read_meta["score"] is None
-        assert read_meta["cover_id"] == "image1"
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test getting info from a non-epub file
-        text_file = abspath(join(temp_dir, "text.txt"))
-        mm_file_tools.write_text_file(text_file, "Text")
-        read_meta = mm_epub.get_info_from_epub(text_file)
-        assert read_meta == mm_archive.get_empty_metadata()
-        zip_file = abspath(join(temp_dir, "not_epub.zip"))
-        mm_file_tools.create_zip(temp_dir, zip_file)
-        read_meta = mm_epub.get_info_from_epub(zip_file)
-        assert read_meta == mm_archive.get_empty_metadata()
-
-def test_update_epub_info():
-    """
-    Tests the update_epub_info function.
-    """
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Create content files
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "Here's some text!")
-        image = Image.new("RGB", size=(100, 100), color="#ff0000")
-        image.save(abspath(join(temp_dir, "2.png")))
-        chapters = mm_epub.get_default_chapters(temp_dir)
-        # Create the epub file
-        metadata = mm_archive.get_empty_metadata()
-        metadata["title"] = "Name"
-        epub_file = mm_epub.create_epub(chapters, metadata, temp_dir)
-        assert exists(epub_file)
-        assert basename(epub_file) == "Name.epub"
-        # Get the epub info
-        read_meta = mm_epub.get_info_from_epub(epub_file)
-        assert read_meta["title"] == "Name"
-        assert read_meta["artists"] is None
-        assert read_meta["description"] is None
-        # Update the epub info
-        metadata["cover_id"] = None
-        metadata["title"] = "New Name!"
-        metadata["writers"] = "Person"
-        metadata["artists"] = "Another"
-        metadata["description"] = "Some text!!"
-        mm_epub.update_epub_info(epub_file, metadata, update_cover=True)
-        read_meta = mm_epub.get_info_from_epub(epub_file)
-        assert read_meta["title"] == "New Name!"
-        assert read_meta["writers"] == "Person"
-        assert read_meta["artists"] == "Another"
-        assert read_meta["description"] == "Some text!!"
-        # Extract the epub file to see contents
-        extracted = abspath(join(temp_dir, "extracted"))
-        os.mkdir(extracted)
-        assert mm_file_tools.extract_zip(epub_file, extracted)
-        assert sorted(os.listdir(extracted)) == ["EPUB", "META-INF", "mimetype"]
-        # Check that contents are still correct
-        assert mm_file_tools.read_text_file(abspath(join(extracted, "mimetype"))) == "application/epub+zip"
-        epub_directory = abspath(join(extracted, "EPUB"))
-        contents = ["content", "content.opf", "images", "nav.xhtml", "original", "style", "toc.ncx"]
-        assert sorted(os.listdir(epub_directory)) == contents
-        assert sorted(os.listdir(abspath(join(epub_directory, "content")))) == ["1.xhtml", "2.xhtml"]
-        assert sorted(os.listdir(abspath(join(epub_directory, "original")))) == ["1.txt", "2.png"]
-        assert sorted(os.listdir(abspath(join(epub_directory, "style")))) == ["epubstyle.css"]
-        image_dir = abspath(join(epub_directory, "images"))
-        assert sorted(os.listdir(image_dir)) == ["image1.png"]
-        # Test than non-cover_image is unaltered
-        extracted_image = Image.open(abspath(join(image_dir, "image1.png")))
-        assert extracted_image.size == (100, 100)
-        # Create an epub file
-        os.remove(epub_file)
-        shutil.rmtree(extracted)
-        metadata = mm_archive.get_empty_metadata()
-        metadata["title"] = "N"
-        metadata["writer"] = "N"
-        chapters = mm_epub.get_default_chapters(temp_dir)
-        chapters = mm_epub.add_cover_to_chapters(chapters, metadata, temp_dir)
-        epub_file = mm_epub.create_epub(chapters, metadata, temp_dir)
-        extracted = abspath(join(temp_dir, "extracted"))
-        os.mkdir(extracted)
-        assert mm_file_tools.extract_zip(epub_file, extracted)
-        epub_dir = abspath(join(extracted, "EPUB"))
-        image_dir = abspath(join(epub_dir, "images"))
-        assert sorted(os.listdir(image_dir)) == ["image1.jpg", "image2.png"]
-        extracted_image = Image.open(abspath(join(image_dir, "image2.png")))
-        assert extracted_image.size == (100, 100)
-        cover_image = Image.open(abspath(join(image_dir, "image1.jpg")))
-        assert cover_image.size == (900, 1200)
-        cover_size = os.stat(abspath(join(image_dir, "image1.jpg"))).st_size
-        # Test that cover image is not altered if not specified
-        shutil.rmtree(extracted)
-        metadata["cover_id"] = "image1"
-        metadata["title"] = "Something else!"
-        metadata["writers"] = "Something"
-        mm_epub.update_epub_info(epub_file, metadata, update_cover=False)
-        assert mm_epub.get_info_from_epub(epub_file)["title"] == "Something else!"
-        extracted = abspath(join(temp_dir, "extracted"))
-        os.mkdir(extracted)
-        assert mm_file_tools.extract_zip(epub_file, extracted)
-        epub_dir = abspath(join(extracted, "EPUB"))
-        image_dir = abspath(join(epub_dir, "images"))
-        assert sorted(os.listdir(image_dir)) == ["image1.jpg", "image2.png"]
-        extracted_image = Image.open(abspath(join(image_dir, "image2.png")))
-        assert extracted_image.size == (100, 100)
-        cover_image = Image.open(abspath(join(image_dir, "image1.jpg")))
-        assert cover_image.size == (900, 1200)
-        assert os.stat(abspath(join(image_dir, "image1.jpg"))).st_size == cover_size
-        content = mm_file_tools.read_text_file(abspath(join(epub_dir, "content.opf")))
+        assert contents == compare
+        # Test that the metadata has been updated
+        contents = mm_file_tools.read_text_file(abspath(join(epub_dir, "content.opf")))
         compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<package xmlns=\"http://www.idpf.org/2007/opf\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" unique-identifier=\"id\" version=\"3.0\" prefix=\"http://www.idpf.org/vocab/rendition/#\">"
         compare = f"{compare}\n    <metadata>"
         compare = f"{compare}\n        <dc:language>en</dc:language>"
         compare = f"{compare}\n        <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
-        compare = f"{compare}\n        <dc:identifier id=\"id\">Something else!</dc:identifier>"
+        compare = f"{compare}\n        <dc:identifier id=\"id\">New Title</dc:identifier>"
         compare = f"{compare}\n        <dc:date>0000-00-00T00:00:00+00:00</dc:date>"
-        compare = f"{compare}\n        <dc:title>Something else!</dc:title>"
-        compare = f"{compare}\n        <dc:creator id=\"author-0\">Something</dc:creator>"
-        compare = f"{compare}\n        <meta refines=\"author-0\" property=\"role\" scheme=\"marc:relators\">aut</meta>"
+        compare = f"{compare}\n        <dc:title>New Title</dc:title>"
+        compare = f"{compare}\n        <dc:creator id=\"illustrator-0\">Other</dc:creator>"
+        compare = f"{compare}\n        <meta refines=\"illustrator-0\" property=\"role\" scheme=\"marc:relators\">ill</meta>"
+        compare = f"{compare}\n        <dc:creator id=\"illustrator-1\">People</dc:creator>"
+        compare = f"{compare}\n        <meta refines=\"illustrator-1\" property=\"role\" scheme=\"marc:relators\">ill</meta>"
         compare = f"{compare}\n        <meta name=\"cover\" content=\"image1\" />"
         compare = f"{compare}\n    </metadata>"
         compare = f"{compare}\n    <manifest>"
         compare = f"{compare}\n        <item href=\"content/cover_image.xhtml\" id=\"cover\" media-type=\"application/xhtml+xml\" />"
-        compare = f"{compare}\n        <item href=\"content/1.xhtml\" id=\"item0\" media-type=\"application/xhtml+xml\" />"
-        compare = f"{compare}\n        <item href=\"content/2.xhtml\" id=\"item1\" media-type=\"application/xhtml+xml\" />"
+        compare = f"{compare}\n        <item href=\"content/Text.xhtml\" id=\"item0\" media-type=\"application/xhtml+xml\" />"
         compare = f"{compare}\n        <item href=\"images/image1.jpg\" id=\"image1\" media-type=\"image/jpeg\" />"
-        compare = f"{compare}\n        <item href=\"images/image2.png\" id=\"image2\" media-type=\"image/png\" />"
         compare = f"{compare}\n        <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
         compare = f"{compare}\n        <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
         compare = f"{compare}\n        <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"
@@ -1551,38 +1376,115 @@ def test_update_epub_info():
         compare = f"{compare}\n    <spine toc=\"ncx\">"
         compare = f"{compare}\n        <itemref idref=\"cover\" />"
         compare = f"{compare}\n        <itemref idref=\"item0\" />"
-        compare = f"{compare}\n        <itemref idref=\"item1\" />"
         compare = f"{compare}\n    </spine>"
         compare = f"{compare}\n</package>"
-        assert content == compare
-        # Test updating the epub
-        shutil.rmtree(extracted)
-        metadata["title"] = "Another Title of Sorts"
-        metadata["writer"] = "Something"
-        mm_epub.update_epub_info(epub_file, metadata, update_cover=True)
-        assert mm_epub.get_info_from_epub(epub_file)["title"] == "Another Title of Sorts"
-        extracted = abspath(join(temp_dir, "extracted"))
-        os.mkdir(extracted)
-        assert mm_file_tools.extract_zip(epub_file, extracted)
-        image_dir = abspath(join(extracted, "EPUB"))
-        image_dir = abspath(join(image_dir, "images"))
-        assert sorted(os.listdir(image_dir)) == ["image1.jpg", "image2.png"]
-        extracted_image = Image.open(abspath(join(image_dir, "image2.png")))
-        assert extracted_image.size == (100, 100)
-        cover_image = Image.open(abspath(join(image_dir, "image1.jpg")))
-        assert cover_image.size == (900, 1200)
-        assert not os.stat(abspath(join(image_dir, "image1.jpg"))).st_size == cover_size
+        assert contents == compare
+    # Test updating EPUB metadata and cover image
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Test updating a non-epub file
-        text_file = abspath(join(temp_dir, "text.txt"))
-        mm_file_tools.write_text_file(text_file, "This is text!")
-        mm_epub.update_epub_info(text_file, metadata)
-        assert mm_file_tools.read_text_file(text_file) == "This is text!"
-        zip_file = abspath(join(temp_dir, "not_epub.zip"))
-        mm_file_tools.create_zip(temp_dir, zip_file)
-        mm_epub.update_epub_info(zip_file, metadata)
-        extract_dir = abspath(join(temp_dir, "extract"))
-        os.mkdir(extract_dir)
-        assert mm_file_tools.extract_zip(zip_file, extract_dir)
-        assert sorted(os.listdir(extract_dir)) == ["text.txt"]
-        assert mm_file_tools.read_text_file(abspath(join(extract_dir, "text.txt"))) == "This is text!"
+        epub_file = abspath(join(temp_dir, "small.epub"))
+        shutil.copy(base_file, epub_file)
+        metadata = mm_archive.get_empty_metadata()
+        metadata["title"] = "New Cover"
+        metadata["writers"] = ["Person"]
+        metadata["cover_id"] = "image1"
+        mm_epub.update_epub_info(epub_file, metadata, update_cover=True)
+        # Check that EPUB structure is intact
+        assert mm_file_tools.extract_zip(epub_file, temp_dir)
+        assert sorted(os.listdir(temp_dir)) == ["EPUB", "META-INF", "mimetype", "small.epub"]
+        epub_dir = abspath(join(temp_dir, "EPUB"))
+        assert sorted(os.listdir(epub_dir)) == ["content", "content.opf", "images", "nav.xhtml", "original", "style", "toc.ncx"]
+        content_dir = abspath(join(epub_dir, "content"))
+        assert sorted(os.listdir(content_dir)) == ["Text.xhtml", "cover_image.xhtml"]
+        image_dir = abspath(join(epub_dir, "images"))
+        assert sorted(os.listdir(image_dir)) == ["image1.jpg"]
+        # Check that the cover image has been updated
+        assert os.stat(abspath(join(image_dir, "image1.jpg"))).st_size > 5000
+        contents = mm_file_tools.read_text_file(abspath(join(content_dir, "cover_image.xhtml")))
+        compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        compare = f"{compare}\n<html xmlns:svgns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns=\"http://www.w3.org/1999/xhtml\">"
+        compare = f"{compare}\n    <head>"
+        compare = f"{compare}\n        <title>Cover</title>"
+        compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+        compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
+        compare = f"{compare}\n    </head>"
+        compare = f"{compare}\n    <body>"
+        compare = f"{compare}\n        <div id=\"full-image-container\">"
+        compare = f"{compare}\n            <svgns:svg width=\"100%\" height=\"100%\" viewBox=\"0 0 900 1200\" preserveAspectRatio=\"xMidYMid meet\" version=\"1.1\">"
+        compare = f"{compare}\n                <svgns:title>Cover</svgns:title>"
+        compare = f"{compare}\n                <svgns:image xlink:href=\"../images/image1.jpg\" width=\"900\" height=\"1200\" />"
+        compare = f"{compare}\n            </svgns:svg>"
+        compare = f"{compare}\n        </div>"
+        compare = f"{compare}\n    </body>"
+        compare = f"{compare}\n</html>"
+        assert contents == compare
+        # Test that the metadata has been updated
+        contents = mm_file_tools.read_text_file(abspath(join(epub_dir, "content.opf")))
+        compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        compare = f"{compare}\n<package xmlns=\"http://www.idpf.org/2007/opf\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" unique-identifier=\"id\" version=\"3.0\" prefix=\"http://www.idpf.org/vocab/rendition/#\">"
+        compare = f"{compare}\n    <metadata>"
+        compare = f"{compare}\n        <dc:language>en</dc:language>"
+        compare = f"{compare}\n        <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
+        compare = f"{compare}\n        <dc:identifier id=\"id\">New Cover</dc:identifier>"
+        compare = f"{compare}\n        <dc:date>0000-00-00T00:00:00+00:00</dc:date>"
+        compare = f"{compare}\n        <dc:title>New Cover</dc:title>"
+        compare = f"{compare}\n        <dc:creator id=\"author-0\">Person</dc:creator>"
+        compare = f"{compare}\n        <meta refines=\"author-0\" property=\"role\" scheme=\"marc:relators\">aut</meta>"
+        compare = f"{compare}\n        <meta name=\"cover\" content=\"image1\" />"
+        compare = f"{compare}\n    </metadata>"
+        compare = f"{compare}\n    <manifest>"
+        compare = f"{compare}\n        <item href=\"content/cover_image.xhtml\" id=\"cover\" media-type=\"application/xhtml+xml\" />"
+        compare = f"{compare}\n        <item href=\"content/Text.xhtml\" id=\"item0\" media-type=\"application/xhtml+xml\" />"
+        compare = f"{compare}\n        <item href=\"images/image1.jpg\" id=\"image1\" media-type=\"image/jpeg\" />"
+        compare = f"{compare}\n        <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
+        compare = f"{compare}\n        <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
+        compare = f"{compare}\n        <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"
+        compare = f"{compare}\n    </manifest>"
+        compare = f"{compare}\n    <spine toc=\"ncx\">"
+        compare = f"{compare}\n        <itemref idref=\"cover\" />"
+        compare = f"{compare}\n        <itemref idref=\"item0\" />"
+        compare = f"{compare}\n    </spine>"
+        compare = f"{compare}\n</package>"
+        assert contents == compare
+    # Test attempting to update EPUB cover image when no cover image is present
+    base_file = abspath(join(mm_test.ARCHIVE_EPUB_DIRECTORY, "basic.epub"))
+    with tempfile.TemporaryDirectory() as temp_dir:
+        epub_file = abspath(join(temp_dir, "basic.epub"))
+        shutil.copy(base_file, epub_file)
+        metadata = mm_archive.get_empty_metadata()
+        metadata["title"] = "No Cover"
+        metadata["tags"] = ["Multiple", "Tags"]
+        metadata["cover_id"] = None
+        mm_epub.update_epub_info(epub_file, metadata, update_cover=True)
+        # Check that EPUB structure is intact
+        assert mm_file_tools.extract_zip(epub_file, temp_dir)
+        assert sorted(os.listdir(temp_dir)) == ["EPUB", "META-INF", "basic.epub", "mimetype"]
+        epub_dir = abspath(join(temp_dir, "EPUB"))
+        assert sorted(os.listdir(epub_dir)) == ["content", "content.opf", "images", "nav.xhtml", "original", "style", "toc.ncx"]
+        content_dir = abspath(join(epub_dir, "content"))
+        assert os.listdir(content_dir) == ["text.xhtml"]
+        image_dir = abspath(join(epub_dir, "images"))
+        assert os.listdir(image_dir) == []
+        # Test that the metadata has been updated
+        contents = mm_file_tools.read_text_file(abspath(join(epub_dir, "content.opf")))
+        compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        compare = f"{compare}\n<package xmlns=\"http://www.idpf.org/2007/opf\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" unique-identifier=\"id\" version=\"3.0\" prefix=\"http://www.idpf.org/vocab/rendition/#\">"
+        compare = f"{compare}\n    <metadata>"
+        compare = f"{compare}\n        <dc:language>en</dc:language>"
+        compare = f"{compare}\n        <meta property=\"dcterms:modified\">0000-00-00T00:30:00Z</meta>"
+        compare = f"{compare}\n        <dc:identifier id=\"id\">No Cover</dc:identifier>"
+        compare = f"{compare}\n        <dc:date>0000-00-00T00:00:00+00:00</dc:date>"
+        compare = f"{compare}\n        <dc:title>No Cover</dc:title>"
+        compare = f"{compare}\n        <dc:subject>Multiple</dc:subject>"
+        compare = f"{compare}\n        <dc:subject>Tags</dc:subject>"
+        compare = f"{compare}\n    </metadata>"
+        compare = f"{compare}\n    <manifest>"
+        compare = f"{compare}\n        <item href=\"content/text.xhtml\" id=\"item0\" media-type=\"application/xhtml+xml\" />"
+        compare = f"{compare}\n        <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
+        compare = f"{compare}\n        <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"
+        compare = f"{compare}\n        <item href=\"toc.ncx\" id=\"ncx\" media-type=\"application/x-dtbncx+xml\" />"
+        compare = f"{compare}\n    </manifest>"
+        compare = f"{compare}\n    <spine toc=\"ncx\">"
+        compare = f"{compare}\n        <itemref idref=\"item0\" />"
+        compare = f"{compare}\n    </spine>"
+        compare = f"{compare}\n</package>"
+        assert contents == compare

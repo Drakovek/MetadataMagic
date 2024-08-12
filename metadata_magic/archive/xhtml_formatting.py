@@ -141,7 +141,8 @@ def text_to_xhtml(text:str, replace_reserved:bool=True) -> str:
     formatted_text = text.replace("\r", "")
     formatted_text = text.replace("\t", "    ")
     # Separate sections into paragraphs
-    formatted_text = re.sub(r"\n\s{3,}|(?:\n\s*){2,}", "{{{PPP}}}", formatted_text)
+    regex = r"\n\s{3,}|(?:\n\s*){2,}|\n\s*(?=[\"ʺ“”＂])|(?<=[\"ʺ“”＂])\s*\n"
+    formatted_text = re.sub(regex, "{{{PPP}}}", formatted_text)
     paragraphs = formatted_text.split("{{{PPP}}}")
     # Format each paragraph
     xhtml = ""
@@ -166,6 +167,18 @@ def txt_to_xhtml(txt_file:str) -> str:
     # Read text from the given txt file
     text = mm_file_tools.read_text_file(txt_file)
     return text_to_xhtml(text)
+
+def format_paragraph(match) -> str:
+    if match.group() is not None:
+        # Split into paragraphs
+        content = re.sub(r"^<[^>]*>|<[^>]*>$", "", match.group())
+        content = re.sub(r"\s+", " ", content).strip()
+        content = re.sub(r"<br\s*\/?>", "\n", content)
+        content = text_to_xhtml(content, False)
+        # Replace the starting elements
+        start_element = re.findall(r"^<[^>]*>", match.group())[0]
+        content = re.sub(r"<p>", start_element, content)
+        return content
 
 def html_to_xhtml(html_file:str) -> str:
     """
@@ -193,24 +206,26 @@ def html_to_xhtml(html_file:str) -> str:
     # Remove encapsulation and body elements, if applicable
     content = ElementTree.tostring(root).decode("UTF-8")
     content = re.sub(r"^\s*<[^\>]+\>\s*|\s*<[^\>]+\>\s*$", "", content)
-    content = re.sub(r".*\<body[^\>]*\>|<\/body[^\>]*\>.*", "", content)
+    content = re.sub(r"[\s\S]*\<body[^\>]*\>|<\/body[^\>]*\>[\s\S]*", "", content)
     # Delete javascript tags
     content = re.sub(r"<\s*script[^>]*>[^<]*<\s*\/\s*script\s*>|<\s*script\s*\/\s*>", "", content)
     # Reformat text in <pre> elements
     for pre in re.findall(r"<pre>[\S\s]*<\/pre>", content):
         new_pre = text_to_xhtml(re.sub(r"^<pre>|<\/pre>$", "", pre), False)
         content = re.sub(r"<pre>[\S\s]*<\/pre>", new_pre, content, count=1)
-    # Reformat if not a fully realized HTML file
-    if not len(re.findall(r"<html[^>]*>", text)) > 0:
-        content = re.sub(r"\n", "", content)
-        content = re.sub(r"<p[^>]*>|<div[^>]*>", "", content)
-        content = re.sub(r"<\/p>|<\/div>", "<br/><br/>", content)
-        content = re.sub(r"\s*<br\s*\/>\s*", "\n", content)
-        content = text_to_xhtml(content, False)
+    # Split paragraph tags, if necessary
+    regex = r"<p(?:\s[^>]*)?>(?:[^<]*<(?!\/p>)[^>]*>)*[^<]*<\/p>"
+    content = re.sub(regex, format_paragraph, content)
     # Replace escape characters
     content = re.sub(r"\s+", " ", content)
     content = content.strip().replace("\n", "")
     content = html_string_tools.html.replace_reserved_in_html(content, True)
+    # Reformat if not a fully realized HTML file
+    if not len(re.findall(r"<html[^>]*>", text)) > 0:
+        content = re.sub(r"<p(?:\s[^>]*)?>|<div(?:\s[^>]*)?>", "<br/><br/>", content)
+        content = re.sub(r"<\/p>|<\/div>", "<br/><br/>", content)
+        content = re.sub(r"<br\s*\/?>", "\n", content)
+        content = text_to_xhtml(content.strip(), False)
     # Return in XML format
     return content
 

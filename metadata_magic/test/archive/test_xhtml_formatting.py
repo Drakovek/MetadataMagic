@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import tempfile
+import metadata_magic.test as mm_test
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.xhtml_formatting as mm_xhtml
 from os.path import abspath, exists, join
@@ -258,6 +259,9 @@ def test_text_to_xhtml():
     assert mm_xhtml.text_to_xhtml(text) == "<p>These.</p><p>Are</p><p>Paragraphs!</p>"
     text = "One\r\nparagraph.\r\n\r\nSecond\r\nparagraph."
     assert mm_xhtml.text_to_xhtml(text) == "<p>One paragraph.</p><p>Second paragraph.</p>"
+    # Test paragraphs separated by quotes
+    text = "\"Not\" \"Separate\"\n\"Separate\""
+    assert mm_xhtml.text_to_xhtml(text) == "<p>&#34;Not&#34; &#34;Separate&#34;</p><p>&#34;Separate&#34;</p>"
     # Test with escape characters
     text = "This & that.\n\n>.>"
     assert mm_xhtml.text_to_xhtml(text) == "<p>This &#38; that.</p><p>&#62;.&#62;</p>"
@@ -282,6 +286,11 @@ def test_txt_to_xhtml():
         mm_file_tools.write_text_file(text_file, text)
         xml = mm_xhtml.txt_to_xhtml(text_file)
         assert xml == "<p>Different paragraphs!</p><p>How cool!</p>"
+        # Test multiple paragraphs based on quotations
+        text = "The next line.\n\"Starts with a quote\""
+        mm_file_tools.write_text_file(text_file, text)
+        xml = mm_xhtml.txt_to_xhtml(text_file)
+        assert xml == "<p>The next line.</p><p>&#34;Starts with a quote&#34;</p>"
         # Test single new line character with HTML escape entities
         text = "More text!\nAnd This & That..."
         mm_file_tools.write_text_file(text_file, text)
@@ -298,108 +307,69 @@ def test_txt_to_xhtml():
         xml = mm_xhtml.txt_to_xhtml(text_file)
         assert xml == "<p>Thing</p><p>Other</p>"
 
-def test_html_to_xml():
+def test_html_to_xhtml():
     """
     Tests the html_to_xhtml function.
     """
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test with no formatting.
-        html_file = abspath(join(temp_dir, "HTML.html"))
-        text = "<p>This is a simple sentence!</p>"
-        mm_file_tools.write_text_file(html_file, text)
-        assert exists(html_file)
-        xml = mm_xhtml.html_to_xhtml(html_file)
-        assert xml == "<p>This is a simple sentence!</p><p></p>"
-        # Test with multiple paragraphs
-        text = "<html><p>Some text.</p><p>&amp; More!</p></html>"
-        mm_file_tools.write_text_file(html_file, text)
-        xml = mm_xhtml.html_to_xhtml(html_file)
-        assert xml == "<p>Some text.</p><p>&#38; More!</p>"
-        # Test with a body
-        text = "<!DOCTYPE html>\n<html>\n<body>\n<p>New.</p>\n<p>Words</p>\n<body>\n</html>"
-        mm_file_tools.write_text_file(html_file, text)
-        xml = mm_xhtml.html_to_xhtml(html_file)
-        assert xml == "<p>New.</p> <p>Words</p>"
-        # Test with newlines and no formatting
-        text = "This is a test.\n\r\r\n\nHopefully nothing added."
-        mm_file_tools.write_text_file(html_file, text)
-        xml = mm_xhtml.html_to_xhtml(html_file)
-        assert xml == "<p>This is a test. Hopefully nothing added.</p>"
-        # Test with DeviantArt formatting
-        text = "<!DOCTYPE html><html><head>Not at all relevant</head><body>"
-        text = f"{text}<div class='blah'>Random metadata and stuff.</div><span>Other things</span>"
-        text = f"{text}<div  class='text'><p>This is the real stuff.</p><p>Right<br>Here.</p>"
-        text = f"{text}<script type'thing'>Blah</script><p>More.<p></div>"
-        text = f"{text}</body></html>"
-        mm_file_tools.write_text_file(html_file, text)
-        xml = mm_xhtml.html_to_xhtml(html_file)
-        assert xml == "<p>This is the real stuff.</p><p>Right<br />Here.</p><p>More.</p><p />"
-        # Test with text in a <pre> element
-        text = "<html><body><p>Thing</p><pre>    This &\nthat!   \n\n <b>Another!</b></pre></body></html>"
-        mm_file_tools.write_text_file(html_file, text)
-        xml = mm_xhtml.html_to_xhtml(html_file)
-        assert xml == "<p>Thing</p><p>This &#38; that!</p><p><b>Another!</b></p>"
-        # Test aggressive formatting if not a fully realized html file
-        text = "<p><div class=\"blah\" />No<br/>\r\n     Paragraphs.<br/> <br/> Just<br/>breaks.</p>"
-        mm_file_tools.write_text_file(html_file, text)
-        xml = mm_xhtml.html_to_xhtml(html_file)
-        assert xml == "<p>No Paragraphs.</p><p>Just breaks.</p><p></p>"
-        text = "<div class=\"thing\">Word</div><p id=\"blah\">Thing</p>"
-        mm_file_tools.write_text_file(html_file, text)
-        xml = mm_xhtml.html_to_xhtml(html_file)
-        assert xml == "<p>Word</p><p>Thing</p><p></p>"
-        # Test that all formatting is preserved in a fully realized html file
-        text = "<html><body><div>Some<br/>Things</div><p>Other<br/><br/>Things</p></body></html>"
-        mm_file_tools.write_text_file(html_file, text)
-        xml = mm_xhtml.html_to_xhtml(html_file)
-        assert xml == "<div>Some<br />Things</div><p>Other<br /><br />Things</p>"
-        # Test that newlines in paragraphs are converted to spaces
-        text = "<html><body><p>This  is a\ntest of things.</body></html>"
-        mm_file_tools.write_text_file(html_file, text)
-        xml = mm_xhtml.html_to_xhtml(html_file)
-        assert xml == "<p>This is a test of things.</p>"
+    # Test formatting HTML with basic HTML structure with head & body
+    html_file = abspath(join(mm_test.BASIC_HTML_DIRECTORY, "basic.html"))
+    xml = mm_xhtml.html_to_xhtml(html_file)
+    assert xml == "<p>This text is basic.</p> <div><hr /></div> <p class=\"A\">More Text</p>"
+    # Test formatting individual paragraph elements, as necessary
+    html_file = abspath(join(mm_test.BASIC_HTML_DIRECTORY, "badformat.html"))
+    xml = mm_xhtml.html_to_xhtml(html_file)
+    compare = "<ping /> <p>This is all a <i>single</i> paragraph!</p>"
+    compare = f"{compare}<p>This is a separate paragraph.</p> "
+    compare = f"{compare}<p class=\"B\">Badly <i>formatted</i> paragraph.</p>"
+    compare = f"{compare}<p class=\"B\">This should be <b>separate!</b></p> "
+    compare = f"{compare}<div><br /><br /></div> <p>This is fine as one</p>"
+    assert xml == compare
+    # Test getting html in the DeviantArt liturature format
+    html_file = abspath(join(mm_test.BASIC_HTML_DIRECTORY, "deviantart.htm"))
+    xml = mm_xhtml.html_to_xhtml(html_file)
+    assert xml == "<p>This is the real stuff.</p> <p>Right Here.</p> <p>More.</p>"
+    # Test formatting text that is not HTML
+    html_file = abspath(join(mm_test.BASIC_TEXT_DIRECTORY, "unicode.txt"))
+    xml = mm_xhtml.html_to_xhtml(html_file)
+    assert xml == "<p>This is &#252;nicode.</p>"
+    # Test formatting HTML with extra whitespace and no structure
+    html_file = abspath(join(mm_test.BASIC_HTML_DIRECTORY, "unformatted.html"))
+    xml = mm_xhtml.html_to_xhtml(html_file)
+    assert xml == "<p>This is a sentence.</p><p>&#38; this is a different sentence.</p><p>Final bit.</p>"
 
 def test_image_to_xml():
     """
     Tests the image_to_xhtml function.
     """
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test getting image as XML
-        image_file = abspath(join(temp_dir, "image.png"))
-        image = Image.new("RGB", size=(600, 800), color="#ff0000")
-        image.save(image_file)
-        assert exists(image_file)
-        xml = mm_xhtml.image_to_xhtml(image_file)
-        assert xml == "<div><img src=\"../images/image.png\" alt=\"image\" width=\"600\" height=\"800\" /></div>"
-        # Different dimensions and an alt tag
-        image_file = abspath(join(temp_dir, "[01] Other's.jpg"))
-        image = Image.new("RGB", size=(350, 200), color="#ff0000")
-        image.save(image_file)
-        assert exists(image_file)
-        xml = mm_xhtml.image_to_xhtml(image_file, "Some Name")
-        assert xml == "<div><img src=\"../images/[01] Other's.jpg\" alt=\"Some Name\" width=\"350\" height=\"200\" /></div>"
-        # Test with a non-image file
-        image_file = abspath(join(temp_dir, "notimage.jpg"))
-        mm_file_tools.write_text_file(image_file, "not an image")
-        assert mm_xhtml.image_to_xhtml(image_file) == ""
+    # Test getting an image as XML with no alt tag
+    image_file = abspath(join(mm_test.PAIR_IMAGE_DIRECTORY, "bare.png"))
+    xml = mm_xhtml.image_to_xhtml(image_file)
+    assert xml == "<div><img src=\"../images/bare.png\" alt=\"bare\" width=\"300\" height=\"200\" /></div>"
+    # Test getting an image as XML with an alt tag
+    image_file = abspath(join(mm_test.PAIR_IMAGE_DIRECTORY, "long.JPG"))
+    xml = mm_xhtml.image_to_xhtml(image_file, "[00] AAA'A")
+    assert xml == "<div><img src=\"../images/long.JPG\" alt=\"[00] AAA'A\" width=\"50\" height=\"250\" /></div>"
+    # Test loading a non-image file
+    image_file = abspath(join(mm_test.PAIR_IMAGE_DIRECTORY, "long.JSON"))
+    assert mm_xhtml.image_to_xhtml(image_file, "BBB") == ""
 
 def test_get_title_from_file():
     """
     Tests the get_title_from_file function.
     """
-    with tempfile.TemporaryDirectory() as temp_dir:
-        filename = abspath(join(temp_dir, "thing.txt"))
-        assert mm_xhtml.get_title_from_file(filename) == "thing"
-        filename = abspath(join(temp_dir, "[00] Image  .png"))
-        assert mm_xhtml.get_title_from_file(filename) == "Image"
-        filename = abspath(join(temp_dir, "(This is a thing) Cover"))
-        assert mm_xhtml.get_title_from_file(filename) == "Cover"
-        filename = abspath(join(temp_dir, "[Not Number) Thing.txt"))
-        assert mm_xhtml.get_title_from_file(filename) == "[Not Number) Thing"
-        filename = abspath(join(temp_dir, "  1 [2] (3).html"))
-        assert mm_xhtml.get_title_from_file(filename) == "1 [2] (3)"
-        filename = abspath(join(temp_dir, "none"))
-        assert mm_xhtml.get_title_from_file(filename) == "none"
+    temp_dir = abspath(tempfile.gettempdir())
+    filename = abspath(join(temp_dir, "thing.txt"))
+    assert mm_xhtml.get_title_from_file(filename) == "thing"
+    filename = abspath(join(temp_dir, "[00] Image  .png"))
+    assert mm_xhtml.get_title_from_file(filename) == "Image"
+    filename = abspath(join(temp_dir, "(This is a thing) Cover"))
+    assert mm_xhtml.get_title_from_file(filename) == "Cover"
+    filename = abspath(join(temp_dir, "[Not Number) Thing.txt"))
+    assert mm_xhtml.get_title_from_file(filename) == "[Not Number) Thing"
+    filename = abspath(join(temp_dir, "  1 [2] (3).html"))
+    assert mm_xhtml.get_title_from_file(filename) == "1 [2] (3)"
+    filename = abspath(join(temp_dir, "none"))
+    assert mm_xhtml.get_title_from_file(filename) == "none"
 
 def test_get_word_count_from_html():
     """

@@ -68,20 +68,18 @@ def get_pairs_from_lists(jsons:List[str], media:List[str], print_info:bool=True)
     if print_info:
         print("Finding JSON metadata:")
         iterator = tqdm.tqdm(media)
-    # Create a new list of json basenames with the extension altered
+    # Create a new list of json basenames set to lowercase
     jsons_modified = []
-    lower = lambda a: a.lower()
     for json in jsons:
-        base = abspath(json)[:-5]
-        base = html_string_tools.regex.regex_replace(lower, r"\.[0-9A-Za-z]{1,5}$", base)
-        jsons_modified.append(base)
+        base = basename(abspath(json))[:-5].lower()
+        jsons_modified.append(abspath(join(abspath(join(json, os.pardir)), base)))
     # Run through the list of media, finding matching JSON files
     pairs = []
     reference_jsons = copy.deepcopy(jsons)
     for media_file in iterator:
         # Get the file with the altered extension
-        base = abspath(media_file)
-        base = html_string_tools.regex.regex_replace(lower, r"\.[0-9A-Za-z]{1,5}$", base)
+        base = basename(abspath(media_file)).lower()
+        base = abspath(join(abspath(join(media_file, os.pardir)), base))
         # Check if the JSON exists with the same basename
         try:
             index = jsons_modified.index(base)

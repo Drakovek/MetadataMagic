@@ -3,6 +3,7 @@
 import os
 import shutil
 import tempfile
+import metadata_magic.test as mm_test
 import metadata_magic.config as mm_config
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.epub as mm_epub
@@ -15,315 +16,241 @@ def test_archive_all_media():
     """
     Tests the archive_all_media function.
     """
+    # Test bulk archiving JSON-image pairs
+    config = mm_config.DEFAULT_CONFIG
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Create test files
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "image1.jpg")), "Blah")
-        mm_file_tools.write_json_file(abspath(join(temp_dir, "image1.json")), {"title": "First Image"})
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "image2.png")), "Blah")
-        mm_file_tools.write_json_file(abspath(join(temp_dir, "image2.json")), {"title": "Long", "caption":"A"*6000})
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "text1.txt")), "Stuff")
-        mm_file_tools.write_json_file(abspath(join(temp_dir, "text1.json")), {"title": "Book", "writer":"Person"})
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "text2.html")), "<p>Thing</p>")
-        mm_file_tools.write_json_file(abspath(join(temp_dir, "text2.json")), {"title": "Second Book", "writer":"Other"})
-        sub_dir = abspath(join(temp_dir, "sub_dir"))
-        os.mkdir(sub_dir)
-        mm_file_tools.write_text_file(abspath(join(sub_dir, "sub_image.cbz")), "Duplicate CBZ")
-        mm_file_tools.write_text_file(abspath(join(sub_dir, "sub_image.jpeg")), "Blah")
-        mm_file_tools.write_json_file(abspath(join(sub_dir, "sub_image.json")), {"title": "Sub Image"})
-        mm_file_tools.write_text_file(abspath(join(sub_dir, "sub_text.epub")), "Duplicate EPUB")
-        mm_file_tools.write_text_file(abspath(join(sub_dir, "sub_text.htm")), "<p>Other</p>")
-        mm_file_tools.write_json_file(abspath(join(sub_dir, "sub_text.json")), {"title": "Sub Text", "writers":["Writer"]})
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "unsupported.blah")), "Blah")
-        mm_file_tools.write_json_file(abspath(join(temp_dir, "unsupported.json")), {"title": "Unsupported"})
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "thing.png")), "Blah")
-        mm_file_tools.write_text_file(abspath(join(sub_dir, "other.txt")), "Blah")
-        files = sorted(os.listdir(temp_dir))
-        assert files == ["image1.jpg", "image1.json", "image2.json", "image2.png", "sub_dir", 
-                "text1.json", "text1.txt", "text2.html", "text2.json", "thing.png", "unsupported.blah", "unsupported.json"]
-        files = sorted(os.listdir(sub_dir))
-        assert files == ["other.txt", "sub_image.cbz", "sub_image.jpeg", "sub_image.json",
-                "sub_text.epub", "sub_text.htm", "sub_text.json"]
-        # Archive all supported files
-        config = mm_config.DEFAULT_CONFIG
-        assert mm_bulk_archive.archive_all_media(temp_dir, config)
-        assert sorted(os.listdir(temp_dir)) == ["image1.cbz", "image2.epub", "sub_dir", "text1.epub", "text2.epub",
-                "thing.png", "unsupported.blah", "unsupported.json"]
-        print(sorted(os.listdir(sub_dir)))
-        assert sorted(os.listdir(sub_dir)) == ["other.txt", "sub_image-2.cbz", "sub_image.cbz",
-                "sub_text-2.epub", "sub_text.epub"]
-        # Test that metadata in archives is correct
-        assert mm_comic_archive.get_info_from_cbz(abspath(join(temp_dir, "image1.cbz")))["title"] == "First Image"
-        assert mm_epub.get_info_from_epub(abspath(join(temp_dir, "image2.epub")))["title"] == "Long"
-        assert mm_comic_archive.get_info_from_cbz(abspath(join(sub_dir, "sub_image-2.cbz")))["title"] == "Sub Image"
-        assert mm_file_tools.read_text_file(abspath(join(sub_dir, "sub_image.cbz"))) == "Duplicate CBZ"
-        assert mm_epub.get_info_from_epub(abspath(join(temp_dir, "text1.epub")))["title"] == "Book"
-        assert mm_epub.get_info_from_epub(abspath(join(temp_dir, "text2.epub")))["writers"] == "Other"
-        assert mm_epub.get_info_from_epub(abspath(join(sub_dir, "sub_text-2.epub")))["title"] == "Sub Text"
-        assert mm_file_tools.read_text_file(abspath(join(sub_dir, "sub_text.epub"))) == "Duplicate EPUB"
-        # Test that the internal file structure of archives are correct
-        cbz_extract = abspath(join(temp_dir, "cbz_extract"))
-        os.mkdir(cbz_extract)
-        mm_file_tools.extract_zip(abspath(join(temp_dir, "image1.cbz")), cbz_extract)
-        assert sorted(os.listdir(cbz_extract)) == ["ComicInfo.xml", "First Image"]
-        assert sorted(os.listdir(abspath(join(cbz_extract, "First Image")))) == ["First Image.jpg", "First Image.json"]
-        epub_extract = abspath(join(temp_dir, "epub_extract"))
-        os.mkdir(epub_extract)
-        mm_file_tools.extract_zip(abspath(join(temp_dir, "text1.epub")), epub_extract)
-        assert sorted(os.listdir(epub_extract)) == ["EPUB", "META-INF", "mimetype"]
-        epub_extract = abspath(join(epub_extract, "EPUB"))
-        assert sorted(os.listdir(epub_extract)) == ["content", "content.opf", "images", "nav.xhtml", "original", "style", "toc.ncx"]
-        epub_extract = abspath(join(epub_extract, "original"))
-        assert sorted(os.listdir(epub_extract)) == ["Book.json", "Book.txt"]
+        image_directory = abspath(join(temp_dir, "images"))
+        shutil.copytree(mm_test.PAIR_IMAGE_DIRECTORY, image_directory)
+        mm_bulk_archive.archive_all_media(image_directory, config)
+        assert sorted(os.listdir(image_directory)) == [".empty", "aaa.json", "aaa.webp", "bare.PNG.cbz", "long.epub"]
+        # Check contents of CBZ file generated from image JSON pair
+        cbz_file = abspath(join(image_directory, "bare.PNG.cbz"))
+        read_metadata = mm_comic_archive.get_info_from_cbz(cbz_file)
+        assert read_metadata["title"] == "Émpty"
+        assert read_metadata["page_count"] == "1"
+        assert read_metadata["description"] is None
+        assert read_metadata["artists"] is None
+        cbz_extracted = abspath(join(temp_dir, "cbz_extracted"))
+        os.mkdir(cbz_extracted)
+        assert mm_file_tools.extract_zip(cbz_file, cbz_extracted)
+        assert sorted(os.listdir(cbz_extracted)) == ["ComicInfo.xml", "Empty"]
+        cbz_extracted = abspath(join(cbz_extracted, "Empty"))
+        assert sorted(os.listdir(cbz_extracted)) == ["Empty.json", "Empty.png"]
+        # Check contents of the EPUB generated from image and text from JSON description
+        epub_file = abspath(join(image_directory, "long.epub"))
+        read_metadata = mm_epub.get_info_from_epub(epub_file)
+        assert read_metadata["title"] == "LÑG"
+        assert read_metadata["artists"] == ["Long Artist"]
+        assert read_metadata["writers"] == ["Long Artist"]
+        assert read_metadata["age_rating"] == "X18+"
+        assert read_metadata["page_count"] == "1"
+        assert read_metadata["cover_id"] == "image1"
+        assert read_metadata["date"] is None
+        epub_extracted = abspath(join(temp_dir, "epub_extracted"))
+        os.mkdir(epub_extracted)
+        assert mm_file_tools.extract_zip(epub_file, epub_extracted)
+        assert sorted(os.listdir(epub_extracted)) == ["EPUB", "META-INF", "mimetype"]
+        epub_extracted = abspath(join(epub_extracted, "EPUB"))
+        epub_extracted = abspath(join(epub_extracted, "content"))
+        assert sorted(os.listdir(epub_extracted)) == ["LNG.xhtml", "cover_image.xhtml"]
+    # Test bulk archiving JSON-text pairs
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Test bulk archiving while formatting the titles
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "image.png")), "Blah")
-        mm_file_tools.write_json_file(abspath(join(temp_dir, "image.json")), {"title": "just a test"})
-        assert sorted(os.listdir(temp_dir)) == ["image.json", "image.png"]
-        assert mm_bulk_archive.archive_all_media(temp_dir, config, True)    
-        assert sorted(os.listdir(temp_dir)) == ["image.cbz"]
-        assert mm_comic_archive.get_info_from_cbz(abspath(join(temp_dir, "image.cbz")))["title"] == "Just a Test"
-        cbz_extract = abspath(join(temp_dir, "cbz_extract"))
-        os.mkdir(cbz_extract)
-        mm_file_tools.extract_zip(abspath(join(temp_dir, "image.cbz")), cbz_extract)
-        assert sorted(os.listdir(cbz_extract)) == ["ComicInfo.xml", "Just a Test"]
-        internal_dir = abspath(join(cbz_extract, "Just a Test"))
-        assert sorted(os.listdir(internal_dir)) == ["Just a Test.json", "Just a Test.png"]
-        # Test with a different description cutoff point
+        text_directory = abspath(join(temp_dir, "text"))
+        shutil.copytree(mm_test.PAIR_TEXT_DIRECTORY, text_directory)
+        mm_bulk_archive.archive_all_media(temp_dir, config)
+        assert sorted(os.listdir(text_directory)) == ["text 02.txt.epub", "text 1.epub"]
+        # Check the contents of EPUB generated from an JSON-HTML pair
+        epub_file = abspath(join(text_directory, "text 1.epub"))
+        read_metadata = mm_epub.get_info_from_epub(epub_file)
+        assert read_metadata["title"] == "HTML"
+        assert read_metadata["writers"] == ["AAA"]
+        assert read_metadata["page_count"] == "1"
+        assert read_metadata["artists"] is None
+        assert read_metadata["date"] is None
+        epub_extracted = abspath(join(temp_dir, "text1_extracted"))
+        os.mkdir(epub_extracted)
+        assert mm_file_tools.extract_zip(epub_file, epub_extracted)
+        assert sorted(os.listdir(epub_extracted)) == ["EPUB", "META-INF", "mimetype"]
+        epub_extracted = abspath(join(epub_extracted, "EPUB"))
+        epub_extracted = abspath(join(epub_extracted, "content"))
+        assert sorted(os.listdir(epub_extracted)) == ["HTML.xhtml", "cover_image.xhtml"]
+        # Check the contents of EPUB generated from an JSON-txt pair
+        epub_file = abspath(join(text_directory, "text 02.txt.epub"))
+        read_metadata = mm_epub.get_info_from_epub(epub_file)
+        assert read_metadata["title"] == "TXT"
+        assert read_metadata["writers"] == ["BBB"]
+        assert read_metadata["page_count"] == "1"
+        assert read_metadata["artists"] is None
+        assert read_metadata["date"] is None
+        epub_extracted = abspath(join(temp_dir, "text2_extracted"))
+        os.mkdir(epub_extracted)
+        assert mm_file_tools.extract_zip(epub_file, epub_extracted)
+        assert sorted(os.listdir(epub_extracted)) == ["EPUB", "META-INF", "mimetype"]
+        epub_extracted = abspath(join(epub_extracted, "EPUB"))
+        epub_extracted = abspath(join(epub_extracted, "content"))
+        assert sorted(os.listdir(epub_extracted)) == ["TXT.xhtml", "cover_image.xhtml"]
+    # Test bulk archiving while formatting the titles, and ignoring unpaired
+    base_directory = abspath(join(mm_test.EPUB_INTERNAL_DIRECTORY, "multiple"))
     with tempfile.TemporaryDirectory() as temp_dir:
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "short.png")), "BLAH")
-        mm_file_tools.write_json_file(abspath(join(temp_dir, "short.json")), {"title":"Short", "caption":"A"*200})
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "long.png")), "BLAH")
-        mm_file_tools.write_json_file(abspath(join(temp_dir, "long.json")), {"title":"Long", "caption":"A"*600})
-        assert mm_bulk_archive.archive_all_media(temp_dir, config, description_length=500)
-        assert sorted(os.listdir(temp_dir)) == ["long.epub", "short.cbz"]
+        multiple_directory = abspath(join(temp_dir, "multiple"))
+        shutil.copytree(base_directory, multiple_directory)
+        mm_bulk_archive.archive_all_media(temp_dir, config, format_title=True)
+        files = sorted(os.listdir(multiple_directory))
+        assert len(files) == 6
+        assert files[0] == ".test"
+        assert files[1] == "[AA] Part 1.epub"
+        assert files[2] == "[BB] Image 1.cbz"
+        assert files[3] == "[CC] Part 2.epub"
+        assert files[4] == "[DD] Image 2.cbz"
+        assert files[5] == "ignore"
+        assert os.listdir(abspath(join(multiple_directory, "ignore"))) == ["sub.txt"]
+        # Test that titles were formatted
+        read_metadata = mm_archive.get_info_from_archive(abspath(join(multiple_directory, "[AA] Part 1.epub")))
+        assert read_metadata["title"] == "Book"
+        read_metadata = mm_archive.get_info_from_archive(abspath(join(multiple_directory, "[BB] Image 1.cbz")))
+        assert read_metadata["title"] == "Image"
+        read_metadata = mm_archive.get_info_from_archive(abspath(join(multiple_directory, "[CC] Part 2.epub")))
+        assert read_metadata["title"] == "Book"
+        read_metadata = mm_archive.get_info_from_archive(abspath(join(multiple_directory, "[DD] Image 2.cbz")))
+        assert read_metadata["title"] == "Image"
+    # Test that image isn't converted to an EPUB with a greater cutoff point for the description length
+    config = mm_config.DEFAULT_CONFIG
+    with tempfile.TemporaryDirectory() as temp_dir:
+        image_directory = abspath(join(temp_dir, "images"))
+        shutil.copytree(mm_test.PAIR_IMAGE_DIRECTORY, image_directory)
+        mm_bulk_archive.archive_all_media(image_directory, config, description_length=2000000)
+        assert sorted(os.listdir(image_directory)) == [".empty", "aaa.json", "aaa.webp", "bare.PNG.cbz", "long.cbz"]
 
 def test_extract_cbz():
     """
     Tests the extract_cbz function
     """
+    # Test extracting CBZ file into a containing directory
+    base_file = abspath(join(mm_test.ARCHIVE_CBZ_DIRECTORY, "NoPage.cbz"))
     with tempfile.TemporaryDirectory() as temp_dir:
-        with tempfile.TemporaryDirectory() as build_dir:
-            # Create test files
-            mm_file_tools.write_text_file(abspath(join(build_dir, "image1.jpg")), "Blah")
-            mm_file_tools.write_text_file(abspath(join(build_dir, "image2.jpg")), "Blah")
-            metadata = mm_archive.get_empty_metadata()
-            metadata["title"] = "Simple"
-            cbz_file = mm_comic_archive.create_cbz(build_dir, name="simple", metadata=metadata)
-            shutil.copy(cbz_file, temp_dir)
-        with tempfile.TemporaryDirectory() as build_dir:
-            a_dir = abspath(join(build_dir, "A"))
-            b_dir = abspath(join(build_dir, "B"))
-            os.mkdir(a_dir)
-            os.mkdir(b_dir)
-            mm_file_tools.write_text_file(abspath(join(a_dir, "imageA.png")), "Blah")
-            mm_file_tools.write_text_file(abspath(join(b_dir, "imageB1.png")), "Blah")
-            mm_file_tools.write_text_file(abspath(join(b_dir, "imageB2.png")), "Blah")
-            metadata["title"] = "Folders"
-            cbz_file = mm_comic_archive.create_cbz(build_dir, name="folder", metadata=metadata)
-            shutil.copy(cbz_file, temp_dir)
-        with tempfile.TemporaryDirectory() as build_dir:
-            mm_file_tools.write_text_file(abspath(join(build_dir, "notcbz.jpg")), "Blah")
-            assert mm_file_tools.create_zip(build_dir, abspath(join(temp_dir, "notcbz.cbz")))
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "text.cbz")), "Blah")
-        assert sorted(os.listdir(temp_dir)) == ["folder.cbz", "notcbz.cbz", "simple.cbz", "text.cbz"]
-        with tempfile.TemporaryDirectory() as extract_dir:
-            # Test extracting cbz file with a containing folder
-            assert mm_bulk_archive.extract_cbz(abspath(join(temp_dir, "simple.cbz")), extract_dir, create_folder=True)
-            assert os.listdir(extract_dir) == ["simple"]
-            extract_dir = abspath(join(extract_dir, "simple"))
-            assert sorted(os.listdir(extract_dir)) == ["ComicInfo.xml", "simple"]
-            extract_dir = abspath(join(extract_dir, "simple"))
-            assert sorted(os.listdir(extract_dir)) == ["image1.jpg", "image2.jpg"]
-        with tempfile.TemporaryDirectory() as extract_dir:
-            # Test extracting cbz file with no containing folder
-            assert mm_bulk_archive.extract_cbz(abspath(join(temp_dir, "simple.cbz")), extract_dir, create_folder=False)
-            assert sorted(os.listdir(extract_dir)) == ["ComicInfo.xml", "simple"]
-        with tempfile.TemporaryDirectory() as extract_dir:
-            assert mm_bulk_archive.extract_cbz(abspath(join(temp_dir, "folder.cbz")), extract_dir, create_folder=False)
-            assert sorted(os.listdir(extract_dir)) == ["A", "B", "ComicInfo.xml"]
-        with tempfile.TemporaryDirectory() as extract_dir:
-            # Test extracting cbz file while removing the original structure
-            assert mm_bulk_archive.extract_cbz(abspath(join(temp_dir, "simple.cbz")), extract_dir, create_folder=True, remove_structure=True)
-            assert sorted(os.listdir(extract_dir)) == ["simple"]
-            extract_dir = abspath(join(extract_dir, "simple"))
-            assert sorted(os.listdir(extract_dir)) == ["image1.jpg", "image2.jpg"]
-        with tempfile.TemporaryDirectory() as extract_dir:
-            assert mm_bulk_archive.extract_cbz(abspath(join(temp_dir, "folder.cbz")), extract_dir, create_folder=True, remove_structure=True)
-            assert sorted(os.listdir(extract_dir)) == ["folder"]
-            extract_dir = abspath(join(extract_dir, "folder"))
-            assert sorted(os.listdir(extract_dir)) == ["A", "B"]
-        with tempfile.TemporaryDirectory() as extract_dir:
-            # Test removing original structure with no containing folder
-            assert mm_bulk_archive.extract_cbz(abspath(join(temp_dir, "simple.cbz")), extract_dir, create_folder=False, remove_structure=True)
-            assert sorted(os.listdir(extract_dir)) == ["image1.jpg", "image2.jpg"]
-        with tempfile.TemporaryDirectory() as extract_dir:
-            assert mm_bulk_archive.extract_cbz(abspath(join(temp_dir, "folder.cbz")), extract_dir, create_folder=False, remove_structure=True)
-            assert sorted(os.listdir(extract_dir)) == ["A", "B"]
-        with tempfile.TemporaryDirectory() as extract_dir:
-            # Test overwriting existing files
-            mm_file_tools.write_text_file(abspath(join(extract_dir, "image1.jpg")), "Duplicate")
-            assert mm_bulk_archive.extract_cbz(abspath(join(temp_dir, "simple.cbz")), extract_dir, create_folder=False, remove_structure=True)
-            assert sorted(os.listdir(extract_dir)) == ["image1-2.jpg", "image1.jpg", "image2.jpg"]
-        with tempfile.TemporaryDirectory() as extract_dir:
-            mm_file_tools.write_text_file(abspath(join(extract_dir, "A")), "Duplicate")
-            assert mm_bulk_archive.extract_cbz(abspath(join(temp_dir, "folder.cbz")), extract_dir, create_folder=False, remove_structure=True)
-            assert sorted(os.listdir(extract_dir)) == ["A", "A-2", "B"]
-            assert mm_file_tools.read_text_file(abspath(join(extract_dir, "A"))) == "Duplicate"
-            extract_dir = abspath(join(extract_dir, "A-2"))
-            assert sorted(os.listdir(extract_dir)) == ["imageA.png"]
-        with tempfile.TemporaryDirectory() as extract_dir:
-            # Test trying to extract non-cbz file
-            assert mm_bulk_archive.extract_cbz(abspath(join(temp_dir, "notcbz.cbz")), extract_dir, create_folder=False)
-            assert sorted(os.listdir(extract_dir)) == ["notcbz.jpg"]
-        with tempfile.TemporaryDirectory() as extract_dir:
-            assert not mm_bulk_archive.extract_cbz(abspath(join(temp_dir, "text.cbz")), extract_dir)
-            assert os.listdir(extract_dir) == []
+        cbz_file = abspath(join(temp_dir, "NoPage.cbz"))
+        shutil.copy(base_file, cbz_file)
+        assert mm_bulk_archive.extract_cbz(cbz_file, temp_dir, create_folder=True, remove_structure=False)
+        assert sorted(os.listdir(temp_dir)) == ["NoPage", "NoPage.cbz"]
+        internal_dir = abspath(join(temp_dir, "NoPage"))
+        assert sorted(os.listdir(internal_dir)) == ["B.jpeg", "ComicInfo.xml", "G.jpg", "R.png"]
+    # Test extracting CBZ file with no containing directory
+    base_file = abspath(join(mm_test.ARCHIVE_CBZ_DIRECTORY, "basic.CBZ"))
+    with tempfile.TemporaryDirectory() as temp_dir:
+        cbz_file = abspath(join(temp_dir, "basic.CBZ"))
+        shutil.copy(base_file, cbz_file)
+        assert mm_bulk_archive.extract_cbz(cbz_file, temp_dir, create_folder=False, remove_structure=False)
+        assert sorted(os.listdir(temp_dir)) == ["Comic", "ComicInfo.xml", "basic.CBZ"]
+        internal_dir = abspath(join(temp_dir, "Comic"))
+        assert sorted(os.listdir(internal_dir)) == ["Comic.jpg"]
+    # Test extracting CBZ file while removing structure with no containing directory
+    with tempfile.TemporaryDirectory() as temp_dir:
+        cbz_file = abspath(join(temp_dir, "basic.CBZ"))
+        shutil.copy(base_file, cbz_file)
+        assert mm_bulk_archive.extract_cbz(cbz_file, temp_dir, create_folder=False, remove_structure=True)
+        assert sorted(os.listdir(temp_dir)) == ["Comic.jpg", "basic.CBZ"]
+    # Test extracting CBZ file while removing structure with a containing directory
+    with tempfile.TemporaryDirectory() as temp_dir:
+        cbz_file = abspath(join(temp_dir, "basic.CBZ"))
+        shutil.copy(base_file, cbz_file)
+        assert mm_bulk_archive.extract_cbz(cbz_file, temp_dir, create_folder=True, remove_structure=True)
+        assert sorted(os.listdir(temp_dir)) == ["basic", "basic.CBZ"]
+        internal_dir = abspath(join(temp_dir, "basic"))
+        assert sorted(os.listdir(internal_dir)) == ["Comic.jpg"]
+    # Test extracting a non-CBZ file
+    base_file = abspath(join(mm_test.BASIC_TEXT_DIRECTORY, "latin1.txt"))
+    with tempfile.TemporaryDirectory() as temp_dir:
+        text_file = abspath(join(temp_dir, "latin1.txt"))
+        shutil.copy(base_file, text_file)
+        assert not mm_bulk_archive.extract_cbz(text_file, temp_dir)
+        assert os.listdir(temp_dir) == ["latin1.txt"]
 
 def test_extract_epub():
     """
     Tests the extract_epub function.
     """
+    # Test extracting EPUB file into a containing directory
+    base_file = abspath(join(mm_test.ARCHIVE_EPUB_DIRECTORY, "long.EPUB"))
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Create test files
-        original_dir = abspath(join(temp_dir, "original"))
-        sub_dir = abspath(join(original_dir, "sub"))
-        os.mkdir(original_dir)
-        os.mkdir(sub_dir)
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "removable.html")), "<p>Thing</p>")
-        mm_file_tools.write_text_file(abspath(join(original_dir, "text.txt")), "Epub Text")
-        mm_file_tools.write_text_file(abspath(join(original_dir, "image.png")), "Epub Image")
-        mm_file_tools.write_text_file(abspath(join(sub_dir, "subtext.txt")), "Blah")
-        metadata = mm_archive.get_empty_metadata()
-        metadata["title"] = "Book"
-        metadata["writer"] = "Person"
-        chapters = mm_epub.get_default_chapters(temp_dir, title="Book")
-        chapters = mm_epub.add_cover_to_chapters(chapters, metadata, temp_dir)
-        epub_file = mm_epub.create_epub(chapters, metadata, temp_dir)
-        assert exists(epub_file)
-        with tempfile.TemporaryDirectory() as extract_dir:
-            # Test extracting epub file with a containing folder
-            assert mm_bulk_archive.extract_epub(abspath(join(temp_dir, "Book.epub")), extract_dir, create_folder=True)
-            assert sorted(os.listdir(extract_dir)) == ["Book"]
-            extract_dir = abspath(join(extract_dir, "Book"))
-            assert sorted(os.listdir(extract_dir)) == ["EPUB", "META-INF", "mimetype"]
-            extract_dir = abspath(join(extract_dir, "EPUB"))
-            assert sorted(os.listdir(extract_dir)) == ["content", "content.opf", "images", "nav.xhtml", "original", "style", "toc.ncx"]
-            content_dir = abspath(join(extract_dir, "content"))
-            assert sorted(os.listdir(content_dir)) == ["cover_image.xhtml", "removable.xhtml"]
-            original_dir = abspath(join(extract_dir, "original"))
-            assert sorted(os.listdir(original_dir)) == ["image.png", "sub", "text.txt"]
-            original_dir = abspath(join(original_dir, "sub"))
-            assert sorted(os.listdir(original_dir)) == ["subtext.txt"]
-        with tempfile.TemporaryDirectory() as extract_dir:
-            # Test extracting epub file with no containing folder
-            assert mm_bulk_archive.extract_epub(abspath(join(temp_dir, "Book.epub")), extract_dir, create_folder=False)
-            assert sorted(os.listdir(extract_dir)) == ["EPUB", "META-INF", "mimetype"]
-            extract_dir = abspath(join(extract_dir, "EPUB"))
-            assert sorted(os.listdir(extract_dir)) == ["content", "content.opf", "images", "nav.xhtml", "original", "style", "toc.ncx"]
-            content_dir = abspath(join(extract_dir, "content"))
-            assert sorted(os.listdir(content_dir)) == ["cover_image.xhtml", "removable.xhtml"]
-            original_dir = abspath(join(extract_dir, "original"))
-            assert sorted(os.listdir(original_dir)) == ["image.png", "sub", "text.txt"]
-            original_dir = abspath(join(original_dir, "sub"))
-            assert sorted(os.listdir(original_dir)) == ["subtext.txt"]
-        with tempfile.TemporaryDirectory() as extract_dir:
-            # Test extracting epub file while removing original structure
-            assert mm_bulk_archive.extract_epub(abspath(join(temp_dir, "Book.epub")), extract_dir, create_folder=True, remove_structure=True)
-            assert sorted(os.listdir(extract_dir)) == ["Book"]
-            extract_dir = abspath(join(extract_dir, "Book"))
-            assert sorted(os.listdir(extract_dir)) == ["image.png", "sub", "text.txt"]
-            extract_dir = abspath(join(extract_dir, "sub"))
-            assert sorted(os.listdir(extract_dir)) == ["subtext.txt"]
-        with tempfile.TemporaryDirectory() as extract_dir:
-            # Test removing original structure with no containing folder
-            assert mm_bulk_archive.extract_epub(abspath(join(temp_dir, "Book.epub")), extract_dir, create_folder=False, remove_structure=True)
-            assert sorted(os.listdir(extract_dir)) == ["image.png", "sub", "text.txt"]
-            extract_dir = abspath(join(extract_dir, "sub"))
-            assert sorted(os.listdir(extract_dir)) == ["subtext.txt"]
-        with tempfile.TemporaryDirectory() as extract_dir:
-            # Test extracting to existing files
-            mm_file_tools.write_text_file(abspath(join(extract_dir, "text.txt")), "Duplicate")
-            mm_file_tools.write_text_file(abspath(join(extract_dir, "sub")), "Substitute")
-            assert mm_bulk_archive.extract_epub(abspath(join(temp_dir, "Book.epub")), extract_dir, create_folder=False, remove_structure=True)
-            assert sorted(os.listdir(extract_dir)) == ["image.png", "sub", "sub-2", "text-2.txt", "text.txt"]
-            assert mm_file_tools.read_text_file(abspath(join(extract_dir, "text.txt"))) == "Duplicate"
-            assert mm_file_tools.read_text_file(abspath(join(extract_dir, "text-2.txt"))) == "Epub Text"
-            extract_dir = abspath(join(extract_dir, "sub-2"))
-            assert sorted(os.listdir(extract_dir)) == ["subtext.txt"]
+        epub_file = abspath(join(temp_dir, "long.EPUB"))
+        shutil.copy(base_file, epub_file)
+        assert mm_bulk_archive.extract_epub(epub_file, temp_dir, create_folder=True, remove_structure=False)
+        assert sorted(os.listdir(temp_dir)) == ["long", "long.EPUB"]
+        internal_dir = abspath(join(temp_dir, "long"))
+        assert sorted(os.listdir(internal_dir)) == ["EPUB", "META-INF", "mimetype"]
+        internal_dir = abspath(join(internal_dir, "EPUB"))
+        internal_dir = abspath(join(internal_dir, "content"))
+        assert sorted(os.listdir(internal_dir)) == ["Chapter 1.xhtml", "Chapter 2.xhtml", "Chapter 3.xhtml", "cover_image.xhtml"]
+    # Test extracting EPUB file with no containing directory
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Test trying to extract non-epub file
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "not_zip.epub")), "Text")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "text.txt")), "Text")
-        fake_epub = abspath(join(temp_dir, "not_epub.epub"))
-        assert mm_file_tools.create_zip(temp_dir, fake_epub)
-        with tempfile.TemporaryDirectory() as extract_dir:
-            assert not mm_bulk_archive.extract_epub(abspath(join(temp_dir, "not_zip.epub")), extract_dir, create_folder=False, remove_structure=False)
-            assert not mm_bulk_archive.extract_epub(abspath(join(temp_dir, "not_zip.epub")), extract_dir, create_folder=False, remove_structure=True)
-            assert not mm_bulk_archive.extract_epub(fake_epub, extract_dir, create_folder=True, remove_structure=True)
-            assert os.listdir(extract_dir) == []
-            assert mm_bulk_archive.extract_epub(fake_epub, extract_dir, create_folder=False, remove_structure=False)
-            assert sorted(os.listdir(extract_dir)) == ["not_zip.epub", "text.txt"]
+        epub_file = abspath(join(temp_dir, "long.EPUB"))
+        shutil.copy(base_file, epub_file)
+        assert mm_bulk_archive.extract_epub(epub_file, temp_dir, create_folder=False, remove_structure=False)
+        assert sorted(os.listdir(temp_dir)) == ["EPUB", "META-INF", "long.EPUB", "mimetype"]
+        internal_dir = abspath(join(temp_dir, "EPUB"))
+        internal_dir = abspath(join(internal_dir, "content"))
+        assert sorted(os.listdir(internal_dir)) == ["Chapter 1.xhtml", "Chapter 2.xhtml", "Chapter 3.xhtml", "cover_image.xhtml"]
+    # Test extracting EPUB file while removing structure with no containing directory
+    with tempfile.TemporaryDirectory() as temp_dir:
+        epub_file = abspath(join(temp_dir, "long.EPUB"))
+        shutil.copy(base_file, epub_file)
+        assert mm_bulk_archive.extract_epub(epub_file, temp_dir, create_folder=False, remove_structure=True)
+        assert sorted(os.listdir(temp_dir)) == ["Chapter 1.txt", "Chapter 2.txt", "Chapter 3.txt", "long.EPUB"]
+    # Test extracting EPUB file while removing structure with a containing directory
+    with tempfile.TemporaryDirectory() as temp_dir:
+        epub_file = abspath(join(temp_dir, "long.EPUB"))
+        shutil.copy(base_file, epub_file)
+        assert mm_bulk_archive.extract_epub(epub_file, temp_dir, create_folder=True, remove_structure=True)
+        assert sorted(os.listdir(temp_dir)) == ["long", "long.EPUB"]
+        internal_dir = abspath(join(temp_dir, "long"))
+        assert sorted(os.listdir(internal_dir)) == ["Chapter 1.txt", "Chapter 2.txt", "Chapter 3.txt"]
+    # Test extracting non-EPUB files
+    base_file = abspath(join(mm_test.BASIC_TEXT_DIRECTORY, "latin1.txt"))
+    with tempfile.TemporaryDirectory() as temp_dir:
+        text_file = abspath(join(temp_dir, "latin1.txt"))
+        shutil.copy(base_file, text_file)
+        assert not mm_bulk_archive.extract_epub(text_file, temp_dir)
+        assert os.listdir(temp_dir) == ["latin1.txt"]
+    base_file = abspath(join(mm_test.ARCHIVE_CBZ_DIRECTORY, "basic.CBZ"))
+    with tempfile.TemporaryDirectory() as temp_dir:
+        cbz_file = abspath(join(temp_dir, "basic.CBZ"))
+        shutil.copy(base_file, cbz_file)
+        assert not mm_bulk_archive.extract_epub(cbz_file, temp_dir, remove_structure=True)
+        assert os.listdir(temp_dir) == ["basic.CBZ"]
 
 def test_extract_all_archives():
     """
     Tests the extract_all_archives function.
     """
+    # Test extracting archives without removing the internal structure
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Create test files
-        sub_dir = abspath(join(temp_dir, "sub"))
-        os.mkdir(sub_dir)
-        with tempfile.TemporaryDirectory() as build_dir:
-            metadata = mm_archive.get_empty_metadata()
-            metadata["title"] = "cbzA"
-            mm_file_tools.write_text_file(abspath(join(build_dir, "imageA.jpg")), "Blah")
-            cbz_file = mm_comic_archive.create_cbz(build_dir, name="cbzA", metadata=metadata)
-            shutil.copy(cbz_file, temp_dir)
-        with tempfile.TemporaryDirectory() as build_dir:
-            metadata["title"] = "cbzB"
-            mm_file_tools.write_text_file(abspath(join(build_dir, "imageB.png")), "Blah")
-            cbz_file = mm_comic_archive.create_cbz(build_dir, name="cbzB", metadata=metadata)
-            shutil.copy(cbz_file, sub_dir)
-        with tempfile.TemporaryDirectory() as build_dir:
-            metadata["title"] = "epubA"
-            mm_file_tools.write_text_file(abspath(join(build_dir, "textA.txt")), "Blah")
-            chapters = mm_epub.get_default_chapters(temp_dir, title="epubA")
-            epub_file = mm_epub.create_epub(chapters, metadata, build_dir)
-            shutil.copy(epub_file, temp_dir)
-        with tempfile.TemporaryDirectory() as build_dir:
-            metadata["title"] = "epubB"
-            mm_file_tools.write_text_file(abspath(join(build_dir, "textB.txt")), "Blah")
-            chapters = mm_epub.get_default_chapters(temp_dir, title="epubB")
-            epub_file = mm_epub.create_epub(chapters, metadata, build_dir)
-            shutil.copy(epub_file, sub_dir)
-        assert sorted(os.listdir(temp_dir)) == ["cbzA.cbz", "epubA.epub", "sub"]
-        assert sorted(os.listdir(sub_dir)) == ["cbzB.cbz", "epubB.epub"]
-        # Test extracting without removing structure
-        extract_dir = abspath(join(temp_dir, "extracted"))
-        extract_sub = abspath(join(extract_dir, "sub"))
-        shutil.copytree(temp_dir, extract_dir)
-        assert exists(extract_dir)
-        assert mm_bulk_archive.extract_all_archives(extract_dir, create_folders=True, remove_structure=False)
-        assert sorted(os.listdir(extract_dir)) == ["cbzA", "epubA", "sub"]
-        cbz_dir = abspath(join(extract_dir, "cbzA"))
-        assert sorted(os.listdir(cbz_dir)) == ["ComicInfo.xml", "cbzA"]
-        assert sorted(os.listdir(abspath(join(cbz_dir, "cbzA")))) == ["imageA.jpg"]
-        assert sorted(os.listdir(abspath(join(extract_dir, "epubA")))) == ["EPUB", "META-INF", "mimetype"]
-        assert sorted(os.listdir(extract_sub)) == ["cbzB", "epubB"]
-        assert sorted(os.listdir(abspath(join(extract_sub, "cbzB")))) == ["ComicInfo.xml", "cbzB"]
-        assert sorted(os.listdir(abspath(join(extract_sub, "epubB")))) == ["EPUB", "META-INF", "mimetype"]
-        # Test extracting while removing structure
-        shutil.rmtree(extract_dir)
-        assert not exists(extract_dir)
-        shutil.copytree(temp_dir, extract_dir)
-        assert exists(extract_dir)
-        assert mm_bulk_archive.extract_all_archives(extract_dir, create_folders=False, remove_structure=True)
-        assert sorted(os.listdir(extract_dir)) == ["imageA.jpg", "sub", "textA.txt"]
-        assert sorted(os.listdir(extract_sub)) == ["imageB.png", "textB.txt"]
-        # Test extracting invalid archives
-        fake_archive = abspath(join(temp_dir, "notepub.epub"))
-        mm_file_tools.write_text_file(fake_archive, "Blah")
-        assert not mm_bulk_archive.extract_all_archives(temp_dir, create_folders=False, remove_structure=True)
-        os.remove(fake_archive)
-        fake_archive = abspath(join(temp_dir, "notcbz.cbz"))
-        mm_file_tools.write_text_file(fake_archive, "Blah")
-        assert not mm_bulk_archive.extract_all_archives(temp_dir, create_folders=False, remove_structure=True)
+        cbz_directory = abspath(join(temp_dir, "cbzs"))
+        epub_directory = abspath(join(temp_dir, "epubs"))
+        shutil.copytree(mm_test.ARCHIVE_CBZ_DIRECTORY, cbz_directory)
+        shutil.copytree(mm_test.ARCHIVE_EPUB_DIRECTORY, epub_directory)
+        assert mm_bulk_archive.extract_all_archives(temp_dir, create_folders=True, remove_structure=False)
+        assert sorted(os.listdir(cbz_directory)) == ["NoPage", "SubInfo", "basic", "empty"]
+        assert sorted(os.listdir(abspath(join(cbz_directory, "basic")))) == ["Comic", "ComicInfo.xml"]
+        assert sorted(os.listdir(epub_directory)) == ["basic", "long", "small"]
+        assert sorted(os.listdir(abspath(join(epub_directory, "basic")))) == ["EPUB", "META-INF", "mimetype"]
+    # Test extracting archives while removing the internal structure
+    with tempfile.TemporaryDirectory() as temp_dir:
+        cbz_directory = abspath(join(temp_dir, "cbzs"))
+        epub_directory = abspath(join(temp_dir, "epubs"))
+        os.mkdir(cbz_directory)
+        os.mkdir(epub_directory)
+        shutil.copy(abspath(join(mm_test.ARCHIVE_CBZ_DIRECTORY, "basic.CBZ")), cbz_directory)
+        shutil.copy(abspath(join(mm_test.ARCHIVE_CBZ_DIRECTORY, "NoPage.cbz")), cbz_directory)
+        shutil.copy(abspath(join(mm_test.ARCHIVE_EPUB_DIRECTORY, "long.EPUB")), epub_directory)
+        shutil.copy(abspath(join(mm_test.ARCHIVE_EPUB_DIRECTORY, "small.epub")), epub_directory)
+        assert mm_bulk_archive.extract_all_archives(temp_dir, create_folders=False, remove_structure=True)
+        assert sorted(os.listdir(cbz_directory)) == ["B.jpeg", "Comic.jpg", "G.jpg", "R.png"]
+        assert sorted(os.listdir(epub_directory)) == ["Chapter 1.txt", "Chapter 2.txt", "Chapter 3.txt", "Text.txt"]
+    # Test extracting invalid archives
+    with tempfile.TemporaryDirectory() as temp_dir:
+        fake_cbz = abspath(join(temp_dir, "fake.cbz"))
+        fake_epub = abspath(join(temp_dir, "fake.epub"))
+        shutil.copy(abspath(join(mm_test.BASIC_TEXT_DIRECTORY, "unicode.txt")), fake_cbz)
+        shutil.copy(abspath(join(mm_test.BASIC_TEXT_DIRECTORY, "unicode.txt")), fake_epub)
+        assert not mm_bulk_archive.extract_all_archives(temp_dir, create_folders=True, remove_structure=False)
+        assert sorted(os.listdir(temp_dir)) == ["fake.cbz", "fake.epub"]

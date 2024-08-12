@@ -61,21 +61,24 @@ def get_comic_xml(metadata:dict, indent:bool=True) -> str:
         day = ElementTree.SubElement(base, "Day")
         day.text = str(int(metadata["date"][8:10]))
     # Set the writer if applicable
-    if metadata["writers"] is not None:
+    if metadata["writers"] is not None and not metadata["writers"] == []:
+        writer_string = ",".join(metadata["writers"])
         writer = ElementTree.SubElement(base, "Writer")
-        writer.text = metadata["writers"]
+        writer.text = writer_string
     # Set all other artist categories if applicable
-    if metadata["artists"] is not None:
+    if metadata["artists"] is not None and not metadata["artists"] == []:
+        artist_string = ",".join(metadata["artists"])
         penciller = ElementTree.SubElement(base, "Penciller")
         inker = ElementTree.SubElement(base, "Inker")
         colorist = ElementTree.SubElement(base, "Colorist")
-        penciller.text = metadata["artists"]
-        inker.text = metadata["artists"]
-        colorist.text = metadata["artists"]
+        penciller.text = artist_string
+        inker.text = artist_string
+        colorist.text = artist_string
     # Set the cover artist if applicable
-    if metadata["cover_artists"] is not None:
+    if metadata["cover_artists"] is not None and not metadata["cover_artists"] == []:
+        cover_string = ",".join(metadata["cover_artists"])
         cover = ElementTree.SubElement(base, "CoverArtist")
-        cover.text = metadata["cover_artists"]
+        cover.text = cover_string
     # Set publisher if applicable
     if metadata["publisher"] is not None:
         publisher = ElementTree.SubElement(base, "Publisher")
@@ -97,17 +100,15 @@ def get_comic_xml(metadata:dict, indent:bool=True) -> str:
         # Add score as star rating in tags
         score_number = int(metadata["score"])
         if score_number > 0 and score_number < 6:
-            stars = "★"
-            while len(stars) < score_number:
-                stars = f"{stars}★"
-            if tags is None or tags == "":
-                tags = stars
+            stars = "★"*score_number
+            if tags is None:
+                tags = [stars]
             else:
-                tags = f"{stars},{tags}"
+                tags.insert(0, stars)
     except (TypeError, ValueError): pass
-    if tags is not None:
+    if tags is not None and not tags == []:
         tag_element = ElementTree.SubElement(base, "Tags")
-        tag_element.text = tags
+        tag_element.text = ",".join(tags)
     # Set the age rating
     age_rating = ElementTree.SubElement(base, "AgeRating")
     age_rating.text = "Unknown"
@@ -150,29 +151,46 @@ def read_comic_info(xml_file:str) -> dict:
     metadata["age_rating"] = base.findtext("AgeRating")
     metadata["score"] = base.findtext("CommunityRating")
     metadata["page_count"] = base.findtext("PageCount")
-    # Get the tags, removing score tags if necessary
-    try:
-        metadata["tags"] = re.sub(r"\s*,+\s*", ",", base.findtext("Tags"))
-        metadata["tags"] = re.sub(r"^\s+|\s+$|★{1,5},|,★{1,5}$", "", metadata["tags"])
-        metadata["tags"] = re.sub("^★{1,5}$", "", metadata["tags"])
-        if metadata["tags"] == "":
-            metadata["tags"] = None
-    except TypeError: metadata["tags"] = None
     # Get the main artist from XML
     metadata["artists"] = base.findtext("Penciller")
     if metadata["artists"] is None:
         metadata["artists"] = base.findtext("Colorist")
     if metadata["artists"] is None:
         metadata["artists"] = base.findtext("Inker")
+    # Update artists and writers to be in list form
+    list_format = lambda a: re.sub(r"^[\s,]*$", "", re.sub(r"\s*,\s*", ",", a)).strip().split(",")
+    if metadata["writers"] is not None:
+        metadata["writers"] = list_format(metadata["writers"])
+    if metadata["artists"] is not None:
+        metadata["artists"] = list_format(metadata["artists"])
+    if metadata["cover_artists"] is not None:
+        metadata["cover_artists"] = list_format(metadata["cover_artists"])
+    # Get the tags, removing score tags if necessary
+    try:
+        metadata["tags"] = base.findtext("Tags").strip()
+        metadata["tags"] = re.sub(r"(?<=,)\s*★{1,5}\s*,", "", metadata["tags"])
+        metadata["tags"] = re.sub(r"^\s*★{1,5}\s*,?|,?\s*★{1,5}\s*$", "", metadata["tags"])
+        metadata["tags"] = list_format(metadata["tags"])
+    except (AttributeError, TypeError): metadata["tags"] = None
     # Get date from XML
     year = base.findtext("Year")
     month = base.findtext("Month")
     day = base.findtext("Day")
-    if year is not None and month is not None and day is not None:
-        while len(month) < 2:
-            month = f"0{month}"
-        while len(day) < 2:
-            day = f"0{day}"
+    try:
+        assert year is not None and month is not None and day is not None
+        assert int(year) > 999
+        assert int(month) < 13
+        assert int(day) < 32
+        month = month.zfill(2)
+        day = day.zfill(2)
         metadata["date"] = f"{year}-{month}-{day}"
+    except (AssertionError, ValueError): metadata["date"] = None
+    # Replace empty text with None
+    for entry in metadata.items():
+        if entry[1] is None:
+            continue
+        if ((isinstance(entry[1], str) and len(re.findall(r"^\s*$", entry[1])) > 0)
+            or len(entry[1]) == 0 or entry[1] == [""]):
+            metadata[entry[0]] = None
     # Return the gathered metadata
     return metadata

@@ -294,7 +294,7 @@ def create_content_files(chapters:List[dict], output_directory:str) -> List[dict
         chapter_xml = ""
         for file in chapters[i]["files"]:
             # Get the file extension
-            extension = html_string_tools.html.get_extension(file["file"])
+            extension = html_string_tools.html.get_extension(file["file"]).lower()
             # Convert based on the appropriate format
             if extension == ".txt":
                 xml = mm_xhtml.txt_to_xhtml(file["file"])
@@ -535,47 +535,44 @@ def get_metadata_xml(metadata:dict, cover_id:str=None) -> str:
         description_tag = ElementTree.SubElement(base, "dc:description")
         description_tag.text = metadata["description"]
     # Set the metadata writer
-    try:
-        writers = metadata["writers"].split(",")
-    except AttributeError: writers = []
-    for i in range(0, len(writers)):
-        # Add the creator tag
-        creator_id = f"author-{i}"
-        creator_tag = ElementTree.SubElement(base, "dc:creator")
-        creator_tag.attrib = {"id":creator_id}
-        creator_tag.text = writers[i]
-        # Add the role tag
-        role_tag = ElementTree.SubElement(base, "meta")
-        role_tag.attrib = {"refines":creator_id, "property":"role", "scheme":"marc:relators"}
-        role_tag.text = "aut"
+    if metadata["writers"] is not None and not metadata["writers"] == []:
+        for i in range(0, len(metadata["writers"])):
+            # Add the creator tag
+            creator_id = f"author-{i}"
+            creator_tag = ElementTree.SubElement(base, "dc:creator")
+            creator_tag.attrib = {"id":creator_id}
+            creator_tag.text = metadata["writers"][i]
+            # Add the role tag
+            role_tag = ElementTree.SubElement(base, "meta")
+            role_tag.attrib = {"refines":creator_id, "property":"role", "scheme":"marc:relators"}
+            role_tag.text = "aut"
     # Set the metadata cover artist
-    try:
-        cover_artists = metadata["cover_artists"].split(",")
-    except AttributeError: cover_artists = []
-    for i in range(0, len(cover_artists)):
-        # Add the creator tag
-        creator_id = f"cover-artist-{i}"
-        creator_tag = ElementTree.SubElement(base, "dc:creator")
-        creator_tag.attrib = {"id":creator_id}
-        creator_tag.text = cover_artists[i]
-        # Add the role tag
-        role_tag = ElementTree.SubElement(base, "meta")
-        role_tag.attrib = {"refines":creator_id, "property":"role", "scheme":"marc:relators"}
-        role_tag.text = "cov"
+    if metadata["cover_artists"] is not None and not metadata["cover_artists"] == []:
+        for i in range(0, len(metadata["cover_artists"])):
+            # Add the creator tag
+            creator_id = f"cover-artist-{i}"
+            creator_tag = ElementTree.SubElement(base, "dc:creator")
+            creator_tag.attrib = {"id":creator_id}
+            creator_tag.text = metadata["cover_artists"][i]
+            # Add the role tag
+            role_tag = ElementTree.SubElement(base, "meta")
+            role_tag.attrib = {"refines":creator_id, "property":"role", "scheme":"marc:relators"}
+            role_tag.text = "cov"
     # Set the metadata illustrator
     try:
         illustrators = metadata["artists"].split(",")
     except AttributeError: illustrators = []
-    for i in range(0, len(illustrators)):
-        # Add the creator tag
-        creator_id = f"illustrator-{i}"
-        creator_tag = ElementTree.SubElement(base, "dc:creator")
-        creator_tag.attrib = {"id":creator_id}
-        creator_tag.text = illustrators[i]
-        # Add the role tag
-        role_tag = ElementTree.SubElement(base, "meta")
-        role_tag.attrib = {"refines":creator_id, "property":"role", "scheme":"marc:relators"}
-        role_tag.text = "ill"
+    if metadata["artists"] is not None and not metadata["artists"] == []:
+        for i in range(0, len(metadata["artists"])):
+            # Add the creator tag
+            creator_id = f"illustrator-{i}"
+            creator_tag = ElementTree.SubElement(base, "dc:creator")
+            creator_tag.attrib = {"id":creator_id}
+            creator_tag.text = metadata["artists"][i]
+            # Add the role tag
+            role_tag = ElementTree.SubElement(base, "meta")
+            role_tag.attrib = {"refines":creator_id, "property":"role", "scheme":"marc:relators"}
+            role_tag.text = "ill"
     # Set the metadata publisher
     if metadata["publisher"] is not None:
         publisher_tag = ElementTree.SubElement(base, "dc:publisher")
@@ -600,12 +597,10 @@ def get_metadata_xml(metadata:dict, cover_id:str=None) -> str:
             series_number.text = metadata["series_number"]
         except (TypeError, ValueError): pass
     # Set the metadata tags
-    try:
-        tags = metadata["tags"].split(",")
-    except AttributeError: tags = []
-    for tag in tags:
-        tag_tag = ElementTree.SubElement(base, "dc:subject")
-        tag_tag.text = tag
+    if metadata["tags"] is not None and not metadata["tags"] == []:
+        for tag in metadata["tags"]:
+            tag_tag = ElementTree.SubElement(base, "dc:subject")
+            tag_tag.text = tag
     # Set the score
     try:
         score = int(metadata["score"])
@@ -652,7 +647,7 @@ def get_manifest_xml(chapters:List[dict], output_directory:str) -> str:
         attributes["href"] = f"images/{images[i]}"
         attributes["id"] = re.sub(r"\..+$", "", basename(images[i]))
         # Set the mimetype
-        extension = html_string_tools.html.get_extension(images[i])
+        extension = html_string_tools.html.get_extension(images[i]).lower()
         mimetype = "application/xhtml+xml"
         if extension == ".png":
             mimetype = "image/png"
@@ -813,7 +808,7 @@ def create_epub_from_description(json_file:str, image_file:str, metadata:dict, d
         shutil.copy(image_file, abspath(join(original_directory, image_name)))
         # Copy the cover image
         extension = html_string_tools.html.get_extension(image_name)
-        cover_image = abspath(join(temp_dir, f"dvk-cover{extension}"))
+        cover_image = abspath(join(temp_dir, f"cover_image{extension}"))
         shutil.copy(image_file, cover_image)
         # Create the html from the json description
         html = mm_meta_reader.load_metadata(json_file, config, image_file)["description"]
@@ -864,6 +859,8 @@ def get_info_from_epub(epub_file:str) -> dict:
         metadata = mm_archive.get_empty_metadata()
         # Extract title from the XML
         metadata["title"] = meta_xml.findtext("dc:title", namespaces=ns)
+        if metadata["title"] == "":
+            metadata["title"] = None
         # Extract date from the XML
         metadata["date"] = meta_xml.findtext("dc:date", namespaces=ns)[:10]
         if metadata["date"] == "0000-00-00":
@@ -899,11 +896,11 @@ def get_info_from_epub(epub_file:str) -> dict:
                 except KeyError: pass
         # Set creator metadata
         if len(writers) > 0:
-            metadata["writers"] = ",".join(writers)
+            metadata["writers"] = writers
         if len(artists) > 0:
-            metadata["artists"] = ",".join(artists)
+            metadata["artists"] = artists
         if len(cover_artists) > 0:
-            metadata["cover_artists"] = ",".join(cover_artists)
+            metadata["cover_artists"] = cover_artists
         # Get the age rating
         try:
             metadata["age_rating"] = meta_xml.find(f".//{{{ns['0']}}}meta[@property='dcterms:audience']").text
@@ -925,7 +922,7 @@ def get_info_from_epub(epub_file:str) -> dict:
         for tag_element in tag_elements:
             tags.append(tag_element.text)
         if len(tags) > 0:
-            metadata["tags"] = ",".join(tags)
+            metadata["tags"] = tags
         # Extract all the content files to get the word count
         word_count = 0
         xml_text = mm_file_tools.read_text_file(xml_file)
@@ -989,6 +986,10 @@ def update_epub_info(epub_file:str, metadata:dict, update_cover:bool=False):
                 cover_image = mm_archive.get_cover_image(metadata["title"], metadata["writers"], uppercase=True)
                 cover_image = cover_image.convert("RGB")
                 cover_image.save(cover_file, quality=95)
+                # Replace the existing cover image xhtml file
+                xml = mm_xhtml.image_to_xhtml(cover_file, "Cover")
+                xml = mm_xhtml.format_xhtml(xml, "Cover")
+                mm_file_tools.write_text_file(cover_xml, xml)
             # Repack the epub file
             new_epub_file = abspath(join(temp_dir, "AAAA.epub"))
             assert mm_file_tools.create_zip(temp_dir, new_epub_file, 8, "application/epub+zip")

@@ -30,7 +30,11 @@ def create_cbz(directory:str, name:str=None, metadata:dict=None, remove_files:bo
     """
     # Return None if directory is empty
     full_directory = abspath(directory)
-    if len(os.listdir(full_directory)) == 0:
+    files = mm_sort.sort_alphanum(os.listdir(full_directory))
+    for i in range(len(files)-1, -1, -1):
+        if files[i].startswith("."):
+            del files[i]
+    if len(files) == 0:
         return None
     # Create CBZ filename
     filename = mm_rename.get_available_filename(["a.cbz"], basename(full_directory), full_directory)
@@ -39,7 +43,6 @@ def create_cbz(directory:str, name:str=None, metadata:dict=None, remove_files:bo
     cbz_file = abspath(join(full_directory, f"{filename}.cbz"))
     # Check if there are existing directories
     move_files = True
-    files = mm_sort.sort_alphanum(os.listdir(full_directory))
     for file in files:
         if isdir(abspath(join(full_directory, file))):
             move_files = False

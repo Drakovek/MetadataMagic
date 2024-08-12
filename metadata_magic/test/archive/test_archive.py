@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
 import os
+import shutil
 import tempfile
+import metadata_magic.test as mm_test
 import metadata_magic.config as mm_config
 import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.epub as mm_epub
@@ -13,40 +15,18 @@ def test_get_directory_archive_type():
     """
     Tests the get_directory_archive_type function.
     """
+    # Test getting "epub" from folder with text files
+    assert mm_archive.get_directory_archive_type(mm_test.PAIR_TEXT_DIRECTORY) == "epub"
+    assert mm_archive.get_directory_archive_type(mm_test.PAIR_DIRECTORY) == "epub"
+    # Test getting cbz from folder with images
+    assert mm_archive.get_directory_archive_type(mm_test.PAIR_IMAGE_DIRECTORY) == "cbz"
+    # Test getting "cbz" from subdirectory with images
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Test getting epub from folder with text files
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "text.txt")), "AAA")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "image.png")), "AAA")
-        assert mm_archive.get_directory_archive_type(temp_dir) == "epub"
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test getting epub from folder with html files
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "thing.html")), "AAA")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "image.jpg")), "AAA")
-        assert mm_archive.get_directory_archive_type(temp_dir) == "epub"
-    with tempfile.TemporaryDirectory() as temp_dir:
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "web.htm")), "AAA")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "image.jpeg")), "AAA")
-        assert mm_archive.get_directory_archive_type(temp_dir) == "epub"
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test getting cbz from folder with images
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "meta.json")), "AAA")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "image.png")), "AAA")
+        image_subdir = abspath(join(temp_dir, "images"))
+        shutil.copytree(mm_test.PAIR_IMAGE_DIRECTORY, image_subdir)
         assert mm_archive.get_directory_archive_type(temp_dir) == "cbz"
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test getting cbz from subdirectory with images
-        sub_dir = abspath(join(temp_dir, "sub"))
-        os.mkdir(sub_dir)
-        mm_file_tools.write_text_file(abspath(join(sub_dir, "meta.jpeg")), "AAA")
-        assert mm_archive.get_directory_archive_type(temp_dir) == "cbz"
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test getting None from directory with no relevant files
-        assert mm_archive.get_directory_archive_type(temp_dir) is None
-        sub_dir = abspath(join(temp_dir, "sub"))
-        os.mkdir(sub_dir)
-        mm_file_tools.write_text_file(abspath(join(sub_dir, "meta.text")), "AAA")
-        mm_file_tools.write_text_file(abspath(join(sub_dir, "meta.gif")), "AAA")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "meta.json")), "AAA")
-        assert mm_archive.get_directory_archive_type(temp_dir) is None
+    # Test that None is returned from a directory with no relevant files
+    assert mm_archive.get_directory_archive_type(mm_test.PAIR_VIDEO_DIRECTORY) is None
 
 def test_get_empty_metadata():
     """
@@ -73,298 +53,164 @@ def test_get_info_from_jsons():
     """
     Tests the get_info_from_jsons function.
     """
+    # Test getting metadata from the lead JSON file in a directory
+    config = mm_config.DEFAULT_CONFIG
+    metadata = mm_archive.get_info_from_jsons(mm_test.PAIR_IMAGE_DIRECTORY, config)
+    assert metadata["title"] == "LRG"
+    assert metadata["series"] is None
+    assert metadata["series_number"] is None
+    assert metadata["series_total"] is None
+    assert metadata["description"] == "This is a description! And Another Line."
+    assert metadata["date"] == "1969-07-21"
+    assert metadata["writers"] == ["Multiple", "People"]
+    assert metadata["artists"] == ["Multiple", "People"]
+    assert metadata["cover_artists"] == ["Multiple", "People"]
+    assert metadata["publisher"] == "DVK Test"
+    assert metadata["tags"] == ["1", "2", "3", "4"]
+    assert metadata["url"] == "https://www.non-existant-website.ca/thing/"
+    assert metadata["age_rating"] == "X18+"
+    assert metadata["score"] is None
+    assert metadata["page_count"] is None
+    # Test getting metadata from JSONs only in subdirectories
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Test getting title
-        sub_dir = abspath(join(temp_dir, "sub"))
-        os.mkdir(sub_dir)
-        main_media = abspath(join(temp_dir, "json.jpg"))
-        main_json = abspath(join(temp_dir, "json.json"))
-        sub_media = abspath(join(sub_dir, "blah.png"))
-        sub_json = abspath(join(sub_dir, "blah.json"))
-        json_meta = {"title":"This is a title!"}
-        mm_file_tools.write_text_file(main_media, "This is text")
-        mm_file_tools.write_json_file(main_json, json_meta)
-        mm_file_tools.write_text_file(sub_media, "Not actually an image")
-        mm_file_tools.write_json_file(sub_json, {"no":"info"})
-        assert exists(main_media)
-        assert exists(main_json)
-        assert exists(sub_media)
-        assert exists(sub_json)
-        config = mm_config.DEFAULT_CONFIG
-        meta = mm_archive.get_info_from_jsons(temp_dir, config)
-        assert meta["title"] == "This is a title!"
-        assert meta["artists"] is None
-        assert meta["description"] is None
-        # Test getting description
-        json_meta["description"] = "Some caption."
-        mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir, config)
-        assert meta["title"] == "This is a title!"
-        assert meta["description"] == "Some caption."
-        assert meta["date"] is None
-        assert meta["cover_artists"] is None
-        # Test simplifying description with HTML info contained
-        json_meta["description"] = "Let's say there's a <a href='ajsdlf'>link</a>.<br>Other!!"
-        mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir, config)
-        assert meta["description"] == "Let's say there's a link. Other!!"
-        json_meta["description"] = "<div><p>Way too many tags!</p><br>\n<br/> <b>B</b>ut it's <i>o</i>kay right?</div>"
-        mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir, config)
-        assert meta["description"] == "Way too many tags! But it's okay right?"
-        json_meta["description"] = "What about 'em elements &amp; such? &gt;.&gt;"
-        mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir, config)
-        assert meta["description"] == "What about 'em elements & such? >.>"
-        # Test getting date
-        json_meta["date"] = "2012-12-21"
-        mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir, config)
-        assert meta["title"] == "This is a title!"
-        assert meta["date"] == "2012-12-21"
-        assert meta["cover_artists"] is None
-        # Test getting artist data
-        json_meta["artists"] = ["Illustrator!"]
-        json_meta["writers"] = ["Story", "People"]
-        mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir, config)
-        assert meta["title"] == "This is a title!"
-        assert meta["writers"] == "Story,People"
-        assert meta["cover_artists"] == "Illustrator!"
-        assert meta["artists"] == "Illustrator!"
-        assert meta["publisher"] is None
-        # Test getting publisher
-        json_meta["url"] = "youtube.com/something"
-        mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir, config)
-        assert meta["title"] == "This is a title!"
-        assert meta["publisher"] == "YouTube"
-        assert meta["tags"] is None
-        # Test getting tags
-        json_meta["tags"] = ["These", "Are", "Tags"]
-        mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir, config)
-        assert meta["title"] == "This is a title!"
-        assert meta["tags"] == "These,Are,Tags"
-        json_meta["tags"] = ["Tag"]
-        mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir, config)
-        assert meta["tags"] == "Tag"
-        json_meta["tags"] = []
-        mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir, config)
-        assert meta["tags"] is None
-        # Test getting url
-        json_meta["url"] = "someurlthing.net"
-        mm_file_tools.write_json_file(main_json, json_meta)
-        meta = mm_archive.get_info_from_jsons(temp_dir, config)
-        assert meta["title"] == "This is a title!"
-        assert meta["url"] == "someurlthing.net"
-        assert meta["tags"] is None
-        assert meta["age_rating"] == "Unknown"
-        # Test getting age rating
-    with tempfile.TemporaryDirectory() as temp_dir:
-        media_everyone = abspath(join(temp_dir, "everyone.png"))
-        json_everyone = abspath(join(temp_dir, "everyone.json"))
-        mm_file_tools.write_text_file(media_everyone, "E For All")
-        mm_file_tools.write_json_file(json_everyone, {"title":"Thing!", "url":"newgrounds.com/", "rating":"E"})
-        meta = mm_archive.get_info_from_jsons(temp_dir, config)
-        assert meta["title"] == "Thing!"
-        assert meta["age_rating"] == "Everyone"
-        media_teen = abspath(join(temp_dir, "teen.gif"))
-        json_teen = abspath(join(temp_dir, "teen.json"))
-        mm_file_tools.write_json_file(media_teen, "Edgy")
-        mm_file_tools.write_json_file(json_teen, {"rating":"t", "url":"www.newgrounds.com"})
-        meta = mm_archive.get_info_from_jsons(temp_dir, config)
-        assert meta["age_rating"] == "Teen"
-        media_mature = abspath(join(temp_dir, "mature.txt"))
-        json_mature = abspath(join(temp_dir, "mature.json"))
-        mm_file_tools.write_text_file(media_mature, "Blood Bleeder")
-        mm_file_tools.write_json_file(json_mature, {"url":"newgrounds", "rating":"m"})
-        meta = mm_archive.get_info_from_jsons(temp_dir, config)
-        assert meta["age_rating"] == "Mature 17+"
-        media_adult = abspath(join(temp_dir, "adult.png"))
-        json_adult = abspath(join(temp_dir, "adult.json"))
-        mm_file_tools.write_text_file(media_adult, "AAAAAAAAAA!")
-        mm_file_tools.write_json_file(json_adult, {"url":"www.newgrounds.com/thing", "rating":"A"})
-        meta = mm_archive.get_info_from_jsons(temp_dir, config)
-        assert meta["age_rating"] == "X18+"
-        assert exists(json_everyone)
-        assert exists(json_teen)
-        assert exists(json_mature)
-        assert exists(json_adult)
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test with JSON files only in subdirectories
-        sub1 = abspath(join(temp_dir, "aaaa"))
-        sub2 = abspath(join(temp_dir, "bbbb"))
-        main_media = abspath(join(sub1, "thing.png"))
-        main_json = abspath(join(sub1, "thing.json"))
-        sub_media = abspath(join(sub2, "first.txt"))
-        sub_json = abspath(join(sub2, "first.json"))
-        os.mkdir(sub1)
-        os.mkdir(sub2)
-        mm_file_tools.write_text_file(main_media, "Main File")
-        mm_file_tools.write_json_file(main_json, {"title":"Real Title."})
-        mm_file_tools.write_text_file(sub_media, "Sub file")
-        mm_file_tools.write_json_file(sub_json, {"title":"Not this one."})
-        assert exists(main_media)
-        assert exists(main_json)
-        assert exists(sub_media)
-        assert exists(sub_json)
-        meta = mm_archive.get_info_from_jsons(temp_dir, config)
-        assert meta["title"] == "Real Title."
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test with no JSON files
-        test_file = abspath(join(temp_dir, "File!.txt"))
-        mm_file_tools.write_text_file(test_file, "Blah.")
-        assert exists(test_file)
-        meta = mm_archive.get_info_from_jsons(temp_dir, config)
-        assert meta["title"] is None
-        assert meta["description"] is None
-        assert meta["date"] is None
-        assert meta["writers"] is None
-        assert meta["artists"] is None
-        assert meta["cover_artists"] is None
-        assert meta["publisher"] is None
-        assert meta["url"] is None
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test that only the writer field is credited to the artist if it is a text file
-        main_media = abspath(join(temp_dir, "json.txt"))
-        main_json = abspath(join(temp_dir, "json.json"))
-        json_meta = {"title":"This is a title!", "author":"Some Person"}
-        mm_file_tools.write_text_file(main_media, "This is text")
-        mm_file_tools.write_json_file(main_json, json_meta)
-        assert exists(main_media)
-        assert exists(main_json)
-        meta = mm_archive.get_info_from_jsons(temp_dir, config)
-        assert meta["title"] == "This is a title!"
-        assert meta["writers"] == "Some Person"
-        assert meta["artists"] is None
-        assert meta["cover_artists"] is None
+        text_directory = abspath(join(temp_dir, "text"))
+        shutil.copytree(mm_test.PAIR_TEXT_DIRECTORY, text_directory)
+        metadata = mm_archive.get_info_from_jsons(temp_dir, config)
+        assert metadata["title"] == "HTML"
+        assert metadata["series"] is None
+        assert metadata["series_number"] is None
+        assert metadata["series_total"] is None
+        assert metadata["description"] == "Nothing special!"
+        assert metadata["date"] is None
+        assert metadata["writers"] == ["AAA"]
+        assert metadata["artists"] is None
+        assert metadata["cover_artists"] is None
+        assert metadata["publisher"] is None
+        assert metadata["tags"] is None
+        assert metadata["url"] is None
+        assert metadata["score"] is None
+        assert metadata["age_rating"] == "Unknown"
+        assert metadata["page_count"] is None
 
 def test_get_info_from_archive():
     """
     Tests the get_info_from_archive function.
     """
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test getting info from a CBZ file
-        metadata = mm_archive.get_empty_metadata()
-        metadata["title"] = "CBZ Title!"
-        metadata["tags"] = "Some,Tags"
-        text_file = abspath(join(temp_dir, "text.txt"))
-        mm_file_tools.write_text_file(text_file, "Text")
-        assert exists(text_file)
-        cbz_file = mm_comic_archive.create_cbz(temp_dir, metadata=metadata)
-        assert exists(cbz_file)
-        read_meta = mm_archive.get_info_from_archive(cbz_file)
-        assert read_meta["title"] == "CBZ Title!"
-        assert read_meta["tags"] == "Some,Tags"
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test getting info from an EPUB file
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "Here's some text!")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "2.txt")), "And")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "3.pdf")), "Stuff")
-        chapters = mm_epub.get_default_chapters(temp_dir)
-        metadata = mm_archive.get_empty_metadata()
-        metadata["title"] = "This is an epub!!"
-        metadata["artists"] = "Art Person"
-        metadata["description"] = "Some Words"
-        epub_file = mm_epub.create_epub(chapters, metadata, temp_dir)
-        assert exists(epub_file)
-        read_meta = mm_archive.get_info_from_archive(epub_file)
-        assert read_meta["title"] == "This is an epub!!"
-        assert read_meta["artists"] == "Art Person"
-        assert read_meta["description"] == "Some Words"
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test getting info from an invalid file
-        text_file = abspath(join(temp_dir, "text.txt"))
-        assert mm_archive.get_info_from_archive(text_file) == mm_archive.get_empty_metadata()
+    # Test getting metadata from an EPUB file
+    epub_file = abspath(join(mm_test.ARCHIVE_EPUB_DIRECTORY, "basic.epub"))
+    metadata = mm_archive.get_info_from_archive(epub_file)
+    assert metadata["title"] == "Básic EPUB"
+    assert metadata["series"] == "Books"
+    assert metadata["series_number"] == "0.5"
+    assert metadata["series_total"] is None
+    assert metadata["description"] == "Simple Description"
+    assert metadata["date"] == "2020-01-01"
+    assert metadata["writers"] == ["Multiple", "Writers"]
+    assert metadata["artists"] == ["Different", "Artists"]
+    assert metadata["cover_artists"] == ["Cover", "Artists"]
+    assert metadata["publisher"] == "BookCo"
+    assert metadata["tags"] == ["This", "&", "That"]
+    assert metadata["url"] == "/placeholder/"
+    assert metadata["age_rating"] == "Everyone"
+    assert metadata["score"] == "4"
+    assert metadata["page_count"] == "1"
+    assert metadata["cover_id"] is None
+    # Test getting metadata from a CBZ file
+    cbz_file = abspath(join(mm_test.ARCHIVE_CBZ_DIRECTORY, "basic.CBZ"))
+    metadata = mm_archive.get_info_from_archive(cbz_file)
+    assert metadata["title"] == "Cómic"
+    assert metadata["series"] == "Basic"
+    assert metadata["series_number"] == "2.5"
+    assert metadata["series_total"] == "5"
+    assert metadata["description"] == "Simple Description."
+    assert metadata["date"] == "2012-12-21"
+    assert metadata["writers"] == ["Author"]
+    assert metadata["artists"] == ["Illustrator"]
+    assert metadata["cover_artists"] == ["CoverArtist"]
+    assert metadata["publisher"] == "DVK"
+    assert metadata["tags"] == ["Multiple", "Tags"]
+    assert metadata["url"] == "/non/existant/"
+    assert metadata["age_rating"] == "Everyone"
+    assert metadata["score"] == "3"
+    assert metadata["page_count"] == "36"
+    # Test getting metadata from a non-archive file
+    text_file = abspath(join(mm_test.BASIC_TEXT_DIRECTORY, "latin1.txt"))
+    assert mm_archive.get_info_from_archive(text_file) == mm_archive.get_empty_metadata()
 
 def test_update_archive_info():
     """
     Test the update_archive_info function.
     """
+    # Test updating an CBZ file
+    base_file = abspath(join(mm_test.ARCHIVE_CBZ_DIRECTORY, "basic.CBZ"))
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Test updating a CBZ file
+        cbz_file = abspath(join(temp_dir, "basic.CBZ"))
+        shutil.copy(base_file, cbz_file)
+        read_metadata = mm_comic_archive.get_info_from_cbz(cbz_file)
+        assert read_metadata["title"] == "Cómic"
         metadata = mm_archive.get_empty_metadata()
-        metadata["title"] = "CBZ Title!"
-        metadata["tags"] = "Some,Tags"
-        text_file = abspath(join(temp_dir, "text.txt"))
-        mm_file_tools.write_text_file(text_file, "Text")
-        assert exists(text_file)
-        cbz_file = mm_comic_archive.create_cbz(temp_dir, metadata=metadata)
-        assert exists(cbz_file)
-        read_meta = mm_archive.get_info_from_archive(cbz_file)
-        assert read_meta["title"] == "CBZ Title!"
-        assert read_meta["tags"] == "Some,Tags"
-        assert read_meta["description"] is None
-        metadata["title"] = "New!"
-        metadata["description"] = "New Words..."
+        metadata["title"] = "New Comic Title"
+        metadata["artists"] = ["New", "Artists"]
         mm_archive.update_archive_info(cbz_file, metadata)
-        read_meta = mm_archive.get_info_from_archive(cbz_file)
-        assert read_meta["title"] == "New!"
-        assert read_meta["tags"] == "Some,Tags"
-        assert read_meta["description"] == "New Words..."
-        extract_dir = abspath(join(temp_dir, "extracted"))
-        os.mkdir(extract_dir)
-        mm_file_tools.extract_zip(cbz_file, extract_dir)
-        assert sorted(os.listdir(extract_dir)) == ["CBZ Title!", "ComicInfo.xml"]
+        read_metadata = mm_comic_archive.get_info_from_cbz(cbz_file)
+        assert read_metadata["title"] == "New Comic Title"
+        assert read_metadata["artists"] == ["New", "Artists"]
+        assert read_metadata["writers"] is None
+        assert read_metadata["publisher"] is None
+    # Test updating an EPUB file without updating the cover image
+    base_file = abspath(join(mm_test.ARCHIVE_EPUB_DIRECTORY, "small.epub"))
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Test updating an EPUB file
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "1.txt")), "Here's some text!")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "2.txt")), "And")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, "3.pdf")), "Stuff")
-        chapters = mm_epub.get_default_chapters(temp_dir)
+        epub_file = abspath(join(temp_dir, "small.epub"))
+        shutil.copy(base_file, epub_file)
+        read_metadata = mm_epub.get_info_from_epub(epub_file)
+        assert read_metadata["title"] is None
+        assert read_metadata["description"] == "Small Cover"
+        assert os.stat(epub_file).st_size < 10000
         metadata = mm_archive.get_empty_metadata()
-        metadata["title"] = "This is an epub!!"
-        metadata["artists"] = "Art Person"
-        metadata["description"] = "Some Words"
-        chapters = mm_epub.add_cover_to_chapters(chapters, metadata, temp_dir)
-        epub_file = mm_epub.create_epub(chapters, metadata, temp_dir)
-        assert exists(epub_file)
-        read_meta = mm_archive.get_info_from_archive(epub_file)
-        assert read_meta["title"] == "This is an epub!!"
-        assert read_meta["artists"] == "Art Person"
-        assert read_meta["description"] == "Some Words"
-        assert read_meta["writers"] is None
+        metadata["title"] = "New Epub Title"
+        metadata["writers"] = ["Updated", "Writers"]
         metadata["cover_id"] = None
-        metadata["title"] = "Different Title"
-        metadata["writers"] = "Author"
         mm_archive.update_archive_info(epub_file, metadata)
-        read_meta = mm_archive.get_info_from_archive(epub_file)
-        assert read_meta["title"] == "Different Title"
-        assert read_meta["artists"] == "Art Person"
-        assert read_meta["description"] == "Some Words"
-        assert read_meta["writers"] == "Author"
-        extract_dir = abspath(join(temp_dir, "extracted"))
-        os.mkdir(extract_dir)
-        mm_file_tools.extract_zip(epub_file, extract_dir)
-        assert sorted(os.listdir(extract_dir)) == ["EPUB", "META-INF", 'mimetype']
-        # Test updating cover image
-        epub_size = os.stat(epub_file).st_size
-        mm_archive.update_archive_info(epub_file, metadata, update_cover=False)
-        assert os.stat(epub_file).st_size == epub_size
-        cover_updated = False
-        for i in range(0, 20):
-            mm_archive.update_archive_info(epub_file, metadata, update_cover=True)
-            if not os.stat(epub_file).st_size == epub_size:
-                cover_updated = True
-                break
-        assert cover_updated    
-        # Test updating a non-archive file
+        assert os.stat(epub_file).st_size < 10000
+        read_metadata = mm_epub.get_info_from_epub(epub_file)
+        assert read_metadata["title"] == "New Epub Title"
+        assert read_metadata["writers"] == ["Updated", "Writers"]
+        assert read_metadata["artists"] is None
+        assert read_metadata["publisher"] is None
+    # Test updating EPUB file metadata and cover image
+    base_file = abspath(join(mm_test.ARCHIVE_EPUB_DIRECTORY, "small.epub"))
     with tempfile.TemporaryDirectory() as temp_dir:
-        text_file = abspath(join(temp_dir, "text.txt"))
-        mm_file_tools.write_text_file(text_file, "This is text!")
+        epub_file = abspath(join(temp_dir, "small.epub"))
+        shutil.copy(base_file, epub_file)
+        read_metadata = mm_epub.get_info_from_epub(epub_file)
+        assert read_metadata["title"] is None
+        assert read_metadata["description"] == "Small Cover"
+        assert os.stat(epub_file).st_size < 10000
+        metadata = mm_archive.get_empty_metadata()
+        metadata["title"] = "New Cover"
+        metadata["writers"] = ["AAAAA"]
+        metadata["cover_id"] = "image1"
+        mm_archive.update_archive_info(epub_file, metadata, update_cover=True)
+        assert os.stat(epub_file).st_size > 30000
+        read_metadata = mm_epub.get_info_from_epub(epub_file)
+        assert read_metadata["title"] == "New Cover"
+        assert read_metadata["writers"] == ["AAAAA"]
+        assert read_metadata["artists"] is None
+        assert read_metadata["publisher"] is None
+    # Test attempting to update non-archive files
+    base_file = abspath(join(mm_test.BASIC_TEXT_DIRECTORY, "unicode.txt"))
+    with tempfile.TemporaryDirectory() as temp_dir:
+        text_file = abspath(join(temp_dir, "unicode.txt"))
+        shutil.copy(base_file, text_file)
         mm_archive.update_archive_info(text_file, metadata)
-        assert mm_file_tools.read_text_file(text_file) == "This is text!"
-        zip_file = abspath(join(temp_dir, "not_epub.zip"))
-        mm_file_tools.create_zip(temp_dir, zip_file)
+        assert mm_file_tools.read_text_file(text_file) == "This is ünicode."
+    base_file = abspath(join(mm_test.BASIC_DIRECTORY, "archive.zip"))
+    with tempfile.TemporaryDirectory() as temp_dir:
+        zip_file = abspath(join(temp_dir, "archive.zip"))
+        shutil.copy(base_file, zip_file)
+        assert os.stat(zip_file).st_size == 784
         mm_archive.update_archive_info(zip_file, metadata)
-        extract_dir = abspath(join(temp_dir, "extract"))
-        os.mkdir(extract_dir)
-        assert mm_file_tools.extract_zip(zip_file, extract_dir)
-        assert sorted(os.listdir(extract_dir)) == ["text.txt"]
-        assert mm_file_tools.read_text_file(abspath(join(extract_dir, "text.txt"))) == "This is text!"
+        assert os.stat(zip_file).st_size == 784
 
 def test_format_title():
     """
@@ -456,7 +302,7 @@ def test_get_cover_image():
     """
     Tests the get_cover_image function.
     """
-    image = mm_archive.get_cover_image("This is something different", "Drakovek, Other Person")
+    image = mm_archive.get_cover_image("This is something different", ["Drakovek", "Other"])
     assert image.size == (900, 1200)
     image = mm_archive.get_cover_image("This is a title", None, portrait=False)
     assert image.size == (1200, 900)

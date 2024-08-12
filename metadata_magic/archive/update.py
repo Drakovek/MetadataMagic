@@ -46,8 +46,7 @@ def mass_update_archives(directory:str, metadata:dict, update_covers:bool=False)
     :type update_covers: bool, optional
     """
     # Get list of archive files in the directory
-    archive_files = mm_file_tools.find_files_of_type(directory, ".cbz")
-    archive_files.extend(mm_file_tools.find_files_of_type(directory, ".epub"))
+    archive_files = mm_file_tools.find_files_of_type(directory, [".cbz", ".epub"])
     # Run through archive files
     for archive_file in tqdm.tqdm(archive_files):
         # Update the archive file with the metadata

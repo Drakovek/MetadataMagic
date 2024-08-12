@@ -146,12 +146,12 @@ def get_date(json:dict, config:dict) -> str:
     if value is None:
         return None
     # Format date into standard format
-    regex = "(19[7-9][0-9]|2[0-1][0-9]{2})[\\-/](0[1-9]|1[0-2])[\\-/](0[1-9]|[1-2][0-9]|3[0-1])"
+    regex = "(19[0-9]{2}|2[0-1][0-9]{2})[\\-/](0[1-9]|1[0-2])[\\-/](0[1-9]|[1-2][0-9]|3[0-1])"
     date = re.findall(regex, value)
     if len(date) > 0:
         year, month, day = date[0]
         return f"{year}-{month}-{day}"
-    regex = "(19[7-9][0-9]|2[0-1][0-9]{2})(0[1-9]|1[0-2])(0[1-9]|[1-2][0-9]|3[0-1])"
+    regex = "(19[0-9]{2}|2[0-1][0-9]{2})(0[1-9]|1[0-2])(0[1-9]|[1-2][0-9]|3[0-1])"
     date = re.findall(regex, value)
     if len(date) > 0:
         year, month, day = date[0]

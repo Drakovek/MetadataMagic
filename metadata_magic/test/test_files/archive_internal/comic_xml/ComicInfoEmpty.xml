@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<ComicInfo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Title>Empty</Title>
+  <PageCount></PageCount>
+  <Series> </Series>
+  <Number></Number>
+  <Count>  </Count>
+  <Summary></Summary>
+  <Year></Year>
+  <Month></Month>
+  <Day></Day>
+  <Writer>, ,</Writer>
+  <Colorist>,</Colorist>
+  <Inker></Inker>
+  <CoverArtist>,,</CoverArtist>
+  <Publisher></Publisher>
+  <Web></Web>
+  <AgeRating>   </AgeRating>
+  <CommunityRating></CommunityRating>
+  <Tags>, , ★★★,</Tags>
+</ComicInfo>

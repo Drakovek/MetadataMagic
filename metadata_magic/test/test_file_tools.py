@@ -224,9 +224,11 @@ def test_create_zip():
         created_zip = abspath(join(temp_dir, "created.zip"))
         assert mm_file_tools.create_zip(mm_test.BASIC_DIRECTORY, created_zip)
         assert mm_file_tools.extract_zip(created_zip, temp_dir)
-        assert sorted(os.listdir(temp_dir)) == ["archive.zip", "created.zip", "json", "text"]
+        assert sorted(os.listdir(temp_dir)) == ["archive.zip", "created.zip", "html", "json", "text"]
         internal_dir = abspath(join(temp_dir, "json"))
         assert sorted(os.listdir(internal_dir)) == ["latin1.JSON", "unicode.json"]
+        internal_dir = abspath(join(temp_dir, "html"))
+        assert sorted(os.listdir(internal_dir)) == ["badformat.html", "basic.html", "deviantart.htm", "unformatted.html"]
         internal_dir = abspath(join(temp_dir, "text"))
         assert sorted(os.listdir(internal_dir)) == ["cp437.TXT", "latin1.txt", "unicode.txt"]
         text_file = abspath(join(internal_dir, "cp437.TXT"))
@@ -247,6 +249,7 @@ def test_find_files_of_type():
     # Get file paths
     basic_directory = mm_test.BASIC_DIRECTORY
     text_directory = abspath(join(basic_directory, "text"))
+    html_directory = abspath(join(basic_directory, "html"))
     json_directory = abspath(join(basic_directory, "json"))
     # Test finding all files of a given extension
     files = mm_file_tools.find_files_of_type(text_directory, ".txt")
@@ -269,15 +272,23 @@ def test_find_files_of_type():
     assert basename(files[2]) == "unicode.json"
     assert abspath(join(files[2], os.pardir)) == json_directory
     # Test finding files with inverted extension
-    files = mm_file_tools.find_files_of_type(basic_directory, ".txt", inverted=True)
-    assert len(files) == 3
+    files = mm_file_tools.find_files_of_type(basic_directory, [".txt"], inverted=True)
+    assert len(files) == 7    
     assert basename(files[0]) == "archive.zip"
     assert abspath(join(files[0], os.pardir)) == basic_directory
-    assert basename(files[1]) == "latin1.JSON"
-    assert abspath(join(files[1], os.pardir)) == json_directory
-    assert basename(files[2]) == "unicode.json"
-    assert abspath(join(files[2], os.pardir)) == json_directory
-    files = mm_file_tools.find_files_of_type(basic_directory, [".txt", ".json"], inverted=True)
+    assert basename(files[1]) == "badformat.html"
+    assert abspath(join(files[1], os.pardir)) == html_directory
+    assert basename(files[2]) == "basic.html"
+    assert abspath(join(files[2], os.pardir)) == html_directory
+    assert basename(files[3]) == "deviantart.htm"
+    assert abspath(join(files[3], os.pardir)) == html_directory
+    assert basename(files[4]) == "unformatted.html"
+    assert abspath(join(files[4], os.pardir)) == html_directory
+    assert basename(files[5]) == "latin1.JSON"
+    assert abspath(join(files[5], os.pardir)) == json_directory
+    assert basename(files[6]) == "unicode.json"
+    assert abspath(join(files[6], os.pardir)) == json_directory
+    files = mm_file_tools.find_files_of_type(basic_directory, [".txt", ".json", ".htm", ".html"], inverted=True)
     assert len(files) == 1
     assert basename(files[0]) == "archive.zip"
     assert abspath(join(files[0], os.pardir)) == basic_directory
@@ -303,4 +314,4 @@ def test_directory_contains():
     assert mm_file_tools.directory_contains(basic_directory, ".json")
     assert mm_file_tools.directory_contains(basic_directory, [".txt", ".png"])
     assert not mm_file_tools.directory_contains(basic_directory, ".png")
-    assert not mm_file_tools.directory_contains(basic_directory, [".jpeg", ".png", ".html"])
+    assert not mm_file_tools.directory_contains(basic_directory, [".jpeg", ".png", ".pdf"])

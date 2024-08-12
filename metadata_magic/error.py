@@ -117,7 +117,7 @@ def find_missing_fields(path:str, fields:List[str]) -> List[str]:
         missing.insert(0, archive_file)
         for field in fields:
             try:
-                # Add to list if the field is missing
+                # Remove item if the field is missing
                 if metadata[field] is not None and (not field == "age_rating" or not metadata[field] == "Unknown"):
                     del missing[0]
                     break

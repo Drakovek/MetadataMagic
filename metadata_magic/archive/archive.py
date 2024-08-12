@@ -16,6 +16,7 @@ import metadata_magic.archive.epub as mm_epub
 import metadata_magic.archive.comic_archive as mm_comic_archive
 from PIL import Image, ImageDraw
 from os.path import abspath, isdir, exists
+from typing import List
 
 SUPPORTED_IMAGES = [".png", ".jpeg", ".jpg"]
 SUPPORTED_TEXT = [".txt", ".html", ".htm"]
@@ -94,14 +95,9 @@ def get_info_from_jsons(path:str, config:dict) -> dict:
     metadata["date"] = main_meta["date"]
     metadata["publisher"] = main_meta["publisher"]
     metadata["url"] = main_meta["url"]
-    # Get artists and writers
-    metadata["artists"] = None
-    metadata["writers"] = None
-    if main_meta["artists"] is not None:
-        metadata["artists"] = ",".join(main_meta["artists"])
-    if main_meta["writers"] is not None:
-        metadata["writers"] = ",".join(main_meta["writers"])
-    metadata["cover_artists"] = metadata["artists"]
+    metadata["writers"] = main_meta["writers"]
+    metadata["artists"] = main_meta["artists"]
+    metadata["cover_artists"] = main_meta["artists"]
     # Get description metadata
     description = main_meta["description"]
     if description is not None:
@@ -112,12 +108,8 @@ def get_info_from_jsons(path:str, config:dict) -> dict:
         description = description.strip()
     metadata["description"] = description
     # Get tag metadata
-    tags = main_meta["tags"]
-    if tags is not None and tags is not []:
-        tag_string = tags[0]
-        for i in range(1, len(tags)):
-            tag_string = f"{tag_string},{tags[i]}"
-        metadata["tags"] = tag_string
+    if main_meta["tags"] is not None and main_meta["tags"] is not []:
+        metadata["tags"] = main_meta["tags"]
     # Get highest age rating in list of JSON metadata
     highest_age = "Unknown"
     for json_meta in json_metas:
@@ -208,14 +200,14 @@ def update_archive_info(archive_file:str, metadata:dict, update_cover:bool=False
     if extension == ".cbz":
         mm_comic_archive.update_cbz_info(archive_file, metadata)
 
-def get_cover_image(title:str, authors:str, portrait:bool=True, uppercase:bool=True) -> Image:
+def get_cover_image(title:str, authors:List[str], portrait:bool=True, uppercase:bool=True) -> Image:
     """
     Creates and returns a cover image based on a given title and author.
     
     :param title: Title to use for the cover image
     :type title: str, required
     :param authors: Author(s) to use for the cover image
-    :type authors: str, required
+    :type authors: List[str], required
     :param portrait: Wheter the image should be in portrait orientation, defaults to True
     :type portrait: bool, optional
     :param uppercase: Whether to set all text to uppercase, defaults to True
@@ -243,8 +235,12 @@ def get_cover_image(title:str, authors:str, portrait:bool=True, uppercase:bool=T
     bold_font = etti.get_basic_font("sans-serif", system_fonts, bold=True)
     # Create the text for the author
     text_width = full_width - math.floor(margin * 2.5)
-    author_text = re.sub(r"\s*,\s*", " and ", str(authors))
-    author_text = f"by {author_text}"
+    try:
+        author_text = ", ".join(authors)
+        author_text = re.sub(r"\s*,\s*(?=[^,]*$)", " & ", author_text)
+        author_text = f"by {author_text}"
+    except TypeError:
+        author_text = "None"
     if uppercase:
         author_text = author_text.upper()
     author_image = etti.text_image_fit_width(author_text, bold_font, image_width=text_width,
@@ -291,30 +287,31 @@ def get_string_from_user(value_type:str, default_value:str=None) -> str:
     # Return default value if user value is not valid
     return default_value
 
-def get_list_from_user(value_type:str, default_value:str=None) -> str:
+def get_list_from_user(value_type:str, default_value:List[str]=None) -> List[str]:
     """
     Gets a list from the user with prompt generated from given value type.
 
     :param value_type: Name of the value user is inputting, used for the prompt
     :type value_type: str, required
     :param default_value: Default value to return, defaults to None
-    :type default_value: str, optional
+    :type default_value: List[str], optional
     :return: User value or default if the value is invalid
-    :rtype: str
+    :rtype: List[str]
     """
     # Get the string value
     value = get_string_from_user(value_type, default_value)
     if value is None: return None
+    # Return list if applicable
+    if not isinstance(value, str):
+        return value
+    # Remove unnecessary whitespace
+    value = re.sub(r"(?:\s*,\s*)+", ",", value)
+    value = re.sub(r"^[\s,]+|[\s,]+$", "", value)
     # Split value by comma
     value_list = value.split(",")
-    # Remove whitespace from each value
-    value = ""
-    for item in value_list:
-        value = f"{value}{item},"
-    value = re.sub(r"\s*,+$", "", value)
-    value = re.sub(r"\s*,\s*", ",", value)
-    # Return the value
-    return value
+    if value_list == []:
+        return default_value
+    return value_list
 
 def user_string_default(value_type:str, default_value:str) -> str:
     """
@@ -332,7 +329,7 @@ def user_string_default(value_type:str, default_value:str) -> str:
         return default_value
     return get_string_from_user(value_type, None)
 
-def user_list_default(value_type:str, default_value:str) -> str:
+def user_list_default(value_type:str, default_value:List[str]) -> List[str]:
     """
     Gets a list from the user with prompt generated from given value type.
     Will simply return the default value without prompting the user if not None.
@@ -340,9 +337,9 @@ def user_list_default(value_type:str, default_value:str) -> str:
     :param value_type: Name of the value user is inputting, used for the prompt
     :type value_type: str, required
     :param default_value: Default value to return, defaults to None
-    :type default_value: str, optional
+    :type default_value: List[str], optional
     :return: User value or default if the value is invalid
-    :rtype: str
+    :rtype: List[str]
     """
     if default_value is not None:
         return default_value

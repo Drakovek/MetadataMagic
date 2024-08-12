@@ -2,6 +2,7 @@
 
 import os
 import tempfile
+import metadata_magic.test as mm_test
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.comic_xml as mm_comic_xml
@@ -16,9 +17,9 @@ def test_get_comic_xml():
     end = "<AgeRating>Unknown</AgeRating></ComicInfo>"
     # Test setting title in the XML file
     meta = mm_archive.get_empty_metadata()
-    meta["title"] = "This's a title\\'"
+    meta["title"] = "AAA\\';"
     xml = mm_comic_xml.get_comic_xml(meta, False)
-    assert xml == f"{start}<Title>This's a title\\'</Title>{end}"
+    assert xml == f"{start}<Title>AAA\\';</Title>{end}"
     # Test setting page count in the XML file
     meta = mm_archive.get_empty_metadata()
     meta["title"] = "Test"
@@ -56,21 +57,30 @@ def test_get_comic_xml():
     meta["date"] = "2014-12-08"
     xml = mm_comic_xml.get_comic_xml(meta, False)
     assert xml == f"{start}<Year>2014</Year><Month>12</Month><Day>8</Day>{end}"
-    # Test setting writer in XML file
+    # Test setting writers in the XML file
     meta = mm_archive.get_empty_metadata()
-    meta["writers"] = "Person!"
+    meta["writers"] = ["Writer"]
     xml = mm_comic_xml.get_comic_xml(meta, False)
-    assert xml == f"{start}<Writer>Person!</Writer>{end}"
+    assert xml == f"{start}<Writer>Writer</Writer>{end}"
+    meta["writers"] = ["Multiple", "People"]
+    xml = mm_comic_xml.get_comic_xml(meta, False)
+    assert xml == f"{start}<Writer>Multiple,People</Writer>{end}"
     # Test setting cover artist in XML file
     meta = mm_archive.get_empty_metadata()
-    meta["cover_artists"] = "Guest"
+    meta["cover_artists"] = ["Artist"]
     xml = mm_comic_xml.get_comic_xml(meta, False)
-    assert xml == f"{start}<CoverArtist>Guest</CoverArtist>{end}"
+    assert xml == f"{start}<CoverArtist>Artist</CoverArtist>{end}"
+    meta["cover_artists"] = ["AAA", "BBB"]
+    xml = mm_comic_xml.get_comic_xml(meta, False)
+    assert xml == f"{start}<CoverArtist>AAA,BBB</CoverArtist>{end}"
     # Test setting main artists in XML file
     meta = mm_archive.get_empty_metadata()
-    meta["artists"] = "Bleh"
+    meta["artists"] = ["Person"]
     xml = mm_comic_xml.get_comic_xml(meta, False)
-    assert xml == f"{start}<Penciller>Bleh</Penciller><Inker>Bleh</Inker><Colorist>Bleh</Colorist>{end}"
+    assert xml == f"{start}<Penciller>Person</Penciller><Inker>Person</Inker><Colorist>Person</Colorist>{end}"
+    meta["artists"] = ["A","B"]
+    xml = mm_comic_xml.get_comic_xml(meta, False)
+    assert xml == f"{start}<Penciller>A,B</Penciller><Inker>A,B</Inker><Colorist>A,B</Colorist>{end}"
     # Test setting publisher in XML file
     meta = mm_archive.get_empty_metadata()
     meta["publisher"] = "Company"
@@ -78,9 +88,9 @@ def test_get_comic_xml():
     assert xml == f"{start}<Publisher>Company</Publisher>{end}"
     # Test setting tags in XML file
     meta = mm_archive.get_empty_metadata()
-    meta["tags"] = "Some,Tags,&,stuff"
+    meta["tags"] = ["Some", "Tags", "&", "Stuff"]
     xml = mm_comic_xml.get_comic_xml(meta, False)
-    assert xml == f"{start}<Tags>Some,Tags,&amp;,stuff</Tags>{end}"
+    assert xml == f"{start}<Tags>Some,Tags,&amp;,Stuff</Tags>{end}"
     # Test setting URL in XML file
     meta = mm_archive.get_empty_metadata()
     meta["url"] = "www.ihopethisisntarealsite.com"
@@ -112,7 +122,7 @@ def test_get_comic_xml():
     assert xml == f"{start}<Title>Thing!</Title>{end}"
     # Test adding score as tags
     meta = mm_archive.get_empty_metadata()
-    meta["tags"] = "These,are,things"
+    meta["tags"] = ["These","are","things"]
     meta["score"] = "3"
     xml = mm_comic_xml.get_comic_xml(meta, False)
     assert xml == f"{start}<CommunityRating>3</CommunityRating><Tags>&#9733;&#9733;&#9733;,These,are,things</Tags>{end}"
@@ -147,166 +157,79 @@ def test_read_comic_info():
     """
     Tests the read_comic_info function.
     """
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test getting title from ComicInfo
-        xml_file = abspath(join(temp_dir, "ComicInfo.xml"))
-        meta_write = mm_archive.get_empty_metadata()
-        meta_write["title"] = "This is a title!"
-        xml = mm_comic_xml.get_comic_xml(meta_write, False)
-        mm_file_tools.write_text_file(xml_file, xml)
-        assert exists(xml_file)
-        meta_read = mm_comic_xml.read_comic_info(xml_file)
-        assert meta_read["title"] == "This is a title!"
-        assert meta_read["series"] is None
-        assert meta_read["page_count"] is None
-        # Test gitting page count from ComicInfo
-        meta_write["page_count"] = "42"
-        xml = mm_comic_xml.get_comic_xml(meta_write, False)
-        mm_file_tools.write_text_file(xml_file, xml)
-        meta_read = mm_comic_xml.read_comic_info(xml_file)
-        assert meta_read["title"] == "This is a title!"
-        assert meta_read["series"] is None
-        assert meta_read["page_count"] == "42"
-        # Test getting series info from ComicInfo.xml
-        meta_write["series"] = "The Thing"
-        meta_write["series_number"] = "3.0"
-        meta_write["series_total"] = "4"
-        xml = mm_comic_xml.get_comic_xml(meta_write, False)
-        mm_file_tools.write_text_file(xml_file, xml)
-        meta_read = mm_comic_xml.read_comic_info(xml_file)
-        assert meta_read["title"] == "This is a title!"
-        assert meta_read["series"] == "The Thing"
-        assert meta_read["page_count"] == "42"
-        assert meta_read["series_number"] == "3.0"
-        assert meta_read["series_total"] == "4"
-        assert meta_read["description"] is None
-        # Test getting description from ComicInfo.xml
-        meta_write["description"] = "Some words and such."
-        xml = mm_comic_xml.get_comic_xml(meta_write, False)
-        mm_file_tools.write_text_file(xml_file, xml)
-        meta_read = mm_comic_xml.read_comic_info(xml_file)
-        assert meta_read["title"] == "This is a title!"
-        assert meta_read["description"] == "Some words and such."
-        assert meta_read["date"] is None
-        meta_write["description"] = "'Tis this & That\\Other >.<"
-        xml = mm_comic_xml.get_comic_xml(meta_write, False)
-        mm_file_tools.write_text_file(xml_file, xml)
-        meta_read = mm_comic_xml.read_comic_info(xml_file)
-        assert meta_read["title"] == "This is a title!"
-        assert meta_read["description"] == "'Tis this & That\\Other >.<"
-        assert meta_read["date"] is None
-        # Test getting date from ComicInfo.xml
-        meta_write["date"] = "2012-03-09"
-        xml = mm_comic_xml.get_comic_xml(meta_write, False)
-        mm_file_tools.write_text_file(xml_file, xml)
-        meta_read = mm_comic_xml.read_comic_info(xml_file)
-        assert meta_read["title"] == "This is a title!"
-        assert meta_read["date"] == "2012-03-09"
-        assert meta_read["writers"] is None
-        meta_write["date"] = "2021-12-12"
-        xml = mm_comic_xml.get_comic_xml(meta_write, False)
-        mm_file_tools.write_text_file(xml_file, xml)
-        meta_read = mm_comic_xml.read_comic_info(xml_file)
-        assert meta_read["title"] == "This is a title!"
-        assert meta_read["date"] == "2021-12-12"
-        assert meta_read["writers"] is None
-        # Test getting writer from ComicInfo.xml
-        meta_write["writers"] = "Author Dude"
-        xml = mm_comic_xml.get_comic_xml(meta_write, False)
-        mm_file_tools.write_text_file(xml_file, xml)
-        meta_read = mm_comic_xml.read_comic_info(xml_file)
-        assert meta_read["title"] == "This is a title!"
-        assert meta_read["writers"] == "Author Dude"
-        assert meta_read["cover_artists"] is None
-        # Test getting cover artist from ComicInfo.xml
-        meta_write["cover_artists"] = "Person"
-        xml = mm_comic_xml.get_comic_xml(meta_write, False)
-        mm_file_tools.write_text_file(xml_file, xml)
-        meta_read = mm_comic_xml.read_comic_info(xml_file)
-        assert meta_read["title"] == "This is a title!"
-        assert meta_read["cover_artists"] == "Person"
-        assert meta_read["artists"] is None
-        # Test getting main artist from ComicInfo.xml
-        meta_write["artists"] = "ArtGirl"
-        xml = mm_comic_xml.get_comic_xml(meta_write, False)
-        mm_file_tools.write_text_file(xml_file, xml)
-        meta_read = mm_comic_xml.read_comic_info(xml_file)
-        assert meta_read["title"] == "This is a title!"
-        assert meta_read["artists"] == "ArtGirl"
-        assert meta_read["publisher"] is None
-        # Test getting the publisher from ComicInfo.xml
-        meta_write["publisher"] = "Website"
-        xml = mm_comic_xml.get_comic_xml(meta_write, False)
-        mm_file_tools.write_text_file(xml_file, xml)
-        meta_read = mm_comic_xml.read_comic_info(xml_file)
-        assert meta_read["title"] == "This is a title!"
-        assert meta_read["publisher"] == "Website"
-        assert meta_read["url"] is None
-        # Test getting url from ComicInfo.xml
-        meta_write["url"] = "/web/page/"
-        xml = mm_comic_xml.get_comic_xml(meta_write, False)
-        mm_file_tools.write_text_file(xml_file, xml)
-        meta_read = mm_comic_xml.read_comic_info(xml_file)
-        assert meta_read["title"] == "This is a title!"
-        assert meta_read["url"] == "/web/page/"
-        assert meta_read["tags"] is None
-        assert meta_read["age_rating"] == "Unknown"
-        # Test getting age rating from ComicInfo.xml
-        meta_write["age_rating"] = "Everyone"
-        xml = mm_comic_xml.get_comic_xml(meta_write, False)
-        mm_file_tools.write_text_file(xml_file, xml)
-        meta_read = mm_comic_xml.read_comic_info(xml_file)
-        assert meta_read["title"] == "This is a title!"
-        assert meta_read["age_rating"] == "Everyone"
-        assert meta_read["tags"] is None
-        # Test getting score from ComicInfo.xml
-        meta_write["score"] = "4"
-        xml = mm_comic_xml.get_comic_xml(meta_write, False)
-        mm_file_tools.write_text_file(xml_file, xml)
-        meta_read = mm_comic_xml.read_comic_info(xml_file)
-        assert meta_read["title"] == "This is a title!"
-        assert meta_read["score"] == "4"
-        assert meta_read["tags"] == None
-        # Test getting tags from ComicInfo.xml
-        meta_write["title"] = None
-        meta_write["tags"] = " these, are , some tags  "
-        xml = mm_comic_xml.get_comic_xml(meta_write, False)
-        mm_file_tools.write_text_file(xml_file, xml)
-        meta_read = mm_comic_xml.read_comic_info(xml_file)
-        assert meta_read["tags"] == "these,are,some tags"
-        assert meta_read["title"] is None
-        # Test that any star score tags are removed
-        meta_write["title"] = "Hooray!"
-        meta_write["tags"] = "★★★★"
-        xml = mm_comic_xml.get_comic_xml(meta_write, False)
-        mm_file_tools.write_text_file(xml_file, xml)
-        meta_read = mm_comic_xml.read_comic_info(xml_file)
-        assert meta_read["title"] == "Hooray!"
-        assert meta_read["tags"] == None
-        meta_write["tags"] = "★, Some,Tags!,Yay"
-        xml = mm_comic_xml.get_comic_xml(meta_write, False)
-        mm_file_tools.write_text_file(xml_file, xml)
-        meta_read = mm_comic_xml.read_comic_info(xml_file)
-        assert meta_read["tags"] == "Some,Tags!,Yay"
-        meta_write["tags"] = "More, tags, and, such, ★★★"
-        xml = mm_comic_xml.get_comic_xml(meta_write, False)
-        mm_file_tools.write_text_file(xml_file, xml)
-        meta_read = mm_comic_xml.read_comic_info(xml_file)
-        assert meta_read["tags"] == "More,tags,and,such"
-        meta_write["tags"] = "Other, ★★★★★, Final "
-        xml = mm_comic_xml.get_comic_xml(meta_write, False)
-        mm_file_tools.write_text_file(xml_file, xml)
-        meta_read = mm_comic_xml.read_comic_info(xml_file)
-        assert meta_read["tags"] == "Other,Final"
-        meta_write["tags"] = "Larger,Star,Count,★★★★★★★★★★"
-        xml = mm_comic_xml.get_comic_xml(meta_write, False)
-        mm_file_tools.write_text_file(xml_file, xml)
-        meta_read = mm_comic_xml.read_comic_info(xml_file)
-        assert meta_read["tags"] == "Larger,Star,Count,★★★★★★★★★★"
-        # Test if given file is not a proper XML file
-        unrelated = abspath(join(temp_dir, "blah.xml"))
-        mm_file_tools.write_text_file(unrelated, "This is some unimportant non-xml text.")
-        assert exists(unrelated)
-        meta_read = mm_comic_xml.read_comic_info(unrelated)
-        assert meta_read["title"] is None
-        assert meta_read["series"] is None
+    # Test getting info from ComicInfo file
+    xml_file = abspath(join(mm_test.COMIC_XML_DIRECTORY, "ComicInfoFull.xml"))
+    metadata = mm_comic_xml.read_comic_info(xml_file)
+    assert metadata["title"] == "Comic Title"
+    assert metadata["page_count"] == "42"
+    assert metadata["series"] == "Series Title"
+    assert metadata["series_number"] == "3.0"
+    assert metadata["series_total"] == "4"
+    assert metadata["description"] == "This & That!"
+    assert metadata["date"] == "2012-03-09"
+    assert metadata["writers"] == ["Multiple", "Authors"]
+    assert metadata["artists"] == ["More", "People"]
+    assert metadata["cover_artists"] == ["A", "B", "C"]
+    assert metadata["publisher"] == "Website"
+    assert metadata["url"] == "/url/page/"
+    assert metadata["age_rating"] == "Teen"
+    assert metadata["score"] == "4"
+    assert metadata["tags"] == ["A", "B", "C", "D", "E"]
+    # Test getting info from ComicInfo file with only title
+    xml_file = abspath(join(mm_test.COMIC_XML_DIRECTORY, "ComicInfoTiny.xml"))
+    metadata = mm_comic_xml.read_comic_info(xml_file)
+    assert metadata["title"] == "Solo"
+    assert metadata["page_count"] is None
+    assert metadata["series"] is None
+    assert metadata["series_number"] is None
+    assert metadata["series_total"] is None
+    assert metadata["description"] is None
+    assert metadata["date"] is None
+    assert metadata["writers"] is None
+    assert metadata["artists"] is None
+    assert metadata["cover_artists"] is None
+    assert metadata["publisher"] is None
+    assert metadata["url"] is None
+    assert metadata["age_rating"] is None
+    assert metadata["score"] is None
+    assert metadata["tags"] is None
+    # Test getting comic info from file with tags but no contents
+    xml_file = abspath(join(mm_test.COMIC_XML_DIRECTORY, "ComicInfoEmpty.xml"))
+    metadata = mm_comic_xml.read_comic_info(xml_file)
+    assert metadata["title"] == "Empty"
+    assert metadata["page_count"] is None
+    assert metadata["series"] is None
+    assert metadata["series_number"] is None
+    assert metadata["series_total"] is None
+    assert metadata["description"] is None
+    assert metadata["date"] is None
+    assert metadata["writers"] is None
+    assert metadata["artists"] is None
+    assert metadata["cover_artists"] is None
+    assert metadata["publisher"] is None
+    assert metadata["url"] is None
+    assert metadata["age_rating"] is None
+    assert metadata["score"] is None
+    assert metadata["tags"] is None
+    # Test removing score tags
+    xml_file = abspath(join(mm_test.COMIC_XML_DIRECTORY, "ComicInfoRating.xml"))
+    metadata = mm_comic_xml.read_comic_info(xml_file)
+    assert metadata["tags"] == ["★★★★★★", "Remaining", "Tags"]
+    # Test invalid XML file
+    xml_file = abspath(join(mm_test.BASIC_TEXT_DIRECTORY, "latin1.txt"))
+    metadata = mm_comic_xml.read_comic_info(xml_file)
+    assert metadata["title"] is None
+    assert metadata["page_count"] is None
+    assert metadata["series"] is None
+    assert metadata["series_number"] is None
+    assert metadata["series_total"] is None
+    assert metadata["description"] is None
+    assert metadata["date"] is None
+    assert metadata["writers"] is None
+    assert metadata["artists"] is None
+    assert metadata["cover_artists"] is None
+    assert metadata["publisher"] is None
+    assert metadata["url"] is None
+    assert metadata["age_rating"] is None
+    assert metadata["score"] is None
+    assert metadata["tags"] is None

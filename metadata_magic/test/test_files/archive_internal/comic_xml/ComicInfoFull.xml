@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<ComicInfo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Title>Comic Title</Title>
+  <PageCount>42</PageCount>
+  <Series>Series Title</Series>
+  <Number>3.0</Number>
+  <Count>4</Count>
+  <Summary>This &amp; That!</Summary>
+  <Year>2012</Year>
+  <Month>03</Month>
+  <Day>09</Day>
+  <Writer>Multiple, Authors</Writer>
+  <Colorist>More,People</Colorist>
+  <Inker>More,People</Inker>
+  <CoverArtist>A, B, C</CoverArtist>
+  <Publisher>Website</Publisher>
+  <Web>/url/page/</Web>
+  <AgeRating>Teen</AgeRating>
+  <CommunityRating>4</CommunityRating>
+  <Tags>A, B, C , D,E</Tags>
+</ComicInfo>

@@ -48,7 +48,6 @@ def archive_all_media(directory:str, config:dict, format_title:bool=False, descr
             # Ignore if the extension is not supported
             extension = html_string_tools.html.get_extension(pair["media"]).lower()
             if extension not in media_extensions:
-                print(pair)
                 continue
             with tempfile.TemporaryDirectory() as temp_dir:
                 # Copy JSON and media into temp directory
@@ -62,14 +61,15 @@ def archive_all_media(directory:str, config:dict, format_title:bool=False, descr
                 if format_title:
                     metadata["title"] = mm_archive.format_title(metadata["title"])
                 # Rename files to fit the title
-                mm_rename.rename_file(new_json, metadata["title"])
-                mm_rename.rename_file(new_media, metadata["title"])
+                title = mm_rename.get_file_friendly_text(metadata["title"], ascii_only=True)
+                mm_rename.rename_file(new_json, title)
+                mm_rename.rename_file(new_media, title)
                 # Create the archive file
                 archive_file = None
                 if extension in mm_archive.SUPPORTED_IMAGES:
                     # Create an epub if the description is too long
                     if metadata["description"] is None or len(metadata["description"]) < description_length:
-                        archive_file = mm_comic_archive.create_cbz(temp_dir, metadata=metadata)
+                        archive_file = mm_comic_archive.create_cbz(temp_dir, name=title, metadata=metadata)
                     else:
                         new_pair = mm_meta_finder.get_pairs(temp_dir, print_info=False)[0]
                         new_media = new_pair["media"]
@@ -77,7 +77,7 @@ def archive_all_media(directory:str, config:dict, format_title:bool=False, descr
                         archive_file = mm_epub.create_epub_from_description(new_json, new_media, metadata, temp_dir, config)
                 elif extension in mm_archive.SUPPORTED_TEXT:
                     with tempfile.TemporaryDirectory() as image_dir:
-                        chapters = mm_epub.get_default_chapters(temp_dir, title=metadata["title"])
+                        chapters = mm_epub.get_default_chapters(temp_dir, title=title)
                         chapters = mm_epub.add_cover_to_chapters(chapters, metadata, image_dir)
                         archive_file = mm_epub.create_epub(chapters, metadata, temp_dir)
                 assert exists(archive_file)
@@ -191,13 +191,15 @@ def extract_all_archives(directory:str, create_folders:bool=True, remove_structu
         try:
             # Extract archives
             parent_dir = abspath(join(archive, os.pardir))
-            extension = html_string_tools.html.get_extension(archive)
+            extension = html_string_tools.html.get_extension(archive).lower()
             if extension == ".cbz":
                 assert extract_cbz(archive, parent_dir, create_folder=create_folders,
                         remove_structure=remove_structure)
-            if extension == ".epub":
+            elif extension == ".epub":
                 assert extract_epub(archive, parent_dir, create_folder=create_folders,
                         remove_structure=remove_structure)
+            else:
+                assert False
         except AssertionError:
             # Extracting archive failed
             python_print_tools.printer.color_print(f"Failed Extracting \"{archive}\"", "red")
