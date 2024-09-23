@@ -456,7 +456,7 @@ def test_create_style_file():
         style_file = abspath(join(sub_dir, "epubstyle.css"))
         style = mm_file_tools.read_text_file(style_file)
         compare = ""
-        compare = f"{compare}img {{"
+        compare = f"{compare}img "+ "{"
         compare = f"{compare}\n    display: block;"
         compare = f"{compare}\n    max-width: 100%;"
         compare = f"{compare}\n    max-height: 100%;"
@@ -464,16 +464,16 @@ def test_create_style_file():
         compare = f"{compare}\n    margin-left: auto;"
         compare = f"{compare}\n    margin-right: auto;"
         compare = f"{compare}\n}}\n\n"
-        compare = f"{compare}#full-image-container {{"
+        compare = f"{compare}#full-image-container " + "{"
         compare = f"{compare}\n    width: 100%;"
         compare = f"{compare}\n    height: 100%;"
         compare = f"{compare}\n    margin: 0;"
         compare = f"{compare}\n    padding: 0;"
         compare = f"{compare}\n    page-break-after: always;"
         compare = f"{compare}\n}}\n\n"
-        compare = f"{compare}center {{"
+        compare = f"{compare}center " + "{"
         compare = f"{compare}\n    text-align: center;"
-        compare = f"{compare}\n}}"
+        compare = f"{compare}\n" + "}"
         assert style == compare
 
 def test_create_nav_file():
@@ -1162,7 +1162,7 @@ def test_create_epub_from_description():
         assert sorted(os.listdir(epub_directory)) == ["content", "content.opf", "images", "nav.xhtml", "original", "style", "toc.ncx"]
         # Check the contents of the content folder
         content_directory = abspath(join(epub_directory, "content"))
-        assert sorted(os.listdir(content_directory)) == ["cover_image.xhtml", "long.xhtml"]
+        assert sorted(os.listdir(content_directory)) == ["back_cover_image.xhtml", "cover_image.xhtml", "long.xhtml"]
         # Check the contents of the original directory
         original_directory = abspath(join(epub_directory, "original"))
         assert sorted(os.listdir(original_directory)) == ["long.JPG", "long.JSON"]
@@ -1194,7 +1194,7 @@ def test_create_epub_from_description():
         compare = f"{compare}\n    <manifest>"
         compare = f"{compare}\n        <item href=\"content/cover_image.xhtml\" id=\"item_cover\" media-type=\"application/xhtml+xml\" />"
         compare = f"{compare}\n        <item href=\"content/long.xhtml\" id=\"item_text\" media-type=\"application/xhtml+xml\" />"
-        compare = f"{compare}\n        <item href=\"content/cover_image.xhtml\" id=\"back_cover\" media-type=\"application/xhtml+xml\" />"
+        compare = f"{compare}\n        <item href=\"content/back_cover_image.xhtml\" id=\"back_cover\" media-type=\"application/xhtml+xml\" />"
         compare = f"{compare}\n        <item href=\"images/image1.JPG\" id=\"image1\" media-type=\"image/jpeg\" />"
         compare = f"{compare}\n        <item href=\"style/epubstyle.css\" id=\"epubstyle\" media-type=\"text/css\" />"
         compare = f"{compare}\n        <item href=\"nav.xhtml\" id=\"nav\" media-type=\"application/xhtml+xml\" properties=\"nav\" />"

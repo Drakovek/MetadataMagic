@@ -12,7 +12,7 @@ MetadataMagic can be downloaded from it's PyPI package using pip:
     pip3 install Metadata-Magic
 
 If you are installing from source, the following python packages are required:
-* [Easy-Text-To-Image](https://github.com/Drakovek/EasyTextToImage)
+* [CoverGenerator](https://github.com/Drakovek/CoverGenerator)
 * [html5lib](https://github.com/html5lib/html5lib-python)
 * [HTML-String-Tools](https://github.com/Drakovek/HTML-String-Tools)
 * [Pillow](https://github.com/python-pillow/Pillow)

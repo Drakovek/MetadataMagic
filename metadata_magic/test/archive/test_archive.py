@@ -10,6 +10,7 @@ import metadata_magic.archive.epub as mm_epub
 import metadata_magic.archive.comic_archive as mm_comic_archive
 import metadata_magic.file_tools as mm_file_tools
 from os.path import abspath, exists, join
+from PIL import Image
 
 def test_get_directory_archive_type():
     """
@@ -298,11 +299,13 @@ def test_format_title():
     # Test returning None if text is None
     assert mm_archive.format_title(None) is None
 
-def test_get_cover_image():
+def test_generate_cover_image():
     """
-    Tests the get_cover_image function.
+    Tests the generate_cover_image function.
     """
-    image = mm_archive.get_cover_image("This is something different", ["Drakovek", "Other"])
-    assert image.size == (900, 1200)
-    image = mm_archive.get_cover_image("This is a title", None, portrait=False)
-    assert image.size == (1200, 900)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        image_file = abspath(join(temp_dir, "cover_image.jpg"))
+        assert mm_archive.generate_cover_image("This is a title.", ["Drakovek", "Other"], image_file)
+        assert os.listdir(temp_dir) == ["cover_image.jpg"]
+        image = Image.open(image_file)
+        assert image.size == (900, 1200)

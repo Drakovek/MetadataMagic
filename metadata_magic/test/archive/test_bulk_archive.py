@@ -52,7 +52,7 @@ def test_archive_all_media():
         assert sorted(os.listdir(epub_extracted)) == ["EPUB", "META-INF", "mimetype"]
         epub_extracted = abspath(join(epub_extracted, "EPUB"))
         epub_extracted = abspath(join(epub_extracted, "content"))
-        assert sorted(os.listdir(epub_extracted)) == ["LNG.xhtml", "cover_image.xhtml"]
+        assert sorted(os.listdir(epub_extracted)) == ["LNG.xhtml", "back_cover_image.xhtml", "cover_image.xhtml"]
     # Test bulk archiving JSON-text pairs
     with tempfile.TemporaryDirectory() as temp_dir:
         text_directory = abspath(join(temp_dir, "text"))

@@ -347,12 +347,14 @@ def user_sort_rename(path:str):
     # Rename files
     sort_rename(path, template, index)
 
-def user_metadata_rename(path:str):
+def user_metadata_rename(path:str, ascii_only:bool=False):
     """
     Prompts the user for info needed for the rename_archives and rename_json_pairs functions.
     
     :param path: Path of the directory in which to rename files
     :type path: str, required
+    :param ascii_only: Whether to only allow basic ASCII characters, defaults to False
+    :type ascii_only: bool, optional
     """
     # Get what type of template the user wants.
     print("Rename in the format \"[options] title\"")
@@ -376,8 +378,8 @@ def user_metadata_rename(path:str):
     # Rename files
     config_paths = mm_config.get_default_config_paths()
     config = mm_config.get_config(config_paths)
-    rename_archives(path, template)
-    rename_json_pairs(path, template, config)
+    rename_archives(path, template, ascii_only=ascii_only)
+    rename_json_pairs(path, template, config, ascii_only=ascii_only)
 
 def main():
     """
@@ -401,6 +403,11 @@ def main():
             "--sort-rename",
             help="Renames files to a template name with index numbers.",
             action="store_true")
+    parser.add_argument(
+            "-a",
+            "--ascii-only",
+            help="Only uses strict ASCII characters",
+            action="store_true")
     args = parser.parse_args()
     # Check that directory is valid
     directory = abspath(args.directory)
@@ -414,4 +421,4 @@ def main():
         elif args.sort_rename:
             user_sort_rename(directory)
         elif args.metadata_rename:
-            user_metadata_rename(directory)
+            user_metadata_rename(directory, args.ascii_only)

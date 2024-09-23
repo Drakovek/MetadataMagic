@@ -6,15 +6,13 @@ import math
 import argparse
 import html_string_tools.html
 import python_print_tools.printer
-import easy_text_to_image.color as etti_color
-import easy_text_to_image.text_to_image as etti
 import metadata_magic.config as mm_config
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.meta_reader as mm_meta_reader
 import metadata_magic.archive.epub as mm_epub
 import metadata_magic.archive.comic_archive as mm_comic_archive
-from PIL import Image, ImageDraw
+import cover_generator.cover_generator as cover_generator
 from os.path import abspath, isdir, exists
 from typing import List
 
@@ -200,7 +198,7 @@ def update_archive_info(archive_file:str, metadata:dict, update_cover:bool=False
     if extension == ".cbz":
         mm_comic_archive.update_cbz_info(archive_file, metadata)
 
-def get_cover_image(title:str, authors:List[str], portrait:bool=True, uppercase:bool=True) -> Image:
+def generate_cover_image(title:str, authors:List[str], path:str, uppercase:bool=True) -> bool:
     """
     Creates and returns a cover image based on a given title and author.
     
@@ -208,61 +206,26 @@ def get_cover_image(title:str, authors:List[str], portrait:bool=True, uppercase:
     :type title: str, required
     :param authors: Author(s) to use for the cover image
     :type authors: List[str], required
-    :param portrait: Wheter the image should be in portrait orientation, defaults to True
-    :type portrait: bool, optional
+    :param path: Path to the image file to create
+    :type path: str, required
     :param uppercase: Whether to set all text to uppercase, defaults to True
     :type uppercase: bool, optional
-    :return: Cover image
+    :return: Whether the cover image creation was successful
     :rtype: PIL.Image
     """
-    # Get the dimensions of the full cover image
-    full_width = 900
-    full_height = 1200
-    if portrait is False:
-        full_width = 1200
-        full_height = 900
-    # Get the colors for the image
-    palette = etti_color.get_random_color_palette()
-    # Create the base image
-    margin = 90
-    half_margin = math.floor(margin/2)
-    cover = Image.new("RGBA", size=(full_width, full_height), color=palette["secondary-saturated"])
-    inner = Image.new("RGBA", size=(full_width - margin, full_height), color=palette["primary-saturated"])
-    cover.alpha_composite(inner, (margin, 0))
-    # Get the font for the image
-    system_fonts = etti.get_system_fonts(etti.get_font_locations())
-    italic_font = etti.get_basic_font("sans-serif", system_fonts, bold=True, italic=True)
-    bold_font = etti.get_basic_font("sans-serif", system_fonts, bold=True)
-    # Create the text for the author
-    text_width = full_width - math.floor(margin * 2.5)
-    try:
-        author_text = ", ".join(authors)
-        author_text = re.sub(r"\s*,\s*(?=[^,]*$)", " & ", author_text)
-        author_text = f"by {author_text}"
-    except TypeError:
-        author_text = "None"
-    if uppercase:
-        author_text = author_text.upper()
-    author_image = etti.text_image_fit_width(author_text, bold_font, image_width=text_width,
-            foreground=palette["secondary-desaturated"], background="#00000000", justified="l", minimum_characters=200)
-    author_height = author_image.size[1]
-    cover.alpha_composite(author_image, (math.floor(margin * 1.5), full_height - (half_margin + author_height)))
-    # Create the text for the title
-    text_height = full_height - ((margin*3) + author_height)
+    # Format the author and title text
     title_text = str(title)
+    author_text = authors
+    if author_text is None:
+        author_text = ["None"]
+    author_text = ", ".join(author_text)
+    author_text = re.sub(r"\s*,\s*(?=[^,]*$)", " & ", author_text)
+    # Set the text to uppercase if specified
     if uppercase:
         title_text = title_text.upper()
-    title_image = etti.text_image_fit_box(title_text, italic_font, image_width=text_width, image_height=text_height,
-            foreground=palette["primary-desaturated"], background="#00000000", justified="l", vertical="t", space=1)
-    # Create the title framing
-    left, top, right, bottom = etti.get_bounds(title_image, palette["primary-desaturated"])
-    frame_bottom = (bottom - top) + (margin * 1.5)
-    draw = ImageDraw.Draw(cover)
-    draw.rounded_rectangle([(0, half_margin), (full_width-half_margin, frame_bottom)],
-            fill=palette["secondary-saturated"], radius=half_margin)
-    cover.alpha_composite(title_image, (math.floor(margin*1.5), margin))
-    # Return the image
-    return cover
+        author_text = author_text.upper()
+    # Generate the cover
+    return cover_generator.generate_cover(title_text, author_text, abspath(path), width=900)
 
 def get_string_from_user(value_type:str, default_value:str=None) -> str:
     """

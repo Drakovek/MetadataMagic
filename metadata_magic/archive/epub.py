@@ -71,9 +71,7 @@ def add_cover_to_chapters(chapters:List[dict], metadata:dict, image_dir:str) -> 
     new_chapters = copy.deepcopy(chapters)
     # Create a cover image
     cover_file = abspath(join(abspath(image_dir), f"cover_image.jpg"))
-    cover_image = mm_archive.get_cover_image(metadata["title"], metadata["writers"], uppercase=True)
-    cover_image = cover_image.convert("RGB")
-    cover_image.save(cover_file, quality=95)
+    mm_archive.generate_cover_image(metadata["title"], metadata["writers"], cover_file, uppercase=True)
     # Create a cover image chapter entry
     entry = dict()
     entry["include"] = True
@@ -365,24 +363,24 @@ def create_style_file(output_directory:str):
     os.mkdir(style_dir)
     # Create the style text
     style = ""
-    style = f"{style}img {{"
+    style = f"{style}img " + "{"
     style = f"{style}\n    display: block;"
     style = f"{style}\n    max-width: 100%;"
     style = f"{style}\n    max-height: 100%;"
     style = f"{style}\n    text-align: center;"
     style = f"{style}\n    margin-left: auto;"
     style = f"{style}\n    margin-right: auto;"
-    style = f"{style}\n}}\n\n"
-    style = f"{style}#full-image-container {{"
+    style = f"{style}\n" + "}" + "\n\n"
+    style = f"{style}#full-image-container " + "{"
     style = f"{style}\n    width: 100%;"
     style = f"{style}\n    height: 100%;"
     style = f"{style}\n    margin: 0;"
     style = f"{style}\n    padding: 0;"
     style = f"{style}\n    page-break-after: always;"
     style = f"{style}\n}}\n\n"
-    style = f"{style}center {{"
+    style = f"{style}center " + "{"
     style = f"{style}\n    text-align: center;"
-    style = f"{style}\n}}"
+    style = f"{style}\n" + "}"
     # Write style to a CSS file
     style_file = abspath(join(style_dir, "epubstyle.css"))
     mm_file_tools.write_text_file(style_file, style)
@@ -763,9 +761,18 @@ def create_epub(chapters:List[dict], metadata:dict, directory:str, copy_back_cov
         updated_chapters = create_content_files(chapters, epub_directory)
         # Copy the cover to the back cover, if specified
         if copy_back_cover:
+            # Create the back cover chapter item
             back_cover = copy.deepcopy(updated_chapters[0])
             back_cover["title"] = "Back Cover"
             back_cover["id"] = "back_cover"
+            # Copy the cover image xhtml file as a back cover image
+            content_directory = abspath(join(epub_directory, "content"))
+            cover_xhtml = re.sub(r".+\/(?=[^\/]+$)", "", back_cover["file"])
+            cover_xhtml = abspath(join(content_directory, cover_xhtml))
+            back_cover_xhtml = abspath(join(content_directory, "back_cover_image.xhtml"))
+            shutil.copy(cover_xhtml, back_cover_xhtml)
+            back_cover["file"] = "content/back_cover_image.xhtml"
+            # Add the back cover to the chapters list
             updated_chapters.append(back_cover)
         # Create nav and ncx files
         create_nav_file(updated_chapters, metadata["title"], epub_directory)
@@ -983,9 +990,7 @@ def update_epub_info(epub_file:str, metadata:dict, update_cover:bool=False):
                 # Delete the existing cover image
                 os.remove(cover_file)
                 # Create a cover image
-                cover_image = mm_archive.get_cover_image(metadata["title"], metadata["writers"], uppercase=True)
-                cover_image = cover_image.convert("RGB")
-                cover_image.save(cover_file, quality=95)
+                mm_archive.generate_cover_image(metadata["title"], metadata["writers"], cover_file, uppercase=True)
                 # Replace the existing cover image xhtml file
                 xml = mm_xhtml.image_to_xhtml(cover_file, "Cover")
                 xml = mm_xhtml.format_xhtml(xml, "Cover")
