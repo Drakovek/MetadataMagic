@@ -198,7 +198,7 @@ def update_archive_info(archive_file:str, metadata:dict, update_cover:bool=False
     if extension == ".cbz":
         mm_comic_archive.update_cbz_info(archive_file, metadata)
 
-def generate_cover_image(title:str, authors:List[str], path:str, uppercase:bool=True) -> bool:
+def generate_cover_image(title:str, authors:List[str], path:str) -> bool:
     """
     Creates and returns a cover image based on a given title and author.
     
@@ -208,8 +208,6 @@ def generate_cover_image(title:str, authors:List[str], path:str, uppercase:bool=
     :type authors: List[str], required
     :param path: Path to the image file to create
     :type path: str, required
-    :param uppercase: Whether to set all text to uppercase, defaults to True
-    :type uppercase: bool, optional
     :return: Whether the cover image creation was successful
     :rtype: PIL.Image
     """
@@ -220,10 +218,6 @@ def generate_cover_image(title:str, authors:List[str], path:str, uppercase:bool=
         author_text = ["None"]
     author_text = ", ".join(author_text)
     author_text = re.sub(r"\s*,\s*(?=[^,]*$)", " & ", author_text)
-    # Set the text to uppercase if specified
-    if uppercase:
-        title_text = title_text.upper()
-        author_text = author_text.upper()
     # Generate the cover
     return cover_generator.generate_cover(title_text, author_text, abspath(path), width=900)
 

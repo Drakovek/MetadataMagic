@@ -866,7 +866,7 @@ def test_get_metadata_xml():
     compare = f"{compare}\n    <meta property=\"dcterms:audience\">Everyone</meta>"
     compare = f"{compare}\n</metadata>"
     assert xml == compare
-    # Test metadata score
+    # Test metadata score w/ star tags
     metadata["score"] = "0"
     metadata["age_rating"] = None
     xml = mm_epub.get_metadata_xml(metadata)
@@ -891,10 +891,12 @@ def test_get_metadata_xml():
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
     compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
     compare = f"{compare}\n    <dc:publisher>Company</dc:publisher>"
+    compare = f"{compare}\n    <dc:subject>&#9733;&#9733;&#9733;&#9733;&#9733;</dc:subject>"
     compare = f"{compare}\n    <meta property=\"calibre:rating\">10.0</meta>"
     compare = f"{compare}\n</metadata>"
     assert xml == compare
     metadata["score"] = "3"
+    metadata["tags"] = ["Some", "tags"]
     xml = mm_epub.get_metadata_xml(metadata)
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
     compare = f"{compare}\n    <dc:language>en</dc:language>"
@@ -904,10 +906,14 @@ def test_get_metadata_xml():
     compare = f"{compare}\n    <dc:title>Title.</dc:title>"
     compare = f"{compare}\n    <dc:description>This &amp; That</dc:description>"
     compare = f"{compare}\n    <dc:publisher>Company</dc:publisher>"
+    compare = f"{compare}\n    <dc:subject>&#9733;&#9733;&#9733;</dc:subject>"
+    compare = f"{compare}\n    <dc:subject>Some</dc:subject>"
+    compare = f"{compare}\n    <dc:subject>tags</dc:subject>"
     compare = f"{compare}\n    <meta property=\"calibre:rating\">6.0</meta>"
     compare = f"{compare}\n</metadata>"
     assert xml == compare
     # Test metadata score if the score is invalid
+    metadata["tags"] = []
     metadata["score"] = "Not Number"
     xml = mm_epub.get_metadata_xml(metadata)
     compare = "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"

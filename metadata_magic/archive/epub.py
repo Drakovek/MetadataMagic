@@ -71,7 +71,7 @@ def add_cover_to_chapters(chapters:List[dict], metadata:dict, image_dir:str) -> 
     new_chapters = copy.deepcopy(chapters)
     # Create a cover image
     cover_file = abspath(join(abspath(image_dir), f"cover_image.jpg"))
-    mm_archive.generate_cover_image(metadata["title"], metadata["writers"], cover_file, uppercase=True)
+    mm_archive.generate_cover_image(metadata["title"], metadata["writers"], cover_file)
     # Create a cover image chapter entry
     entry = dict()
     entry["include"] = True
@@ -595,8 +595,19 @@ def get_metadata_xml(metadata:dict, cover_id:str=None) -> str:
             series_number.text = metadata["series_number"]
         except (TypeError, ValueError): pass
     # Set the metadata tags
-    if metadata["tags"] is not None and not metadata["tags"] == []:
-        for tag in metadata["tags"]:
+    tags = metadata["tags"]
+    try:
+        # Add score as star rating in tags
+        score_number = int(metadata["score"])
+        if score_number > 0 and score_number < 6:
+            stars = "★"*score_number
+            if tags is None:
+                tags = [stars]
+            else:
+                tags.insert(0, stars)
+    except (TypeError, ValueError): pass
+    if tags is not None and not tags == []:
+        for tag in tags:
             tag_tag = ElementTree.SubElement(base, "dc:subject")
             tag_tag.text = tag
     # Set the score
@@ -927,7 +938,8 @@ def get_info_from_epub(epub_file:str) -> dict:
         tags = []
         tag_elements = meta_xml.findall("dc:subject", namespaces=ns)
         for tag_element in tag_elements:
-            tags.append(tag_element.text)
+            if len(re.findall(r"^★{1,5}$", tag_element.text)) == 0:
+                tags.append(tag_element.text)
         if len(tags) > 0:
             metadata["tags"] = tags
         # Extract all the content files to get the word count
@@ -990,7 +1002,7 @@ def update_epub_info(epub_file:str, metadata:dict, update_cover:bool=False):
                 # Delete the existing cover image
                 os.remove(cover_file)
                 # Create a cover image
-                mm_archive.generate_cover_image(metadata["title"], metadata["writers"], cover_file, uppercase=True)
+                mm_archive.generate_cover_image(metadata["title"], metadata["writers"], cover_file)
                 # Replace the existing cover image xhtml file
                 xml = mm_xhtml.image_to_xhtml(cover_file, "Cover")
                 xml = mm_xhtml.format_xhtml(xml, "Cover")
