@@ -99,7 +99,6 @@ def get_comic_xml(metadata:dict, indent:bool=True) -> str:
     try:
         # Add score as star rating in tags
         score_number = int(metadata["score"])
-        print(score_number)
         if score_number > 0 and score_number < 6:
             stars = "★"*score_number
             if tags is None:

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import shutil
 import tempfile
 import metadata_magic.test as mm_test
 import metadata_magic.file_tools as mm_file_tools
@@ -148,6 +149,24 @@ def test_extract_zip():
         assert mm_file_tools.read_text_file(text_file) == "This is text!"
         text_file = abspath(join(temp_dir, "Text2-2.txt"))
         assert mm_file_tools.read_text_file(text_file) == "Another File."
+    # Test that JSON pairs remain connected when renamed
+    base_dir = mm_test.ZIP_CONFLICT_DIRECTORY
+    with tempfile.TemporaryDirectory() as temp_dir:
+        extract_dir = abspath(join(temp_dir, "extract"))
+        shutil.copytree(base_dir, extract_dir)
+        zip_file = abspath(join(extract_dir, "blue.zip"))
+        assert mm_file_tools.extract_zip(zip_file, extract_dir, remove_internal=True)
+        files = sorted(os.listdir(extract_dir))
+        assert len(files) == 7
+        assert files[0] == "blue-2.json"
+        assert files[1] == "blue-2.png"
+        assert files[2] == "blue.jpg"
+        assert files[3] == "blue.json"
+        assert files[4] == "blue.zip"
+        assert files[5] == "folder"
+        assert files[6] == "folder-2"
+        assert os.listdir(abspath(join(extract_dir, "folder"))) == ["outside.txt"]
+        assert os.listdir(abspath(join(extract_dir, "folder-2"))) == ["internal.txt"]
     # Test if an invalid zip file is given
     with tempfile.TemporaryDirectory() as temp_dir:
         assert not mm_file_tools.extract_zip(non_zip_file, temp_dir)

@@ -7,6 +7,7 @@ import zipfile
 import tempfile
 import traceback
 import html_string_tools.html
+import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.rename as mm_rename
 import metadata_magic.sort as mm_sort
 from typing import List
@@ -246,6 +247,16 @@ def extract_zip(zip_path:str, extract_directory:str, create_folder:bool=False,
             full_file = abspath(join(unzip_dir, os.listdir(unzip_dir)[0]))
             if isdir(full_file):
                 unzip_dir = full_file
+        # Move JSON pairs to new directories
+        pairs = mm_meta_finder.get_pairs(unzip_dir, False)
+        for pair in pairs:
+            if abspath(join(pair["json"], os.pardir)) == unzip_dir:
+                extension = html_string_tools.html.get_extension(pair["media"])
+                filename = basename(pair["json"])
+                filename = filename[:-5]
+                filename = mm_rename.get_available_filename(["a.json", pair["media"]], filename, new_dir)
+                shutil.move(pair["json"], abspath(join(new_dir, f"{filename}.json")))
+                shutil.move(pair["media"], abspath(join(new_dir, f"{filename}{extension}")))
         # Copy files to new directory
         files = os.listdir(unzip_dir)
         for file in files:
