@@ -226,7 +226,7 @@ def extract_zip(zip_path:str, extract_directory:str, create_folder:bool=False,
         try:
             with zipfile.ZipFile(zip_path, mode="r") as file:
                 file.extractall(path=unzip_dir)
-        except (FileNotFoundError, zipfile.BadZipFile): return False
+        except (FileNotFoundError, OSError, zipfile.BadZipFile): return False
         # Create new extraction subfolder if specified
         main_dir = abspath(extract_directory)
         new_dir = abspath(extract_directory)
@@ -309,4 +309,4 @@ def extract_file_from_zip(zip_path:str, extract_directory:str, extract_file:str,
                 # Copy file to new location
                 shutil.copy(extracted, new_file)
                 return new_file
-    except (zipfile.BadZipFile, FileNotFoundError, KeyError): return None
+    except (zipfile.BadZipFile, FileNotFoundError, OSError, KeyError, zipfile.BadZipFile): return None

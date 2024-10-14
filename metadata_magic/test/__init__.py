@@ -32,3 +32,5 @@ COMIC_XML_DIRECTORY = abspath(join(ARCHIVE_INTERNAL_DIRECTORY, "comic_xml"))
 # ERROR TEST DIRECTORIES
 ERROR_TEST_DIRECTORY = abspath(join(TEST_DIRECTORY, "error_tests"))
 ZIP_CONFLICT_DIRECTORY = abspath(join(ERROR_TEST_DIRECTORY, "zip_conflicts"))
+JSON_ERROR_DIRECTORY = abspath(join(ERROR_TEST_DIRECTORY, "json_error"))
+ARCHIVE_ERROR_DIRECTORY = abspath(join(ERROR_TEST_DIRECTORY, "archive_error"))

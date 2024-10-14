@@ -10,6 +10,7 @@ import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.meta_reader as mm_meta_reader
 import metadata_magic.archive.archive as mm_archive
+import tempfile
 from os.path import abspath, exists
 from typing import List
 
@@ -125,6 +126,39 @@ def find_missing_fields(path:str, fields:List[str]) -> List[str]:
     # Return the list of missing files
     return mm_sort.sort_alphanum(missing)
 
+def find_invalid_jsons(path:str) -> List[str]:
+    """
+    Returns a improperly formatted JSON files.
+
+    :param path: Directory in which to search
+    :type path: str, required
+    :return: List of JSON files that are incorrectly formatted
+    :rtype: list[str]
+    """
+    invalid = []
+    json_files = mm_file_tools.find_files_of_type(path, ".json")
+    for json_file in tqdm.tqdm(json_files):
+        if mm_file_tools.read_json_file(json_file) == {}:
+            invalid.append(json_file)
+    return mm_sort.sort_alphanum(invalid)
+
+def find_invalid_archives(path:str) -> List[str]:
+    """
+    Returns a list of improperly formed archive files.
+
+    :param path: Directory in which to search
+    :type path: str, required
+    :return: List of CBZ and EPUB files that are incorrectly formatted
+    :rtype: list[str]
+    """
+    invalid = []
+    archive_files = mm_file_tools.find_files_of_type(path, [".epub", ".cbz"])
+    for archive_file in tqdm.tqdm(archive_files):
+        with tempfile.TemporaryDirectory() as tempdir:
+            if not mm_file_tools.extract_zip(archive_file, tempdir):
+                invalid.append(archive_file)
+    return mm_sort.sort_alphanum(invalid)
+
 def print_errors(error_files:List[str], root_directory:str, print_text:str):
     """
     Prints the files gotten from one of the error-finding functions.
@@ -157,6 +191,11 @@ def main():
             type=str,
             default=str(os.getcwd()))
     parser.add_argument(
+            "-c",
+            "--corrupt",
+            help="Find corrupt archive and JSON files",
+            action="store_true")
+    parser.add_argument(
             "-l",
             "--long-description",
             nargs="?",
@@ -185,6 +224,12 @@ def main():
     if not exists(directory):
         python_print_tools.printer.color_print("Invalid directory.", "red")
     else:
+        # Find corrupt files
+        if args.corrupt:
+            invalid_files = find_invalid_jsons(directory)
+            invalid_files.extend(find_invalid_archives(directory))
+            invalid_files = mm_sort.sort_alphanum(invalid_files)
+            print_errors(invalid_files, directory, "Corrupted Files")
         # Find missing media
         if args.missing_media:
             missing = find_missing_media(directory)

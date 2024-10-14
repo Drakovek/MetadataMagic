@@ -107,3 +107,21 @@ def test_find_missing_fields():
         assert basename(missing[4]) == "basic.epub"
         assert basename(missing[5]) == "long.EPUB"
         assert basename(missing[6]) == "small.epub"
+
+def test_find_invalid_jsons():
+    """
+    Tests the find_invalid_jsons function.
+    """
+    missing = mm_error.find_invalid_jsons(mm_test.JSON_ERROR_DIRECTORY)
+    assert len(missing) == 2
+    assert basename(missing[0]) == "internal-invalid.json"
+    assert basename(missing[1]) == "invalid.json"
+
+def test_find_invalid_archives():
+    """
+    Tests the find_invalid_archives function.
+    """
+    missing = mm_error.find_invalid_archives(mm_test.ARCHIVE_ERROR_DIRECTORY)
+    assert len(missing) == 2
+    assert basename(missing[0]) == "corrupt.epub"
+    assert basename(missing[1]) == "corrupt.CBZ"
