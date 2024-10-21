@@ -135,6 +135,21 @@ def test_format_xhtml():
     compare = f"{compare}\n    </body>"
     compare = f"{compare}\n</html>"
     assert xhtml == compare
+    # Test hyphen or asterix between tags
+    html = "<a>Thing</a> - <a href='other'>Other</a> * <a>Last</a>"
+    xhtml = mm_xhtml.format_xhtml(html, "Lines")
+    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
+    compare = f"{compare}\n    <head>"
+    compare = f"{compare}\n        <title>Lines</title>"
+    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
+    compare = f"{compare}\n    </head>"
+    compare = f"{compare}\n    <body>"
+    compare = f"{compare}\n        <a>Thing</a> - <a href=\"other\">Other</a> * <a>Last</a>"
+    compare = f"{compare}\n    </body>"
+    compare = f"{compare}\n</html>"
+    assert xhtml == compare
     # Test altering image wrapper for a single image
     html = "<div><img src=\"../images/thing's.jpg\" alt=\"thing's\" width=\"600\" height=\"800\"/></div>"
     xhtml = mm_xhtml.format_xhtml(html, "Single's Image")

@@ -68,10 +68,8 @@ def format_xhtml(html:str, title:str) -> str:
     formatted_html = ElementTree.tostring(root).decode("UTF-8")
     formatted_html = re.sub(r".*\<body[^\>]*\>|<\/body[^\>]*\>.*", "", formatted_html)
     # Add centering element to page break lines
-    formatted_html = "".join(reversed(formatted_html))
-    formatted_html = re.sub(r"<\s*(?=[\-*][\s\-*]+>)", "<>retnec/<", formatted_html)
-    formatted_html = "".join(reversed(formatted_html))
-    formatted_html = re.sub(r">\s*(?=[\-*][\s\-*]+<)", "><center>", formatted_html)
+    add_center = lambda match: "<center>" + str(match.group(0)).strip() + "</center>"
+    formatted_html = re.sub(r"(?<=>)\s*[*\-][*\-\s]*\s*(?=<\/)", add_center, formatted_html)
     # Convert image to full page SVG element if there is a single image present
     regex = "<div>\\s*<img[^>]+width=\"[0-9]+\"[^>]+height=\"[0-9]+\"[^>]*>\\s*<\\/div>|"
     regex = f"{regex}<div>\\s*<img[^>]+height=\"[0-9]+\"[^>]+width=\"[0-9]+\"[^>]*>\\s*<\\/div>"
