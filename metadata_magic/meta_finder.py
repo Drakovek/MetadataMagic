@@ -5,7 +5,6 @@ import re
 import copy
 import tqdm
 import html_string_tools.html
-import html_string_tools.regex
 import metadata_magic.sort as mm_sort
 from os.path import abspath, basename, exists, isdir, join
 from typing import List
