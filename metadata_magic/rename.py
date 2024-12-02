@@ -4,15 +4,15 @@ import os
 import re
 import tqdm
 import argparse
-import html_string_tools.html
-import python_print_tools.printer
+import html_string_tools
+import python_print_tools
 import metadata_magic.sort as mm_sort
 import metadata_magic.config as mm_config
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.meta_reader as mm_meta_reader
-import metadata_magic.archive.archive as mm_archive
-from os.path import abspath, basename, exists, isdir, join
+import metadata_magic.archive as mm_archive
+from os.path import abspath, basename, isdir, exists, join
 from typing import List
 
 def get_file_friendly_text(string:str, ascii_only:bool=False) -> str:
@@ -94,9 +94,9 @@ def get_available_filename(source_files:List[str], filename:str, end_path:str, a
     extensions = []
     if isinstance(source_files, list):
         for source_file in source_files:
-            extensions.append(html_string_tools.html.get_extension(source_file))
+            extensions.append(html_string_tools.get_extension(source_file))
     else:
-        extensions = [html_string_tools.html.get_extension(source_files)]
+        extensions = [html_string_tools.get_extension(source_files)]
     # Get a list of all the files in the end path
     try:
         files = []
@@ -133,7 +133,7 @@ def rename_file(file:str, new_filename:str, ascii_only:bool=False) -> str:
     """
     # Get the prefered new filename
     path = abspath(file)
-    extension = html_string_tools.html.get_extension(file)
+    extension = html_string_tools.get_extension(file)
     filename = get_file_friendly_text(new_filename, ascii_only)
     # Do nothing if the filename is already accurate
     if basename(path) == f"{filename}{extension}":
@@ -412,12 +412,12 @@ def main():
     # Check that directory is valid
     directory = abspath(args.directory)
     if not exists(directory):
-        python_print_tools.printer.color_print("Invalid directory.", "red")
+        python_print_tools.color_print("Invalid directory.", "red")
     else:
         if args.metadata_rename and args.sort_rename:
-            python_print_tools.printer.color_print("Choose only one renaming option.", "red")
+            python_print_tools.color_print("Choose only one renaming option.", "red")
         elif not args.metadata_rename and not args.sort_rename:
-            python_print_tools.printer.color_print("Choose a renaming option.", "red")   
+            python_print_tools.color_print("Choose a renaming option.", "red")
         elif args.sort_rename:
             user_sort_rename(directory)
         elif args.metadata_rename:

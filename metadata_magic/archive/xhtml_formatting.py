@@ -4,9 +4,9 @@ import re
 import html5lib
 import html_string_tools
 import metadata_magic.file_tools as mm_file_tools
-from xml.etree import ElementTree
 from PIL import Image, UnidentifiedImageError
 from os.path import abspath, basename
+from xml.etree import ElementTree
 
 def get_title_from_file(file:str) -> str:
     """
@@ -43,7 +43,7 @@ def format_xhtml(html:str, title:str) -> str:
     meta = ElementTree.SubElement(head, "meta")
     meta.attrib = {"charset":"utf-8"}
     # Remove all unnecessary HTML escape entities
-    formatted_html = html_string_tools.html.replace_reserved_in_html(html)
+    formatted_html = html_string_tools.replace_reserved_in_html(html)
     # Remove newlines and nonstandard spaces
     formatted_html = formatted_html.replace("\n", "").strip()
     formatted_html = re.sub(r"\s", " ", formatted_html)
@@ -120,7 +120,7 @@ def format_xhtml(html:str, title:str) -> str:
         return None
     # Set indents to make the XML more readable
     xml = ElementTree.tostring(base).decode("UTF-8")
-    xml = html_string_tools.html.make_human_readable(xml, "    ").strip()
+    xml = html_string_tools.make_human_readable(xml, "    ").strip()
     xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
     return xml
 
@@ -148,7 +148,7 @@ def text_to_xhtml(text:str, replace_reserved:bool=True) -> str:
         formatted_paragraph = re.sub(r"\s*\n\s*", " ", paragraph)
         formatted_paragraph = formatted_paragraph.strip()
         if replace_reserved:
-            formatted_paragraph = html_string_tools.html.replace_reserved_characters(formatted_paragraph, True)
+            formatted_paragraph = html_string_tools.replace_reserved_characters(formatted_paragraph, True)
         xhtml = f"{xhtml}<p>{formatted_paragraph}</p>"
     # Return xhtml
     return xhtml
@@ -217,7 +217,7 @@ def html_to_xhtml(html_file:str) -> str:
     # Replace escape characters
     content = re.sub(r"\s+", " ", content)
     content = content.strip().replace("\n", "")
-    content = html_string_tools.html.replace_reserved_in_html(content, True)
+    content = html_string_tools.replace_reserved_in_html(content, True)
     # Reformat if not a fully realized HTML file
     if not len(re.findall(r"<html[^>]*>", text)) > 0:
         content = re.sub(r"<p(?:\s[^>]*)?>|<div(?:\s[^>]*)?>", "<br/><br/>", content)

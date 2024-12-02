@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 
 import os
-import tempfile
 import metadata_magic.test as mm_test
-import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
-from os.path import abspath, basename, exists, join
+from os.path import abspath, basename, join
 
 def test_separate_files():
     """

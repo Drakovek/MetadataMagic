@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import metadata_magic.sort as mm_sort
+from os.path import abspath
 
 def test_get_first_section():
     """

@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 
-import os
-import tempfile
 import shutil
+import tempfile
 import metadata_magic.test as mm_test
-import metadata_magic.config as mm_config
 import metadata_magic.file_tools as mm_file_tools
+import metadata_magic.archive as mm_archive
 import metadata_magic.archive.series as mm_series
-import metadata_magic.archive.archive as mm_archive
-import metadata_magic.archive.bulk_archive as mm_bulk_archive
 from os.path import abspath, basename, join
 
 def test_get_default_labels():

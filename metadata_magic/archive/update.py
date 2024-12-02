@@ -3,10 +3,9 @@
 import os
 import tqdm
 import argparse
-import html_string_tools.html
-import python_print_tools.printer
+import python_print_tools
 import metadata_magic.file_tools as mm_file_tools
-import metadata_magic.archive.archive as mm_archive
+import metadata_magic.archive as mm_archive
 from os.path import abspath, isdir, exists
 
 def update_fields(existing_metadata:dict, updating_metadata:dict) -> dict:
@@ -106,7 +105,7 @@ def main():
     # Check that directory is valid
     path = abspath(args.path)
     if not exists(path):
-        python_print_tools.printer.color_print("Invalid path.", "red")
+        python_print_tools.color_print("Invalid path.", "red")
     elif isdir(path):
         user_mass_update(path, args.cover)
     else:

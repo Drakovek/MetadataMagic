@@ -6,12 +6,7 @@ import tempfile
 import metadata_magic.test as mm_test
 import metadata_magic.error as mm_error
 import metadata_magic.config as mm_config
-import metadata_magic.file_tools as mm_file_tools
-import metadata_magic.archive.archive as mm_archive
-import metadata_magic.archive.bulk_archive as mm_bulk_archive
-import metadata_magic.archive.comic_archive as mm_comic_archive
-import metadata_magic.archive.epub as mm_epub
-from os.path import abspath, basename, exists, join
+from os.path import abspath, basename, join
 
 def test_find_long_descriptions():
     """

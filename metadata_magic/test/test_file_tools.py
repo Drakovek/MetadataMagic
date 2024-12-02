@@ -5,7 +5,7 @@ import shutil
 import tempfile
 import metadata_magic.test as mm_test
 import metadata_magic.file_tools as mm_file_tools
-from os.path import abspath, basename, exists, isdir, join
+from os.path import abspath, basename, join
 
 def test_read_text_file():
     """

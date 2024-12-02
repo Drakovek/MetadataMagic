@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 import re
-import html_string_tools.html
+import html_string_tools
+import metadata_magic.file_tools as mm_file_tools
 from os.path import abspath
 from typing import List
-from . import file_tools as mm_file_tools
 
 def get_value_from_keylist(dictionary:dict, keylist:List[List[str]], type_obj):
     """
@@ -312,7 +312,7 @@ def load_metadata(json_file:str, config:dict, media_file:str) -> dict:
     meta_dict["tags"] = get_tags(json, config)
     meta_dict["url"] = get_url(json, config, meta_dict["publisher"], meta_dict["id"])
     meta_dict["age_rating"] = get_age_rating(json, config, meta_dict["publisher"])
-    extension = html_string_tools.html.get_extension(media_file)
+    extension = html_string_tools.get_extension(media_file)
     meta_dict["artists"], meta_dict["writers"] = get_artists_and_writers(json, config, extension)
     meta_dict["original"] = json
     # Return the dict with all metadata

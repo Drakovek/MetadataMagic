@@ -2,17 +2,17 @@
 
 import os
 import re
-import math
+import shutil
 import argparse
-import html_string_tools.html
-import python_print_tools.printer
+import cover_generator
+import html_string_tools
+import python_print_tools
 import metadata_magic.config as mm_config
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.meta_reader as mm_meta_reader
 import metadata_magic.archive.epub as mm_epub
 import metadata_magic.archive.comic_archive as mm_comic_archive
-import cover_generator.cover_generator as cover_generator
 from os.path import abspath, isdir, exists
 from typing import List
 
@@ -85,7 +85,7 @@ def get_info_from_jsons(path:str, config:dict) -> dict:
     # Get first instance of JSON metadata
     try:
         main_meta = json_metas[0]
-        extension = html_string_tools.html.get_extension(pairs[0]["media"])
+        extension = html_string_tools.get_extension(pairs[0]["media"])
     except IndexError: return get_empty_metadata()
     # Get most metadata from first JSON
     metadata = get_empty_metadata()
@@ -99,7 +99,7 @@ def get_info_from_jsons(path:str, config:dict) -> dict:
     # Get description metadata
     description = main_meta["description"]
     if description is not None:
-        description = html_string_tools.html.replace_entities(description)
+        description = html_string_tools.replace_entities(description)
         description = re.sub(r"<a [^<>]*>|<\/a[^<>]*>|<b>|<i>|<\/b>|<\/i>", "", description)
         description = re.sub("<[^<>]*>", " ", description)
         description = re.sub(r"\s+", " ", description)
@@ -192,7 +192,7 @@ def update_archive_info(archive_file:str, metadata:dict, update_cover:bool=False
     :param update_cover: Whether to regenerate cover images, defaults to False
     :type update_cover: bool, optional
     """
-    extension = html_string_tools.html.get_extension(archive_file).lower()
+    extension = html_string_tools.get_extension(archive_file).lower()
     if extension == ".epub":
         mm_epub.update_epub_info(archive_file, metadata, update_cover=update_cover)
     if extension == ".cbz":
@@ -422,7 +422,7 @@ def main():
         # Discover the type of archive to create
         archive_type = get_directory_archive_type(path)
         if archive_type is None:
-            python_print_tools.printer.color_print("Unsupported media.", "red")
+            python_print_tools.color_print("Unsupported media.", "red")
         else:
             # Get existing info from a directory
             config_paths = mm_config.get_default_config_paths()

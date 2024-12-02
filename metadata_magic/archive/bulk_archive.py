@@ -2,20 +2,20 @@
 
 import os
 import re
-import argparse
-import shutil
 import tqdm
+import shutil
+import argparse
 import tempfile
 import traceback
-import html_string_tools.html
-import python_print_tools.printer
+import html_string_tools
+import python_print_tools
 import metadata_magic.config as mm_config
-import metadata_magic.file_tools as mm_file_tools
-import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.error as mm_error
 import metadata_magic.rename as mm_rename
+import metadata_magic.file_tools as mm_file_tools
+import metadata_magic.meta_finder as mm_meta_finder
+import metadata_magic.archive as mm_archive
 import metadata_magic.archive.epub as mm_epub
-import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.comic_archive as mm_comic_archive
 from os.path import abspath, basename, exists, isdir, join
 
@@ -46,7 +46,7 @@ def archive_all_media(directory:str, config:dict, format_title:bool=False, descr
     for pair in tqdm.tqdm(pairs):
         try:
             # Ignore if the extension is not supported
-            extension = html_string_tools.html.get_extension(pair["media"]).lower()
+            extension = html_string_tools.get_extension(pair["media"]).lower()
             if extension not in media_extensions:
                 continue
             with tempfile.TemporaryDirectory() as temp_dir:
@@ -86,7 +86,7 @@ def archive_all_media(directory:str, config:dict, format_title:bool=False, descr
                 filename = basename(pair["json"])
                 filename = filename[:len(filename) - 5]
                 filename = mm_rename.get_available_filename([archive_file], filename, parent)
-                extension = html_string_tools.html.get_extension(archive_file).lower()
+                extension = html_string_tools.get_extension(archive_file).lower()
                 new_archive = join(parent, f"{filename}{extension}")
                 shutil.copy(archive_file, new_archive)
                 assert exists(new_archive)
@@ -96,7 +96,7 @@ def archive_all_media(directory:str, config:dict, format_title:bool=False, descr
         except:
             # Archiving failed
             traceback.print_exc()
-            python_print_tools.printer.color_print(f"Failed Archiving \"{pair['media']}\"", "red")
+            python_print_tools.color_print(f"Failed Archiving \"{pair['media']}\"", "red")
             return False
     return True
 
@@ -161,7 +161,7 @@ def extract_epub(epub_file:str, output_directory:str, create_folder:bool=True, r
             full_file = abspath(join(original_dir, original_file))
             filename = re.sub(r"\..{1,6}$", "", original_file)
             filename = mm_rename.get_available_filename([original_file], filename, copy_dir)
-            filename = filename + html_string_tools.html.get_extension(full_file)
+            filename = filename + html_string_tools.get_extension(full_file)
             new_file = abspath(join(copy_dir, filename))
             if isdir(full_file):
                 shutil.copytree(full_file, new_file)
@@ -191,7 +191,7 @@ def extract_all_archives(directory:str, create_folders:bool=True, remove_structu
         try:
             # Extract archives
             parent_dir = abspath(join(archive, os.pardir))
-            extension = html_string_tools.html.get_extension(archive).lower()
+            extension = html_string_tools.get_extension(archive).lower()
             if extension == ".cbz":
                 assert extract_cbz(archive, parent_dir, create_folder=create_folders,
                         remove_structure=remove_structure)
@@ -202,7 +202,7 @@ def extract_all_archives(directory:str, create_folders:bool=True, remove_structu
                 assert False
         except AssertionError:
             # Extracting archive failed
-            python_print_tools.printer.color_print(f"Failed Extracting \"{archive}\"", "red")
+            python_print_tools.color_print(f"Failed Extracting \"{archive}\"", "red")
             return False
         # Remove the existing archive
         os.remove(archive)
@@ -241,7 +241,7 @@ def main():
     # Check that directory is valid
     directory = abspath(args.directory)
     if not exists(directory):
-        python_print_tools.printer.color_print("Invalid directory.", "red")
+        python_print_tools.color_print("Invalid directory.", "red")
     else:
         if args.extract:
             if input("Remove archive structure? (Y/[N]): ").lower() == "y":

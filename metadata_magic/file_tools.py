@@ -3,15 +3,14 @@
 import os
 import json
 import shutil
-import zipfile
 import tempfile
-import traceback
-import html_string_tools.html
-import metadata_magic.meta_finder as mm_meta_finder
-import metadata_magic.rename as mm_rename
+import zipfile
+import html_string_tools
 import metadata_magic.sort as mm_sort
-from typing import List
+import metadata_magic.rename as mm_rename
+import metadata_magic.meta_finder as mm_meta_finder
 from os.path import abspath, basename, exists, isdir, join, relpath
+from typing import List
 
 def write_text_file(file:str, text:str):
     """
@@ -104,7 +103,7 @@ def find_files_of_type(directory:str, extension:str, include_subdirectories:bool
             # Find file properties
             has_extension = False
             full_file = abspath(join(directories[0], filename))
-            check_extension = html_string_tools.html.get_extension(full_file).lower()
+            check_extension = html_string_tools.get_extension(full_file).lower()
             for ex in extensions:
                 if check_extension == ex:
                     has_extension = True
@@ -153,7 +152,7 @@ def directory_contains(directory:str, extension:List[str], include_subdirectorie
                     directories.append(full_file)
                 continue
             # Check if the extension matches
-            cur_extension = html_string_tools.html.get_extension(full_file).lower()
+            cur_extension = html_string_tools.get_extension(full_file).lower()
             if cur_extension in extensions:
                 return True
         # Delete the current directory from the list
@@ -232,7 +231,7 @@ def extract_zip(zip_path:str, extract_directory:str, create_folder:bool=False,
         new_dir = abspath(extract_directory)
         if create_folder:
             filename = basename(zip_path)
-            extension = html_string_tools.html.get_extension(filename)
+            extension = html_string_tools.get_extension(filename)
             filename = filename[:len(filename) - len(extension)]
             filename = mm_rename.get_available_filename(["AAAAAAAAAA"], filename, main_dir)
             new_dir = abspath(join(main_dir, filename))
@@ -251,7 +250,7 @@ def extract_zip(zip_path:str, extract_directory:str, create_folder:bool=False,
         pairs = mm_meta_finder.get_pairs(unzip_dir, False)
         for pair in pairs:
             if abspath(join(pair["json"], os.pardir)) == unzip_dir:
-                extension = html_string_tools.html.get_extension(pair["media"])
+                extension = html_string_tools.get_extension(pair["media"])
                 filename = basename(pair["json"])
                 filename = filename[:-5]
                 filename = mm_rename.get_available_filename(["a.json", pair["media"]], filename, new_dir)
@@ -260,7 +259,7 @@ def extract_zip(zip_path:str, extract_directory:str, create_folder:bool=False,
         # Copy files to new directory
         files = os.listdir(unzip_dir)
         for file in files:
-            extension = html_string_tools.html.get_extension(file)
+            extension = html_string_tools.get_extension(file)
             filename = file[:len(file) - len(extension)]
             filename = mm_rename.get_available_filename([file], filename, new_dir)
             current_file = abspath(join(unzip_dir, file))
@@ -302,7 +301,7 @@ def extract_file_from_zip(zip_path:str, extract_directory:str, extract_file:str,
                 new_file = abspath(join(extract_directory, extract_file))
                 # Update file if it already exists
                 if exists(new_file):
-                    extension = html_string_tools.html.get_extension(extract_file)
+                    extension = html_string_tools.get_extension(extract_file)
                     filename = extract_file[:len(extract_file) - len(extension)]
                     filename = mm_rename.get_available_filename([extracted], filename, extract_directory)
                     new_file = abspath(join(extract_directory, f"{filename}{extension}"))

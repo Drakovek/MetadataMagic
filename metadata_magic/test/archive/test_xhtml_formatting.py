@@ -5,7 +5,6 @@ import metadata_magic.test as mm_test
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.xhtml_formatting as mm_xhtml
 from os.path import abspath, exists, join
-from PIL import Image
 
 def test_format_xhtml():
     """

@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
-import metadata_magic
 import metadata_magic.config as mm_config
-from os.path import exists
 
 def test_get_default_config_paths():
     """

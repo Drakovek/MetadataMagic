@@ -7,10 +7,7 @@ import metadata_magic.test as mm_test
 import metadata_magic.config as mm_config
 import metadata_magic.rename as mm_rename
 import metadata_magic.file_tools as mm_file_tools
-import metadata_magic.archive.archive as mm_archive
-import metadata_magic.archive.epub as mm_epub
-import metadata_magic.archive.comic_archive as mm_comic_archive
-from os.path import abspath, basename, exists, join
+from os.path import abspath, basename, join
 
 def test_get_file_friendly_text():
     """

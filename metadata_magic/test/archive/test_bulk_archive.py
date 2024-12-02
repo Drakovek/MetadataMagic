@@ -6,11 +6,11 @@ import tempfile
 import metadata_magic.test as mm_test
 import metadata_magic.config as mm_config
 import metadata_magic.file_tools as mm_file_tools
+import metadata_magic.archive as mm_archive
 import metadata_magic.archive.epub as mm_epub
-import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.bulk_archive as mm_bulk_archive
 import metadata_magic.archive.comic_archive as mm_comic_archive
-from os.path import abspath, exists, join
+from os.path import abspath, join
 
 def test_archive_all_media():
     """

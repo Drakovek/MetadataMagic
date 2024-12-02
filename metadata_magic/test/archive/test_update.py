@@ -4,12 +4,11 @@ import os
 import shutil
 import tempfile
 import metadata_magic.test as mm_test
-import metadata_magic.file_tools as mm_file_tools
+import metadata_magic.archive as mm_archive
 import metadata_magic.archive.epub as mm_epub
 import metadata_magic.archive.update as mm_update
-import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.comic_archive as mm_comic_archive
-from os.path import abspath, exists, join
+from os.path import abspath, join
 
 def test_update_fields():
     """

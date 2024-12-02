@@ -2,8 +2,8 @@
 
 import re
 import html_string_tools
-import metadata_magic.meta_reader as mm_meta_reader
-import metadata_magic.archive.archive as mm_archive
+import metadata_magic.archive as mm_archive
+import metadata_magic.file_tools as mm_file_tools
 from os.path import abspath
 from xml.etree import ElementTree
 
@@ -117,7 +117,7 @@ def get_comic_xml(metadata:dict, indent:bool=True) -> str:
     # Set indents to make the XML more readable
     xml = ElementTree.tostring(base).decode("UTF-8").strip()
     if indent:
-        xml = html_string_tools.html.make_human_readable(xml, "  ")
+        xml = html_string_tools.make_human_readable(xml, "  ")
     xml = f"<?xml version=\"1.0\"?>\n{xml}"
     # Return XML
     return xml

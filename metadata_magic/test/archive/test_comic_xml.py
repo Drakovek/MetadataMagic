@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 
-import os
-import tempfile
 import metadata_magic.test as mm_test
-import metadata_magic.file_tools as mm_file_tools
-import metadata_magic.archive.archive as mm_archive
+import metadata_magic.archive as mm_archive
 import metadata_magic.archive.comic_xml as mm_comic_xml
-from os.path import abspath, exists, join
+from os.path import abspath, join
 
 def test_get_comic_xml():
     """

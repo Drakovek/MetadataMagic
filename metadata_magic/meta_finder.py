@@ -4,9 +4,9 @@ import os
 import re
 import copy
 import tqdm
-import html_string_tools.html
+import html_string_tools
 import metadata_magic.sort as mm_sort
-from os.path import abspath, basename, exists, isdir, join
+from os.path import abspath, basename, isdir, join
 from typing import List
 
 ARCHIVE_EXTENSIONS = [".cbz", ".epub"]
@@ -30,7 +30,7 @@ def separate_files(path:str) -> tuple:
     directories = []
     for file in all_files:
         full_file = abspath(join(absolute_path, file))
-        extension = html_string_tools.html.get_extension(full_file).lower()
+        extension = html_string_tools.get_extension(full_file).lower()
         if extension == ".json":
             jsons.append(full_file)
         elif isdir(full_file):

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import re
 import copy
@@ -5,14 +7,13 @@ import math
 import shutil
 import tempfile
 import html_string_tools
-import python_print_tools.printer
+import python_print_tools
 import metadata_magic.sort as mm_sort
 import metadata_magic.rename as mm_rename
 import metadata_magic.file_tools as mm_file_tools
-import metadata_magic.archive.archive as mm_archive
-import metadata_magic.archive.comic_xml as mm_comic_xml
-import metadata_magic.archive.xhtml_formatting as mm_xhtml
 import metadata_magic.meta_reader as mm_meta_reader
+import metadata_magic.archive as mm_archive
+import metadata_magic.archive.xhtml_formatting as mm_xhtml
 from xml.etree import ElementTree
 from os.path import abspath, basename, exists, isdir, join
 from typing import List
@@ -213,7 +214,7 @@ def get_chapters_from_user(directory:str, metadata:dict) -> List[dict]:
     chapters = get_default_chapters(directory, metadata["title"])
     while True:
         # Clear the console
-        python_print_tools.printer.clear_console()
+        python_print_tools.clear_console()
         # Print the chapters
         print(get_chapters_string(chapters))
         # Print extra instructions
@@ -286,13 +287,13 @@ def create_content_files(chapters:List[dict], output_directory:str) -> List[dict
         # Get the filename for the XHTML file
         title = chapters[i]["title"]
         filename = basename(chapters[i]["files"][0]["file"])
-        filename = filename[:len(filename) - len(html_string_tools.html.get_extension(filename))]
+        filename = filename[:len(filename) - len(html_string_tools.get_extension(filename))]
         xhtml_file = abspath(join(content_dir, f"{filename}.xhtml"))
         # Convert all the files for the chapter into XML
         chapter_xml = ""
         for file in chapters[i]["files"]:
             # Get the file extension
-            extension = html_string_tools.html.get_extension(file["file"]).lower()
+            extension = html_string_tools.get_extension(file["file"]).lower()
             # Convert based on the appropriate format
             if extension == ".txt":
                 xml = mm_xhtml.txt_to_xhtml(file["file"])
@@ -300,7 +301,7 @@ def create_content_files(chapters:List[dict], output_directory:str) -> List[dict
                 xml = mm_xhtml.html_to_xhtml(file["file"])
             else:
                 # Copy image to the image folder with new name
-                extension = html_string_tools.html.get_extension(file["file"])
+                extension = html_string_tools.get_extension(file["file"])
                 new_image = abspath(join(image_dir, f"image{image_num}{extension}"))
                 shutil.copy(file["file"], new_image)
                 image_num += 1
@@ -424,7 +425,7 @@ def create_nav_file(chapters:List[dict], title:str, output_directory:str):
             a.text = chapter["title"]
     # Set indents to make the XML more readable
     xml = ElementTree.tostring(base).decode("UTF-8")
-    xml = html_string_tools.html.make_human_readable(xml, "    ").strip()
+    xml = html_string_tools.make_human_readable(xml, "    ").strip()
     xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
     # Write the nav file
     nav_file = abspath(join(output_directory, "nav.xhtml"))
@@ -482,7 +483,7 @@ def create_ncx_file(chapters:List[dict], title:str, uid:str, output_directory:st
             nav_link.attrib = {"src":chapter["file"]}
     # Set indents to make the XML more readable
     xml = ElementTree.tostring(base).decode("UTF-8")
-    xml = html_string_tools.html.make_human_readable(xml, "    ").strip()
+    xml = html_string_tools.make_human_readable(xml, "    ").strip()
     xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
     # Write the ncx file
     nav_file = abspath(join(output_directory, "toc.ncx"))
@@ -624,7 +625,7 @@ def get_metadata_xml(metadata:dict, cover_id:str=None) -> str:
         cover_tag.attrib = {"name":"cover", "content":cover_id}
     # Set indents to make the XML more readable
     xml = ElementTree.tostring(base).decode("UTF-8")
-    xml = html_string_tools.html.make_human_readable(xml, "    ").strip()
+    xml = html_string_tools.make_human_readable(xml, "    ").strip()
     return xml
 
 def get_manifest_xml(chapters:List[dict], output_directory:str) -> str:
@@ -656,7 +657,7 @@ def get_manifest_xml(chapters:List[dict], output_directory:str) -> str:
         attributes["href"] = f"images/{images[i]}"
         attributes["id"] = re.sub(r"\..+$", "", basename(images[i]))
         # Set the mimetype
-        extension = html_string_tools.html.get_extension(images[i]).lower()
+        extension = html_string_tools.get_extension(images[i]).lower()
         mimetype = "application/xhtml+xml"
         if extension == ".png":
             mimetype = "image/png"
@@ -680,7 +681,7 @@ def get_manifest_xml(chapters:List[dict], output_directory:str) -> str:
     ncx_item.attrib = {"href":"toc.ncx", "id":"ncx", "media-type":"application/x-dtbncx+xml"}
     # Set indents to make the XML more readable
     xml = ElementTree.tostring(base).decode("UTF-8")
-    xml = html_string_tools.html.make_human_readable(xml, "    ").strip()
+    xml = html_string_tools.make_human_readable(xml, "    ").strip()
     return xml
 
 def create_content_opf(chapters:List[dict], metadata:dict, output_directory:str):
@@ -728,7 +729,7 @@ def create_content_opf(chapters:List[dict], metadata:dict, output_directory:str)
         itemref.attrib = {"idref":chapter["id"]}
     # Set indents to make the XML more readable
     xml = ElementTree.tostring(base).decode("UTF-8")
-    xml = html_string_tools.html.make_human_readable(xml, "    ").strip()
+    xml = html_string_tools.make_human_readable(xml, "    ").strip()
     xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
     # Write the opf file
     opf_file = abspath(join(output_directory, "content.opf"))
@@ -760,7 +761,7 @@ def create_epub(chapters:List[dict], metadata:dict, directory:str, copy_back_cov
         rootfile = ElementTree.SubElement(rootfiles, "rootfile")
         rootfile.attrib = {"media-type":"application/oebps-package+xml", "full-path":"EPUB/content.opf"}
         xml = ElementTree.tostring(base).decode("UTF-8")
-        xml = html_string_tools.html.make_human_readable(xml, "    ").strip()
+        xml = html_string_tools.make_human_readable(xml, "    ").strip()
         xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
         container_file = abspath(join(meta_directory, "container.xml"))
         mm_file_tools.write_text_file(container_file, xml)
@@ -825,7 +826,7 @@ def create_epub_from_description(json_file:str, image_file:str, metadata:dict, d
         shutil.copy(json_file, abspath(join(original_directory, json_name)))
         shutil.copy(image_file, abspath(join(original_directory, image_name)))
         # Copy the cover image
-        extension = html_string_tools.html.get_extension(image_name)
+        extension = html_string_tools.get_extension(image_name)
         cover_image = abspath(join(temp_dir, f"cover_image{extension}"))
         shutil.copy(image_file, cover_image)
         # Create the html from the json description
@@ -985,7 +986,7 @@ def update_epub_info(epub_file:str, metadata:dict, update_cover:bool=False):
             ElementTree.register_namespace("", ns["0"])
             # Write the opf
             xml = ElementTree.tostring(base).decode("UTF-8")
-            xml = html_string_tools.html.make_human_readable(xml, "    ").strip()
+            xml = html_string_tools.make_human_readable(xml, "    ").strip()
             xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
             mm_file_tools.write_text_file(opf_file, xml)
             # Remove the mimetype

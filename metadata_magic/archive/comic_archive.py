@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 
 import os
-import re
 import copy
 import shutil
 import tempfile
 import html_string_tools
 import metadata_magic.sort as mm_sort
 import metadata_magic.rename as mm_rename
+import metadata_magic.archive as mm_archive
 import metadata_magic.file_tools as mm_file_tools
-import metadata_magic.archive.archive as mm_archive
 import metadata_magic.archive.comic_xml as mm_comic_xml
 from os.path import abspath, basename, exists, isdir, join
 
@@ -56,7 +55,7 @@ def create_cbz(directory:str, name:str=None, metadata:dict=None, remove_files:bo
                 folder_name = metadata["title"]
                 assert folder_name is not None
             except (AssertionError, KeyError, TypeError):
-                folder_name = files[0][:len(files[0]) - len(html_string_tools.html.get_extension(files[0]))]
+                folder_name = files[0][:len(files[0]) - len(html_string_tools.get_extension(files[0]))]
         folder_name = mm_rename.get_file_friendly_text(folder_name)
         folder_name = mm_rename.get_available_filename(["AAAAAAAAAA"], folder_name, full_directory)
         new_folder = abspath(join(full_directory, folder_name))

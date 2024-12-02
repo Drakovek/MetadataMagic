@@ -1,5 +1,3 @@
 #!/usr/bin/env python3
 
-"""
-Defines the main package.
-"""
+from metadata_magic.archive.archive import *

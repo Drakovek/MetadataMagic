@@ -1,6 +1,6 @@
-CoverGenerator>=0.1.0
+CoverGenerator>=0.2.0
 html5lib>=1.1
-HTML-String-Tools>=0.2.0
+HTML-String-Tools>=0.3.0
 pillow>=8.0.0
-Python-Print-Tools>=0.2.1
+Python-Print-Tools>=0.2.2
 tqdm>=4.64.1

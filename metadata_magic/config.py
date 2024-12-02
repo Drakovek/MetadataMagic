@@ -2,7 +2,6 @@
 
 import os
 import json
-import metadata_magic
 import metadata_magic.file_tools as mm_file_tools
 from os.path import abspath, expandvars
 from typing import List

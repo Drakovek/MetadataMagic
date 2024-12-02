@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
-import tempfile
 import metadata_magic.test as mm_test
 import metadata_magic.config as mm_config
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_reader as mm_meta_reader
-from os.path import abspath, exists, join
+from os.path import abspath, join
 
 def test_get_value_from_keylist():
     """

@@ -3,14 +3,14 @@
 import os
 import tqdm
 import argparse
-import python_print_tools.printer
+import tempfile
+import python_print_tools
 import metadata_magic.sort as mm_sort
 import metadata_magic.config as mm_config
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.meta_reader as mm_meta_reader
-import metadata_magic.archive.archive as mm_archive
-import tempfile
+import metadata_magic.archive as mm_archive
 from os.path import abspath, exists
 from typing import List
 
@@ -172,11 +172,11 @@ def print_errors(error_files:List[str], root_directory:str, print_text:str):
     """
     length = len(error_files)
     if length > 0:
-        python_print_tools.printer.color_print(f"{length} {print_text}:", "red")
-        python_print_tools.printer.print_files(root_directory, error_files)
+        python_print_tools.color_print(f"{length} {print_text}:", "red")
+        python_print_tools.print_files(root_directory, error_files)
         print("")
     else:
-        python_print_tools.printer.color_print(f"No {print_text}.\n", "green")
+        python_print_tools.color_print(f"No {print_text}.\n", "green")
     
 def main():
     """
@@ -222,7 +222,7 @@ def main():
     # Check that directory is valid
     directory = abspath(args.directory)
     if not exists(directory):
-        python_print_tools.printer.color_print("Invalid directory.", "red")
+        python_print_tools.color_print("Invalid directory.", "red")
     else:
         # Find corrupt files
         if args.corrupt:
@@ -269,4 +269,4 @@ def main():
                 missing = find_missing_fields(directory, responses[response]["key"])
                 print_errors(missing, directory, f"archives with missing {label} field")
             except KeyError:
-                python_print_tools.printer.color_print("Invalid response.", "red")
+                python_print_tools.color_print("Invalid response.", "red")

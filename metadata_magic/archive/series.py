@@ -5,10 +5,10 @@ import re
 import math
 import tqdm
 import argparse
-import python_print_tools.printer
+import python_print_tools
 import metadata_magic.sort as mm_sort
+import metadata_magic.archive as mm_archive
 import metadata_magic.file_tools as mm_file_tools
-import metadata_magic.archive.archive as mm_archive
 from os.path import abspath, basename, exists
 from typing import List
 
@@ -24,7 +24,6 @@ def get_default_labels(directory:str) -> List[dict]:
     :return: List of dictionaries containing file paths to archives and labels for their number in a series
     :rtype: List[dict]
     """
-    
     # Get all archive files
     archive_files = mm_file_tools.find_files_of_type(directory, [".cbz", ".epub"], include_subdirectories=False)
     archive_files = mm_sort.sort_alphanum(archive_files)
@@ -176,7 +175,7 @@ def set_series_from_user(directory:str):
     # Relabel the files if the user requests
     while len(labeled_files) > 0:
         # Clear the terminal
-        python_print_tools.printer.clear_console()
+        python_print_tools.clear_console()
         # Show instructions to user
         print(get_series_string(labeled_files))
         print()
@@ -231,7 +230,7 @@ def main():
     # Check that directory is valid
     directory = abspath(args.directory)
     if not exists(directory):
-        python_print_tools.printer.color_print("Invalid directory.", "red")
+        python_print_tools.color_print("Invalid directory.", "red")
     else:
         # Check whether to add as full series or as one-shots
         if not args.standalone:

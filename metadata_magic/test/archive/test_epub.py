@@ -1,11 +1,13 @@
+#!/usr/bin/env python3
+
 import os
 import shutil
 import tempfile
 import metadata_magic.test as mm_test
 import metadata_magic.config as mm_config
-import metadata_magic.archive.epub as mm_epub
 import metadata_magic.file_tools as mm_file_tools
-import metadata_magic.archive.archive as mm_archive
+import metadata_magic.archive as mm_archive
+import metadata_magic.archive.epub as mm_epub
 from os.path import abspath, basename, exists, join
 from PIL import Image
 
