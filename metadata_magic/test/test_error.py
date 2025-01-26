@@ -13,7 +13,7 @@ def test_find_long_descriptions():
     Tests the find_long_descriptions function.
     """
     # Copy folders to test error detection
-    config = mm_config.DEFAULT_CONFIG
+    config = mm_config.get_config([])
     with tempfile.TemporaryDirectory() as temp_dir:
         cbz_directory = abspath(join(temp_dir, "cbzs"))
         epub_directory = abspath(join(temp_dir, "epubs"))

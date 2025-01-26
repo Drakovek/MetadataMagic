@@ -1133,7 +1133,7 @@ def test_create_epub_from_description():
     Tests the create_epub_from_description function.
     """
     # Create an EPUB file from the description of an image-JSON pair
-    config = mm_config.DEFAULT_CONFIG
+    config = mm_config.get_config([])
     image_file = abspath(join(mm_test.PAIR_IMAGE_DIRECTORY, "long.JPG"))
     json_file = abspath(join(mm_test.PAIR_IMAGE_DIRECTORY, "long.JSON"))
     metadata = mm_archive.get_empty_metadata()

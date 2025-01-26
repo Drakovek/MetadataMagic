@@ -199,7 +199,7 @@ def test_rename_media_archives():
     Tests the rename_media_archives function.
     """
     # Test renaming cbz archives
-    config = mm_config.DEFAULT_CONFIG
+    config = mm_config.get_config([])
     with tempfile.TemporaryDirectory() as temp_dir:
         cbz_dir = abspath(join(temp_dir, "cbz_dir"))
         shutil.copytree(mm_test.ARCHIVE_CBZ_DIRECTORY, cbz_dir)
@@ -241,7 +241,7 @@ def test_rename_json_pairs():
     Tests the rename_json_pairs function.
     """
     # Test renaming JSON pairs
-    config = mm_config.DEFAULT_CONFIG
+    config = mm_config.get_config([])
     with tempfile.TemporaryDirectory() as temp_dir:
         text_dir = abspath(join(temp_dir, "text"))
         image_dir = abspath(join(temp_dir, "image"))

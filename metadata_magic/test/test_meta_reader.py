@@ -34,7 +34,7 @@ def test_load_metadata():
     Tests the load_metadata function.
     """
     # Get JSON file to load
-    config = mm_config.DEFAULT_CONFIG
+    config = mm_config.get_config([])
     json_directory = abspath(join(mm_test.PAIR_DIRECTORY, "images"))
     json_file = abspath(join(json_directory, "bare.PNG.json"))
     # Check the loaded contents of the JSON file
@@ -73,7 +73,7 @@ def test_get_title():
     Tests the get_title function.
     """
     # Test getting title with the default config
-    config = mm_config.DEFAULT_CONFIG
+    config = mm_config.get_config([])
     metadata = {"title":"Name", "info":{"title":"Different"}}
     assert mm_meta_reader.get_title(metadata, config) == "Name"
     metadata = {"other":"string", "info":{"title":"Different"}}
@@ -93,7 +93,7 @@ def test_get_index():
     Tests the get_index function.
     """
     # Test getting the index when it is a string
-    config = mm_config.DEFAULT_CONFIG
+    config = mm_config.get_config([])
     metadata = {"title":"Name", "num":"12"}
     assert mm_meta_reader.get_index(metadata, config) == "12"
     metadata = {"title":"Name", "image_number":"123"}
@@ -119,7 +119,7 @@ def test_get_artists_and_writers():
     Tests the get_artists_and_writers function.
     """
     # Test getting separate single artist and writer
-    config = mm_config.DEFAULT_CONFIG
+    config = mm_config.get_config([])
     metadata = {"title":"AAA", "artist":"Illustrator", "writer":"Author"}
     artists, writers = mm_meta_reader.get_artists_and_writers(metadata, config, ".jpg")
     assert artists == ["Illustrator"]
@@ -176,7 +176,7 @@ def test_get_date():
     Tests the get_date function.
     """
     # Test getting date from dictionary in YYYY-MM-DD format
-    config = mm_config.DEFAULT_CONFIG
+    config = mm_config.get_config([])
     metadata = {"title":"AAA", "date":"2022-12-25"}
     assert mm_meta_reader.get_date(metadata, config) == "2022-12-25"
     metadata = {"upload_date":"1983/07-14", "title":"AAA"}
@@ -212,7 +212,7 @@ def test_get_description():
     Tests the get_description function.
     """
     # Test getting description from metadata with default config
-    config = mm_config.DEFAULT_CONFIG
+    config = mm_config.get_config([])
     metadata = {"title":"AAA", "description":"A<br/>B"}
     assert mm_meta_reader.get_description(metadata, config) == "A<br/>B"
     metadata = {"caption":"Description", "title":"BBB"}
@@ -236,7 +236,7 @@ def test_get_id():
     Tests the get_id function.
     """
     # Test getting an ID that is a string
-    config = mm_config.DEFAULT_CONFIG
+    config = mm_config.get_config([])
     metadata = {"title":"AAA", "id":"abc123"}
     assert mm_meta_reader.get_id(metadata, config) == "abc123"
     metadata = {"title":"AAA", "index":"Identifier"}
@@ -274,7 +274,7 @@ def test_get_publisher():
     Tests the get_publisher function.
     """
     # Test getting DeviantArt as publisher
-    config = mm_config.DEFAULT_CONFIG
+    config = mm_config.get_config([])
     metadata = {"url":"www.deviantart.com/AAA", "title":"AAA"}
     assert mm_meta_reader.get_publisher(metadata, config) == "DeviantArt"
     metadata = {"category":"DeviantArt", "url":False}
@@ -305,7 +305,7 @@ def test_get_url():
     Tests the get_url function.
     """
     # Test getting the URL from only the metadata
-    config = mm_config.DEFAULT_CONFIG
+    config = mm_config.get_config([])
     metadata = {"url":"/url/", "title":"AAA"}
     assert mm_meta_reader.get_url(metadata, config) == "/url/"
     metadata = {"post_url":"page/url/", "title":"AAA"}
@@ -339,7 +339,7 @@ def test_get_tags():
     Tests the get_tags function.
     """
     # Test getting tags from multiple lists of tags
-    config = mm_config.DEFAULT_CONFIG
+    config = mm_config.get_config([])
     metadata = {"title":"123", "tags":["A", "B"], "categories":["C", "D"]}
     assert mm_meta_reader.get_tags(metadata, config) == ["A", "B", "C", "D"]
     # Test getting tags from multiple single string entries in the metadata
@@ -371,7 +371,7 @@ def test_get_age_rating():
     Tests the get_age_rating function.
     """
     # Test getting general style age ratings from Fur Affinity
-    config = mm_config.DEFAULT_CONFIG
+    config = mm_config.get_config([])
     metadata = {"title":"AAA", "rating":"General"}
     assert mm_meta_reader.get_age_rating(metadata, config, "Fur Affinity") == "Everyone"
     metadata = {"title":"AAA", "rating":"Mature"}

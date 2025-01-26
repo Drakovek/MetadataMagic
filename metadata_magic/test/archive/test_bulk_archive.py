@@ -17,7 +17,7 @@ def test_archive_all_media():
     Tests the archive_all_media function.
     """
     # Test bulk archiving JSON-image pairs
-    config = mm_config.DEFAULT_CONFIG
+    config = mm_config.get_config([])
     with tempfile.TemporaryDirectory() as temp_dir:
         image_directory = abspath(join(temp_dir, "images"))
         shutil.copytree(mm_test.PAIR_IMAGE_DIRECTORY, image_directory)
@@ -114,7 +114,7 @@ def test_archive_all_media():
         read_metadata = mm_archive.get_info_from_archive(abspath(join(multiple_directory, "[DD] Image 2.cbz")))
         assert read_metadata["title"] == "Image"
     # Test that image isn't converted to an EPUB with a greater cutoff point for the description length
-    config = mm_config.DEFAULT_CONFIG
+    config = mm_config.get_config([])
     with tempfile.TemporaryDirectory() as temp_dir:
         image_directory = abspath(join(temp_dir, "images"))
         shutil.copytree(mm_test.PAIR_IMAGE_DIRECTORY, image_directory)

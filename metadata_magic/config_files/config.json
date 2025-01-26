@@ -1,0 +1,164 @@
+{
+    "json_reader": {
+        "id": {
+            "keys": [
+                ["id"],
+                ["display_id"],
+                ["index"],
+                ["submission_id"],
+                ["submitid"]
+            ]
+        },
+        "title": {
+            "keys": [
+                ["title"],
+                ["info", "title"]
+            ]
+        },
+        "artists": {
+            "keys": [
+                ["artists"],
+                ["info", "artists"],
+                ["artist"],
+                ["username"],
+                ["user"],
+                ["owner"],
+                ["author", "username"],
+                ["user", "name"]
+            ]
+        },
+        "writers": {
+            "keys": [
+                ["writers"],
+                ["authors"],
+                ["writer"],
+                ["author"],
+                ["creator", "full_name"]
+            ]
+        },
+        "date": {
+            "keys": [
+                ["date"],
+                ["upload_date"],
+                ["published_at"],
+                ["info", "time"]
+            ]
+        },
+        "description": {
+            "keys": [
+                ["description"],
+                ["caption"],
+                ["content"],
+                ["info", "description"],
+                ["chapter_description"],
+                ["post_content"],
+                ["webtoon_summary"]
+            ]
+        },
+        "tags": {
+            "keys": [
+                ["info", "web_tags"],
+                ["tags"],
+                ["categories"],
+                ["genres"],
+                ["da_category"],
+                ["theme"],
+                ["species"],
+                ["gender"]
+            ],
+            "internal_keys": [
+                ["translated_name"],
+                ["name"]
+            ]
+        },
+        "publisher": {
+            "keys": [
+                ["link"],
+                ["post_url"],
+                ["webpage_url"],
+                ["page_url"],
+                ["url"],
+                ["web", "page_url"],
+                ["category"]
+            ],
+            "match": [
+                {"match":"deviantart", "publisher":"DeviantArt"},
+                {"match":"furaffinity", "publisher":"Fur Affinity"},
+                {"match":"newgrounds", "publisher":"Newgrounds"},
+                {"match":"pixiv", "publisher":"Pixiv"},
+                {"match":"weasyl", "publisher":"Weasyl"},
+                {"match":"inkbunny", "publisher":"Inkbunny"},
+                {"match":"patreon", "publisher":"Patreon"},
+                {"match":"twitter", "publisher":"Twitter"},
+                {"match":"tumblr", "publisher":"Tumblr"},
+                {"match":"youtube", "publisher":"YouTube"},
+                {"match":"non-existant-website.ca", "publisher":"DVK Test"}
+            ]
+        },
+        "url": {
+            "keys": [
+                ["link"],
+                ["post_url"],
+                ["webpage_url"],
+                ["url"],
+                ["web", "page_url"]
+            ],
+            "patterns": {
+                "Fur Affinity": "https://www.furaffinity.net/view/*",
+                "pixiv": "https://www.pixiv.net/en/artworks/*",
+                "Inkbunny": "https://inkbunny.net/s/*"
+            }
+        },
+        "age_rating": {
+            "keys": [
+                ["age_rating"],
+                ["rating"],
+                ["rating_name"]
+            ],
+            "allowed": [
+                "DeviantArt",
+                "Fur Affinity",
+                "Newgrounds",
+                "Pixiv",
+                "Weasyl",
+                "Inkbunny",
+                "DVK Test"
+            ],
+            "match": {
+                "e": "Everyone",
+                "general": "Everyone",
+                "t": "Teen",
+                "pg": "Teen",
+                "m": "Mature 17+",
+                "r": "Mature 17+",
+                "mature": "Mature 17+",
+                "x": "X18+",
+                "a": "X18+",
+                "r-18": "X18+",
+                "adult": "X18+",
+                "explicit": "X18+"
+            },
+            "specialized": {
+                "DeviantArt": {
+                    "keys": [
+                        ["mature_level"],
+                        ["is_mature"]
+                    ],
+                    "match": {
+                        "false": "Everyone",
+                        "moderate": "Mature 17+",
+                        "strict": "X18+"
+                    }
+                }
+            }
+        },
+        "index": {
+            "keys": [
+                ["image_num"],
+                ["image_number"],
+                ["part"],
+                ["num"]
+            ]
+        }
+    }
+}

@@ -55,7 +55,7 @@ def test_get_info_from_jsons():
     Tests the get_info_from_jsons function.
     """
     # Test getting metadata from the lead JSON file in a directory
-    config = mm_config.DEFAULT_CONFIG
+    config = mm_config.get_config([])
     metadata = mm_archive.get_info_from_jsons(mm_test.PAIR_IMAGE_DIRECTORY, config)
     assert metadata["title"] == "LRG"
     assert metadata["series"] is None
