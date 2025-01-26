@@ -16,6 +16,7 @@ import metadata_magic.archive.comic_archive as mm_comic_archive
 from os.path import abspath, isdir, exists
 from typing import List
 
+ARCHIVE_EXTENSIONS = [".cbz", ".epub"]
 SUPPORTED_IMAGES = [".png", ".jpeg", ".jpg"]
 SUPPORTED_TEXT = [".txt", ".html", ".htm"]
 

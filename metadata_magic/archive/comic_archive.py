@@ -71,7 +71,7 @@ def create_cbz(directory:str, name:str=None, metadata:dict=None, remove_files:bo
     if metadata is not None:
         # Set the page count
         new_metadata = copy.deepcopy(metadata)
-        images = mm_file_tools.find_files_of_type(full_directory, [".png", ".jpg", ".jpeg"])
+        images = mm_file_tools.find_files_of_type(full_directory, mm_archive.SUPPORTED_IMAGES)
         new_metadata["page_count"] = str(len(images))
         # Write the metadata file
         mm_file_tools.write_text_file(meta_file, mm_comic_xml.get_comic_xml(new_metadata))
@@ -120,7 +120,7 @@ def get_info_from_cbz(cbz_file:str, check_subdirectories:bool=True) -> dict:
             extract_dir = abspath(join(extract_dir, "images"))
             os.mkdir(extract_dir)
             mm_file_tools.extract_zip(cbz_file, extract_dir)
-            images = mm_file_tools.find_files_of_type(extract_dir, [".png", ".jpg", ".jpeg"])
+            images = mm_file_tools.find_files_of_type(extract_dir, mm_archive.SUPPORTED_IMAGES)
             metadata["page_count"] = str(len(images))
             # Update the cbz file
             update_cbz_info(cbz_file, metadata)

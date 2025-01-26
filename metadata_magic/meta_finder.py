@@ -6,10 +6,9 @@ import copy
 import tqdm
 import html_string_tools
 import metadata_magic.sort as mm_sort
+import metadata_magic.archive as mm_archive
 from os.path import abspath, basename, isdir, join
 from typing import List
-
-ARCHIVE_EXTENSIONS = [".cbz", ".epub"]
 
 def separate_files(path:str) -> tuple:
     """
@@ -35,7 +34,7 @@ def separate_files(path:str) -> tuple:
             jsons.append(full_file)
         elif isdir(full_file):
             directories.append(full_file)
-        elif not extension in ARCHIVE_EXTENSIONS:
+        elif not extension in mm_archive.ARCHIVE_EXTENSIONS:
             media.append(full_file)    
     # Append files in subdirectories
     for directory in directories:

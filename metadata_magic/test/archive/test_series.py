@@ -29,7 +29,7 @@ def test_get_default_labels():
         assert basename(labels[4]["file"]) == "00B.epub"
         assert labels[4]["label"] == "100001.0"
         # Remove All Sequence information
-        for file in mm_file_tools.find_files_of_type(temp_dir, [".cbz", ".epub"]):
+        for file in mm_file_tools.find_files_of_type(temp_dir, mm_archive.ARCHIVE_EXTENSIONS):
             metadata = mm_archive.get_info_from_archive(file)
             metadata["series"] = None
             metadata["series_number"] = None

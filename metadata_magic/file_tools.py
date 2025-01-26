@@ -74,7 +74,8 @@ def read_json_file(file:str) -> dict:
         return json_dict
     except(TypeError, json.JSONDecodeError): return {}
 
-def find_files_of_type(directory:str, extension:str, include_subdirectories:bool=True, inverted:bool=False) -> List[str]:
+def find_files_of_type(directory:str, extension:str,
+            include_subdirectories:bool=True, inverted:bool=False) -> List[str]:
     """
     Returns a list of files in a given directory that match a given file extension.
     

@@ -185,7 +185,7 @@ def extract_all_archives(directory:str, create_folders:bool=True, remove_structu
     :rtype: bool
     """
     # Get a list of all archive files
-    archives = mm_file_tools.find_files_of_type(directory, [".cbz", ".epub"])
+    archives = mm_file_tools.find_files_of_type(directory, mm_archive.ARCHIVE_EXTENSIONS)
     # Extract each archive
     for archive in tqdm.tqdm(archives):
         try:
