@@ -73,9 +73,9 @@ def get_title(json:dict, config:dict) -> str:
     keylist = config["json_reader"]["title"]["keys"]
     return get_value_from_keylist(json, keylist, str)
 
-def get_index(json:dict, config:dict) -> str:
+def get_num(json:dict, config:dict) -> str:
     """
-    Attempts to find the index from a given JSON dictionary.
+    Attempts to find the image/index num from a given JSON dictionary.
     Index refers to a number indicating the image/part number in a collection.
     
     :param json: JSON in dict form to search for metadata within
@@ -85,7 +85,7 @@ def get_index(json:dict, config:dict) -> str:
     :return: Extracted value of the index
     :rtype: str
     """
-    keylist = config["json_reader"]["index"]["keys"]
+    keylist = config["json_reader"]["num"]["keys"]
     value = get_value_from_keylist(json, keylist, int)
     if value is None:
         return get_value_from_keylist(json, keylist, str)
@@ -305,7 +305,7 @@ def load_metadata(json_file:str, config:dict, media_file:str) -> dict:
     # Add internal metadata in standardized forms
     meta_dict["id"] = get_id(json, config)
     meta_dict["title"] = get_title(json, config)
-    meta_dict["index"] = get_index(json, config)
+    meta_dict["num"] = get_num(json, config)
     meta_dict["date"] = get_date(json, config)
     meta_dict["description"] = get_description(json, config)
     meta_dict["publisher"] = get_publisher(json, config)

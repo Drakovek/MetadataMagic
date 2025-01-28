@@ -42,7 +42,7 @@ def test_load_metadata():
     assert metadata["json_path"] == json_file
     assert metadata["id"] is None
     assert metadata["title"] == "Émpty"
-    assert metadata["index"] is None
+    assert metadata["num"] is None
     assert metadata["date"] is None
     assert metadata["description"] is None
     assert metadata["publisher"] is None
@@ -57,7 +57,7 @@ def test_load_metadata():
     assert metadata["json_path"] == "/non/existant/file.json"
     assert metadata["id"] is None
     assert metadata["title"] is None
-    assert metadata["index"] is None
+    assert metadata["num"] is None
     assert metadata["date"] is None
     assert metadata["description"] is None
     assert metadata["publisher"] is None
@@ -88,31 +88,31 @@ def test_get_title():
     metadata = mm_meta_reader.load_metadata(json_file, config, "a.jpg")
     assert metadata["title"] == "JPEG Image"
 
-def test_get_index():
+def test_get_num():
     """
-    Tests the get_index function.
+    Tests the get_num function.
     """
     # Test getting the index when it is a string
     config = mm_config.get_config([])
     metadata = {"title":"Name", "num":"12"}
-    assert mm_meta_reader.get_index(metadata, config) == "12"
+    assert mm_meta_reader.get_num(metadata, config) == "12"
     metadata = {"title":"Name", "image_number":"123"}
-    assert mm_meta_reader.get_index(metadata, config) == "123"
+    assert mm_meta_reader.get_num(metadata, config) == "123"
     # Test getting the index when it is an integer
     metadata = {"title":"Name", "image_num":5}
-    assert mm_meta_reader.get_index(metadata, config) == "5"
+    assert mm_meta_reader.get_num(metadata, config) == "5"
     metadata = {"title":"Name", "part":42}
-    assert mm_meta_reader.get_index(metadata, config) == "42"
+    assert mm_meta_reader.get_num(metadata, config) == "42"
     # Test getting the index when no valid index is present
-    assert mm_meta_reader.get_index({"A":"B"}, config) is None
-    assert mm_meta_reader.get_index({"num":None}, config) is None
+    assert mm_meta_reader.get_num({"A":"B"}, config) is None
+    assert mm_meta_reader.get_num({"num":None}, config) is None
     # Test getting index when loading metadata
     json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair.json"))
     metadata = mm_meta_reader.load_metadata(json_file, config, "A.txt")
-    assert metadata["index"] == "3"
+    assert metadata["num"] == "3"
     json_file = abspath(join(mm_test.PAIR_DIRECTORY, "pair-2.json"))
     metadata = mm_meta_reader.load_metadata(json_file, config, "A.txt")
-    assert metadata["index"] == "32"
+    assert metadata["num"] == "32"
 
 def test_get_artists_and_writers():
     """
