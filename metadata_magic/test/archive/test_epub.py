@@ -1496,3 +1496,18 @@ def test_update_epub_info():
         compare = f"{compare}\n    </spine>"
         compare = f"{compare}\n</package>"
         assert contents == compare
+    # Test that file isn't overwritten if using the exact same metadata
+    base_file = abspath(join(mm_test.ARCHIVE_EPUB_DIRECTORY, "basic.epub"))
+    with tempfile.TemporaryDirectory() as temp_dir:
+        epub_file = abspath(join(temp_dir, "basic.epub"))
+        shutil.copy(base_file, epub_file)
+        assert os.stat(epub_file).st_size == 3359
+        metadata = mm_epub.get_info_from_epub(epub_file)
+        metadata["page_count"] = "136"
+        mm_epub.update_epub_info(epub_file, metadata)
+        assert os.stat(epub_file).st_size == 3359
+        # Test that file will be overwritten even with the same metadata, if specified
+        metadata = mm_epub.get_info_from_epub(epub_file)
+        mm_epub.update_epub_info(epub_file, metadata, always_overwrite=True)
+        assert os.stat(epub_file).st_size == 3336
+        assert metadata == mm_epub.get_info_from_epub(epub_file)

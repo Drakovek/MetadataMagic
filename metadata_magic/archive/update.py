@@ -31,7 +31,8 @@ def update_fields(existing_metadata:dict, updating_metadata:dict) -> dict:
             return_metadata[item[0]] = item[1]
     return return_metadata
 
-def mass_update_archives(directory:str, metadata:dict, update_covers:bool=False):
+def mass_update_archives(directory:str, metadata:dict,
+            update_covers:bool=False, always_overwrite:bool=False):
     """
     Updates all the media archive files in a given directory to use new metadata.
     Any metadata fields with a value of None will be unaltered from the orignal archive file.
@@ -43,6 +44,8 @@ def mass_update_archives(directory:str, metadata:dict, update_covers:bool=False)
     :type metadata: dict, required
     :param update_covers: Whether to regenerate cover images, defaults to False
     :type update_covers: bool, optional
+    :param always_overwrite: Whether to overwrite files even if metadata is unchanged, defaults to False
+    :type always_overwrite: bool, optional
     """
     # Get list of archive files in the directory
     archive_files = mm_file_tools.find_files_of_type(directory, mm_archive.ARCHIVE_EXTENSIONS)
@@ -50,9 +53,10 @@ def mass_update_archives(directory:str, metadata:dict, update_covers:bool=False)
     for archive_file in tqdm.tqdm(archive_files):
         # Update the archive file with the metadata
         new_metadata = update_fields(mm_archive.get_info_from_archive(archive_file), metadata)
-        mm_archive.update_archive_info(archive_file, new_metadata, update_cover=update_covers)
+        mm_archive.update_archive_info(archive_file, new_metadata,
+                update_cover=update_covers, always_overwrite=always_overwrite)
 
-def user_update_file(file:str, update_cover:bool):
+def user_update_file(file:str, update_cover:bool, always_overwrite:bool=False):
     """
     Update one specific CBZ or EPUB file with user provided metadata.
     
@@ -60,6 +64,8 @@ def user_update_file(file:str, update_cover:bool):
     :type file: str, required
     :param update_cover: Whether to regenerate cover images
     :type update_cover: bool, required
+    :param always_overwrite: Whether to overwrite files even if metadata is unchanged, defaults to False
+    :type always_overwrite: bool, optional
     """
     # Read info from the given file
     full_file = abspath(file)
@@ -68,9 +74,10 @@ def user_update_file(file:str, update_cover:bool):
     updating_metadata = mm_archive.get_metadata_from_user(mm_archive.get_empty_metadata(), True)
     # Update the archive metadata
     updating_metadata = update_fields(existing_metadata, updating_metadata)
-    mm_archive.update_archive_info(full_file, updating_metadata, update_cover=update_cover)
+    mm_archive.update_archive_info(full_file, updating_metadata,
+            update_cover=update_cover, always_overwrite=always_overwrite)
 
-def user_mass_update(directory:str, update_covers:bool):
+def user_mass_update(directory:str, update_covers:bool, always_overwrite:bool=False):
     """
     Mass update all the CBZ and EPUB files in a given directory with user provided metadata.
     
@@ -78,11 +85,14 @@ def user_mass_update(directory:str, update_covers:bool):
     :type directory: str, required
     :param update_covers: Whether to regenerate cover images
     :type update_covers: bool, required
+    :param always_overwrite: Whether to overwrite files even if metadata is unchanged, defaults to False
+    :type always_overwrite: bool, optional
     """
     # Get metadata to update
     updating_metadata = mm_archive.get_metadata_from_user(mm_archive.get_empty_metadata(), True)
     # Mass update cbz and epub files
-    mass_update_archives(abspath(directory), updating_metadata, update_covers=update_covers)
+    mass_update_archives(abspath(directory), updating_metadata,
+            update_covers=update_covers, always_overwrite=always_overwrite)
 
 def main():
     """
@@ -101,12 +111,17 @@ def main():
             "--cover",
             help="Regenerate cover image(s).",
             action="store_true")
+    parser.add_argument(
+            "-o",
+            "--overwrite",
+            help="Overwrites files, regardless of if metadata has changed",
+            action="store_true")
     args = parser.parse_args()
     # Check that directory is valid
     path = abspath(args.path)
     if not exists(path):
         python_print_tools.color_print("Invalid path.", "red")
     elif isdir(path):
-        user_mass_update(path, args.cover)
+        user_mass_update(path, args.cover, args.overwrite)
     else:
-        user_update_file(path, args.cover)
+        user_update_file(path, args.cover, args.overwrite)

@@ -126,26 +126,32 @@ def get_info_from_cbz(cbz_file:str, check_subdirectories:bool=True) -> dict:
             update_cbz_info(cbz_file, metadata)
     return metadata
 
-def update_cbz_info(cbz_file:str, metadata:dict):
+def update_cbz_info(cbz_file:str, metadata:dict, always_overwrite:bool=False):
     """
     Replaces the ComicInfo.xml file in a given .cbz file to reflect the given metadata
+    If the metadata is already correct, file is not overwritten unless specified
     
     :param cbz_file: Path of the .cbz file to update
     :type cbz_file: str, required
     :param metadata: Metadata to use for the new ComicInfo.xml file
     :type metadata: dict
+    :param always_overwrite: Whether to overwrite file even if metadata is identical, defaults to False
+    :type always_overwrite: bool, optional
     """
     with tempfile.TemporaryDirectory() as temp_dir:
         # Extract cbz into temp file
         full_cbz_file = abspath(cbz_file)
         if mm_file_tools.extract_zip(full_cbz_file, temp_dir):
-            # Delete existing ComicInfo.xml files
+            # Delete existing ComicInfo.xml files, and get existing metadata
+            old_metadata = None
             xml_files = mm_file_tools.find_files_of_type(temp_dir, ".xml")
             for xml_file in xml_files:
                 if basename(xml_file) == "ComicInfo.xml":
+                    old_metadata = mm_comic_xml.read_comic_info(xml_file)
                     os.remove(xml_file)
-            # Pack files into archive using new metadata
-            new_cbz = create_cbz(temp_dir, name=metadata["title"], metadata=metadata)
-            # Replace the old cbz file
-            os.remove(full_cbz_file)
-            shutil.copy(new_cbz, full_cbz_file)
+            # Pack files into archive using new metadata, if different
+            if always_overwrite or not old_metadata == metadata:
+                new_cbz = create_cbz(temp_dir, name=metadata["title"], metadata=metadata)
+                # Replace the old cbz file
+                os.remove(full_cbz_file)
+                shutil.copy(new_cbz, full_cbz_file)

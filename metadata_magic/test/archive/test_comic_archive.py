@@ -333,6 +333,32 @@ def test_update_cbz_info():
         assert sorted(os.listdir(extract_dir)) == ["ComicInfo.xml", "Internal"]
         sub_dir = abspath(join(extract_dir, "Internal"))
         assert sorted(os.listdir(sub_dir)) == ["Red.jpg"]
+
+    # Test that updating a CBZ file with the same metadata causes no overwriting
+    base_file = abspath(join(mm_test.ARCHIVE_CBZ_DIRECTORY, "SubInfo.CBZ"))
+    with tempfile.TemporaryDirectory() as temp_dir:
+        cbz_file = abspath(join(temp_dir, "basic.CBZ"))
+        shutil.copy(base_file, cbz_file)
+        metadata = mm_comic_archive.get_info_from_cbz(cbz_file)
+        mm_comic_archive.update_cbz_info(cbz_file, metadata)
+        assert mm_comic_archive.get_info_from_cbz(cbz_file) == metadata
+        extract_dir = abspath(join(temp_dir, "extracted"))
+        os.mkdir(extract_dir)
+        mm_file_tools.extract_zip(cbz_file, extract_dir)
+        assert sorted(os.listdir(extract_dir)) == ["Internal"]
+        sub_dir = abspath(join(extract_dir, "Internal"))
+        assert sorted(os.listdir(sub_dir)) == ["ComicInfo.xml", "Red.jpg"]
+        # Check that file will be overwritten even with identical metadata, if specified
+        mm_comic_archive.update_cbz_info(cbz_file, metadata, True)
+        read_metadata = mm_comic_archive.get_info_from_cbz(cbz_file)
+        assert metadata["title"] == "Internal"
+        assert metadata["page_count"] == "12"
+        extract_dir = abspath(join(temp_dir, "new_extracted"))
+        os.mkdir(extract_dir)
+        mm_file_tools.extract_zip(cbz_file, extract_dir)
+        assert sorted(os.listdir(extract_dir)) == ["ComicInfo.xml", "Internal"]
+        sub_dir = abspath(join(extract_dir, "Internal"))
+        assert sorted(os.listdir(sub_dir)) == ["Red.jpg"]
     # Test attempting to update a non-cbz file
     metadata = mm_archive.get_empty_metadata()
     text_file = abspath(join(mm_test.BASIC_TEXT_DIRECTORY, "latin1.txt"))

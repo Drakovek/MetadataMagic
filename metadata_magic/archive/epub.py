@@ -596,7 +596,7 @@ def get_metadata_xml(metadata:dict, cover_id:str=None) -> str:
             series_number.text = metadata["series_number"]
         except (TypeError, ValueError): pass
     # Set the metadata tags
-    tags = metadata["tags"]
+    tags = copy.deepcopy(metadata["tags"])
     try:
         # Add score as star rating in tags
         score_number = int(metadata["score"])
@@ -956,19 +956,27 @@ def get_info_from_epub(epub_file:str) -> dict:
         # Return the extracted metadata
         return metadata
 
-def update_epub_info(epub_file:str, metadata:dict, update_cover:bool=False):
+def update_epub_info(epub_file:str, metadata:dict,
+            update_cover:bool=False, always_overwrite:bool=False):
     """
     Replaces the content.opf file in a given .epub file to reflect the given metadata.
     
     :param epub_file: Path of the .epub file to update
     :type epub_file: str, required
-    :param update_cover: Whether to regenerate the cover image for the epub, defaults to False
-    :type update_cover: bool, optional
     :param metadata: Metadata to use for the new content.opf file
     :type metadata: dict
+    :param update_cover: Whether to regenerate the cover image for the epub, defaults to False
+    :type update_cover: bool, optional
+    :param always_overwrite: Whether to overwrite file even if metadata is unchanged, defaults to False
+    :type always_overwrite: bool, optional
     """
-    
     try:
+        # Check if the metadata is identical
+        existing_metadata = get_info_from_epub(epub_file)
+        existing_metadata["page_count"] = None
+        new_metadata = copy.deepcopy(metadata)
+        new_metadata["page_count"] = None
+        assert always_overwrite or not new_metadata == existing_metadata
         with tempfile.TemporaryDirectory() as temp_dir:
             # Extract epub into temp file
             mm_file_tools.extract_zip(abspath(epub_file), temp_dir)
@@ -1015,4 +1023,4 @@ def update_epub_info(epub_file:str, metadata:dict, update_cover:bool=False):
             os.remove(abspath(epub_file))
             shutil.copy(new_epub_file, abspath(epub_file))
             os.remove(new_epub_file)
-    except IndexError: pass
+    except (AssertionError, IndexError): pass
