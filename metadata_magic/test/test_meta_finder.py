@@ -68,10 +68,10 @@ def test_separate_files():
     assert abspath(join(media[12], os.pardir)) == mm_test.PAIR_TEXT_DIRECTORY
     assert basename(media[13]) == "A.A.mkv"
     assert abspath(join(media[13], os.pardir)) == mm_test.PAIR_VIDEO_DIRECTORY
-    # Check that archive files aren't included
+    # Check that archive files are included
     jsons, media = mm_meta_finder.separate_files(mm_test.ARCHIVE_DIRECTORY)
+    assert len(media) == 13
     assert jsons == []
-    assert media == []
 
 def test_get_pairs_from_list():
     """

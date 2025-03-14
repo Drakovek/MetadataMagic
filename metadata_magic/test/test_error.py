@@ -46,13 +46,13 @@ def test_find_missing_metadata():
     Tests the find_missing_metadata function.
     """
     missing = mm_error.find_missing_metadata(mm_test.PAIR_DIRECTORY)
-    assert len(missing) == 3
-    assert basename(missing[0]) == ".empty"
-    assert abspath(join(missing[0], os.pardir)) == mm_test.PAIR_IMAGE_DIRECTORY
-    assert basename(missing[1]) == "missing-metadata.txt"
-    assert abspath(join(missing[1], os.pardir)) == mm_test.PAIR_DIRECTORY
-    assert basename(missing[2]) == "no-metadata.txt"
-    assert abspath(join(missing[2], os.pardir)) == mm_test.PAIR_MISSING_DIRECTORY
+    assert len(missing) == 2
+    assert basename(missing[0]) == "missing-metadata.txt"
+    assert abspath(join(missing[0], os.pardir)) == mm_test.PAIR_DIRECTORY
+    assert basename(missing[1]) == "no-metadata.txt"
+    assert abspath(join(missing[1], os.pardir)) == mm_test.PAIR_MISSING_DIRECTORY
+    # Test that directories with no jsons are not counted
+    assert mm_error.find_missing_metadata(mm_test.BASIC_DIRECTORY) == []
 
 def test_find_missing_fields():
     """

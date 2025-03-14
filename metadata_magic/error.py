@@ -11,7 +11,7 @@ import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.meta_reader as mm_meta_reader
 import metadata_magic.archive as mm_archive
-from os.path import abspath, exists
+from os.path import abspath, basename, exists, join
 from typing import List
 
 LONG_DESCRIPTION = 1000
@@ -57,6 +57,15 @@ def find_missing_metadata(path:str) -> List[str]:
             index = media.index(pair["media"])
             del media[index]
         except ValueError: pass
+    # Remove dotfiles and media in directories with no JSON files
+    for media_num in range(len(media) - 1, -1, -1):
+        if basename(media[media_num]).startswith("."):
+            del media[media_num]
+            continue
+        # Check if parent dir contains JSON files
+        parent_dir = abspath(join(media[media_num], os.pardir))
+        if not mm_file_tools.directory_contains(parent_dir, ".json", False):
+            del media[media_num]
     # Return list of media without metadata
     return media
 

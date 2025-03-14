@@ -34,8 +34,8 @@ def separate_files(path:str) -> tuple:
             jsons.append(full_file)
         elif isdir(full_file):
             directories.append(full_file)
-        elif not extension in mm_archive.ARCHIVE_EXTENSIONS:
-            media.append(full_file)    
+        else:
+            media.append(full_file)
     # Append files in subdirectories
     for directory in directories:
         new_jsons, new_media = separate_files(directory)
