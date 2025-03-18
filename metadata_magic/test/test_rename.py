@@ -168,27 +168,14 @@ def test_get_string_from_metadata():
     metadata = {"title":"Name", "original":{"number":5, "other":"Final"}}
     assert mm_rename.get_string_from_metadata(metadata, "[{number}] {title}") == "[5] Name"
     assert mm_rename.get_string_from_metadata(metadata, "{title} - {other}") == "Name - Final"
-    # Test with series info
-    metadata = {"series_number":"15", "series_total":"20"}
-    assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") == "[15] AAA"
-    metadata = {"series_number":"1", "series_total":"20"}
-    assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") == "[01] AAA"
-    metadata = {"series_number":"1.00", "series_total":"15"}
-    assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") == "[01] AAA"
-    metadata = {"series_number":"1.5", "series_total":"1.0"}
-    assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") == "[01.5] AAA"
-    metadata = {"series_number":"12.0", "series_total":None}
-    assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") == "[12] AAA"
-    metadata = {"series_number":"1", "series_total":"1.0"}
-    assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") is None
-    metadata = {"series_number":"1.0", "series_total":"1"}
-    assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") is None
-    metadata = {"series_number":"A", "series_total":"20"}
-    assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") is None
-    metadata = {"series_number":"20", "series_total":"A"}
-    assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") is None
-    metadata = {"series_number":"20"}
-    assert mm_rename.get_string_from_metadata(metadata, "[{series_number}] AAA") is None
+    # Test padding number
+    metadata = {"title":"Name", "other":25, "original":{"number":5, "other":"Final"}}
+    assert mm_rename.get_string_from_metadata(metadata, "[{number!p3}] {title}") == "[005] Name"
+    assert mm_rename.get_string_from_metadata(metadata, "{other!p5} {number!p02}") == "00025 05"
+    assert mm_rename.get_string_from_metadata(metadata, "{title!p5}") == "0Name"
+    # Test that improper modifiers do nothing
+    assert mm_rename.get_string_from_metadata(metadata, "{title!pblah}") == "Name"
+    assert mm_rename.get_string_from_metadata(metadata, "{title!nothing}") == "Name"
     # Test getting string with empty keys
     metadata["id"] = None
     assert mm_rename.get_string_from_metadata(metadata, "{id}") is None
@@ -325,6 +312,15 @@ def test_sort_rename():
         # Test that subdirectories are not affected
         mm_rename.sort_rename(temp_dir, "NONE [#####]", 500)
         assert sorted(os.listdir(file_dir)) == ["[42].TXT", "[43].txt", "[44].txt"]
+    # Test limiting to a certain file pattern
+    with tempfile.TemporaryDirectory() as temp_dir:
+        file_dir = abspath(join(temp_dir, "copy"))
+        shutil.copytree(mm_test.PAIR_TEXT_DIRECTORY, file_dir)
+        mm_file_tools.write_text_file(abspath(join(file_dir, "text.txt")), "A")
+        mm_rename.sort_rename(file_dir, "#", file_pattern=r"\.txt$")
+        assert sorted(os.listdir(file_dir)) == ["1.JSON", "1.TXT", "2.txt", "text 1.htm", "text 1.json"]
+        mm_rename.sort_rename(file_dir, "A!", file_pattern=r"2")
+        assert sorted(os.listdir(file_dir)) == ["1.JSON", "1.TXT", "A!.txt", "text 1.htm", "text 1.json"]
     # Test renaming a single file
     with tempfile.TemporaryDirectory() as temp_dir:
         mm_file_tools.write_text_file(abspath(join(temp_dir, "AAA.png")), "AAA")

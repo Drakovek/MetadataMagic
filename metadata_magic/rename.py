@@ -2,6 +2,7 @@
 
 import os
 import re
+import copy
 import tqdm
 import argparse
 import html_string_tools
@@ -167,23 +168,18 @@ def get_string_from_metadata(metadata:dict, template:str) -> str:
     # Replace all the keys in the string with their values
     for key in keys:
         # Attempt to get the key
+        base_key = re.sub(r"!.*", "", key)
         try:
-            value = metadata[key]
+            value = metadata[base_key]
         except KeyError:
             try:
-                value = metadata["original"][key]
+                value = metadata["original"][base_key]
             except KeyError: return None
-        # Check if series number is valid and needed if specified
-        if key == "series_number":
-            try:
-                # Get the padded series number
-                padded = re.findall("^[0-9]+", value)[0].zfill(2)
-                value = re.sub(r"^[0-9]+", padded, value)
-                value = re.sub(r"\.0+$", "", value)
-                # Check that the file isn't 1 of 1
-                total = metadata["series_total"]
-                assert total is None or not float(total) == 1 or not float(value) == 1
-            except (AssertionError, IndexError, KeyError, TypeError, ValueError): return None
+        # Pad value, if appropriate
+        try:
+            pad_value = int(re.findall(r"(?<=!p)[0-9]+$", key)[0])
+            value = str(value).zfill(pad_value)
+        except IndexError: pass
         # Return none if the key is empty
         if value is None:
             return None
@@ -263,7 +259,7 @@ def rename_json_pairs(path:str, template:str, config:str, ascii_only:bool=False)
         rename_file(json, filename)
         rename_file(media, filename)
 
-def sort_rename(path:str, template:str, index:int=1):
+def sort_rename(path:str, rename_template:str, index:int=1, file_pattern:str=".*"):
     """
     Renames all the files in a directory to a standard name with index numbers.
     File numbers will be in the order that the files were originally sorted alpha-numerically.
@@ -300,18 +296,22 @@ def sort_rename(path:str, template:str, index:int=1):
         full_file = abspath(join(full_path, file))
         if not isdir(full_file):
             pairs.append({"json":None, "media":full_file})
+    # Delete pairs that don't match the file pattern
+    for i in range(len(pairs)-1, -1, -1):
+        if len(re.findall(file_pattern, basename(pairs[i]["media"]), flags=re.IGNORECASE)) < 1:
+            del pairs[i]
     # Update the template
     try:
-        updated_template = template
-        number_string = re.findall(r"#+(?=[^#]*$)", template)[0]
+        new_rename_template = copy.deepcopy(rename_template)
+        number_string = re.findall(r"#+(?=[^#]*$)", new_rename_template)[0]
     except IndexError:
         number_string = "##"
         if not index == 1 or len(pairs) > 1:
-            updated_template = f"{template} [##]"
+            new_rename_template = f"{rename_template} [##]"
     # Rename all the files
     for i in range(0, len(pairs)):
         # Don't rename if the filename is already correct
-        filename = re.sub(r"#+(?=[^#]*$)", str(i+index).zfill(len(number_string)), updated_template)
+        filename = re.sub(r"#+(?=[^#]*$)", str(i+index).zfill(len(number_string)), new_rename_template)
         filename = get_file_friendly_text(filename)
         if filename == re.sub(r"\.[^\.]{0,5}$", "", basename(pairs[i]["media"])):
             continue
@@ -344,8 +344,10 @@ def user_sort_rename(path:str):
             index = mm_archive.get_string_from_user("Starting Index", "1")
             index = int(index)
         except ValueError: index = None
+    # Get the filename pattern
+    file_pattern = mm_archive.get_string_from_user("File pattern", r".*")
     # Rename files
-    sort_rename(path, template, index)
+    sort_rename(path, template, index, file_pattern)
 
 def user_metadata_rename(path:str, ascii_only:bool=False):
     """
