@@ -35,6 +35,48 @@ def get_value_from_keylist(dictionary:dict, keylist:List[List[str]], type_obj):
             continue
     return None
 
+def get_string_from_metadata(metadata:dict, template:str) -> str:
+    """
+    Returns a text string based on given metadata and a string template.
+    Keys in the template marked as {key} will be replaced with the key values in metadata.
+
+    :param metadata: Dictionary with metadata key-value pairs
+    :type metadata: dict, required
+    :param template: Metadata string template
+    :type template: str, required
+    :return: String containing metadata as defined by the template
+    :rtype: str
+    """
+    # Find all keys in the template string
+    filename = template
+    keys = re.findall(r"(?<={)[^}]+(?=})", template)
+    # Replace all the keys in the string with their values
+    for key in keys:
+        # Attempt to get the key
+        base_key = re.sub(r"!.*", "", key)
+        try:
+            value = metadata[base_key]
+        except KeyError:
+            try:
+                value = metadata["original"][base_key]
+            except KeyError: return None
+        # Pad value, if appropriate
+        try:
+            pad_value = int(re.findall(r"(?<=!p)[0-9]+$", key)[0])
+            value = str(value).zfill(pad_value)
+        except IndexError: pass
+        # Return none if the key is empty
+        if value is None:
+            return None
+        # Convert the value to a string, if necessary
+        if isinstance(value, list):
+            value = ",".join(value)
+        filename = filename.replace(f"{{{key}}}", str(value))
+    # Remove all key references that weren't found in the metadata
+    filename = re.sub(r"{[^}]*}", "", filename).strip()
+    # Return the filename
+    return filename
+
 def get_id(json:dict, config:dict) -> str:
     """
     Attempts to find the ID from a given JSON dictionary.
@@ -193,12 +235,12 @@ def get_publisher(json:dict, config:dict) -> str:
     # Find a publisher by matching to a value in the config file
     url = url.lower()
     for comparison in config["json_reader"]["publisher"]["match"]:
-        if comparison["match"].lower() in url:
+        if re.fullmatch(comparison["match"], url, flags=re.IGNORECASE):
             return comparison["publisher"]
     # Return None of no appropriate publisher can be found
     return None
 
-def get_url(json:dict, config:dict, publisher:str=None, media_id:str=None) -> str:
+def get_url(json:dict, config:dict, publisher:str=None) -> str:
     """
     Gets the page URL for the media described by the JSON.
     
@@ -208,19 +250,22 @@ def get_url(json:dict, config:dict, publisher:str=None, media_id:str=None) -> st
     :type config: dict, required
     :param publisher: Publisher as returned by get_publisher, defaults to None
     :type publisher: str, optional
-    :param media_id: ID as returned by get_id, defaults to None
-    :type media_id: str, optional
     :return: URL that the media originated from
     :rtype: str
     """
     # Attempt to get the publisher via the publisher and id
     try:
         pattern = config["json_reader"]["url"]["patterns"][publisher]
-        return re.sub(r"\*+", media_id, pattern)
+        return get_string_from_metadata(json, pattern)
     except (KeyError, TypeError): pass
     # Return default URL if it couldn't be determined by ID and publisher
     keylist = config["json_reader"]["url"]["keys"]
-    return get_value_from_keylist(json, keylist, str)
+    url = get_value_from_keylist(json, keylist, str)
+    if url is None:
+        try:
+            url = get_value_from_keylist(json["original"], keylist, str)
+        except KeyError: return None
+    return url
 
 def get_tags(json:dict, config:dict) -> List[str]:
     """
@@ -303,6 +348,7 @@ def load_metadata(json_file:str, config:dict, media_file:str) -> dict:
     # Set the path of the JSON in the metadata
     meta_dict = {"json_path":abspath(json_file)}
     # Add internal metadata in standardized forms
+    meta_dict["original"] = json
     meta_dict["id"] = get_id(json, config)
     meta_dict["title"] = get_title(json, config)
     meta_dict["num"] = get_num(json, config)
@@ -310,10 +356,9 @@ def load_metadata(json_file:str, config:dict, media_file:str) -> dict:
     meta_dict["description"] = get_description(json, config)
     meta_dict["publisher"] = get_publisher(json, config)
     meta_dict["tags"] = get_tags(json, config)
-    meta_dict["url"] = get_url(json, config, meta_dict["publisher"], meta_dict["id"])
     meta_dict["age_rating"] = get_age_rating(json, config, meta_dict["publisher"])
     extension = html_string_tools.get_extension(media_file)
     meta_dict["artists"], meta_dict["writers"] = get_artists_and_writers(json, config, extension)
-    meta_dict["original"] = json
+    meta_dict["url"] = get_url(meta_dict, config, meta_dict["publisher"])
     # Return the dict with all metadata
     return meta_dict

@@ -3,6 +3,7 @@
 MetadataMagic is a command line utility for managing media and their respective metadata. This includes cleaning up naming for `.json` metadata as downloaded by applications such as [gallery-dl](https://github.com/mikf/gallery-dl) and [yt-dlp](https://github.com/yt-dlp/yt-dlp), as well as packaging media and metadata together into archive formats such as `.cbz` and `epub`.
 
 - [Installation](#installation)
+- [Configuration](#configuration)
 - [Scripts](#scripts)
 
 # Installation
@@ -18,6 +19,26 @@ If you are installing from source, the following python packages are required:
 * [Pillow](https://github.com/python-pillow/Pillow)
 * [Python-Print-Tools](https://github.com/Drakovek/Python-Print-Tools)
 * [tqdm](https://pypi.org/project/tqdm/)
+
+## Configuration
+
+Configuration files for *Metadata-Magic* are stored in JSON format. Documentation for all the available configuration options can be found at [/docs/configuration.md](./docs/configuration.md)
+
+A default config file can be found at [/docs/metadata-magic.json](./docs/metadata-magic.json)
+
+*Metadata-Magic* looks for config files in the following locations:
+
+**WINDOWS:**
++ `%APPDATA%\metadata-magic\config.json`
++ `%USERPROFILE%\metadata-magic\config.json`
++ `%USERPROFILE%\metadata-magic.json`
+
+(`%USERPROFILE%` usually refers to a user's home directory, i.e. C:\Users\<username>\)
+
+**LINUX/MAC/UNIX-BASED:**
++ `/etc/metadata-magic.json`
++ `${HOME}/.config/metadata-magic/config.json`
++ `${HOME}/.metadata-magic.json`
 
 # Scripts
 

@@ -13,6 +13,7 @@ import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.meta_reader as mm_meta_reader
 import metadata_magic.archive as mm_archive
+from metadata_magic.meta_reader import get_string_from_metadata
 from os.path import abspath, basename, isdir, exists, join
 from typing import List
 
@@ -149,48 +150,6 @@ def rename_file(file:str, new_filename:str, ascii_only:bool=False) -> str:
         return new_file
     except FileNotFoundError:
         return None
-
-def get_string_from_metadata(metadata:dict, template:str) -> str:
-    """
-    Returns a text string based on given metadata and a string template.
-    Keys in the template marked as {key} will be replaced with the key values in metadata.
-    
-    :param metadata: Dictionary with metadata key-value pairs
-    :type metadata: dict, required
-    :param template: Metadata string template
-    :type template: str, required
-    :return: String containing metadata as defined by the template
-    :rtype: str
-    """
-    # Find all keys in the template string
-    filename = template
-    keys = re.findall(r"(?<={)[^}]+(?=})", template)
-    # Replace all the keys in the string with their values
-    for key in keys:
-        # Attempt to get the key
-        base_key = re.sub(r"!.*", "", key)
-        try:
-            value = metadata[base_key]
-        except KeyError:
-            try:
-                value = metadata["original"][base_key]
-            except KeyError: return None
-        # Pad value, if appropriate
-        try:
-            pad_value = int(re.findall(r"(?<=!p)[0-9]+$", key)[0])
-            value = str(value).zfill(pad_value)
-        except IndexError: pass
-        # Return none if the key is empty
-        if value is None:
-            return None
-        # Convert the value to a string, if necessary
-        if isinstance(value, list):
-            value = ",".join(value)
-        filename = filename.replace(f"{{{key}}}", str(value))
-    # Remove all key references that weren't found in the metadata
-    filename = re.sub(r"{[^}]*}", "", filename).strip()
-    # Return the filename
-    return filename
 
 def rename_archives(path:str, template:str, ascii_only:bool=False):
     """

@@ -29,6 +29,38 @@ def test_get_value_from_keylist():
     assert mm_meta_reader.get_value_from_keylist(dictionary, ["nope", "not this either", ["or", "this"]], int) is None
     assert mm_meta_reader.get_value_from_keylist(None, ["nope"], str) is None
 
+def test_get_string_from_metadata():
+    """
+    Tests the get_string_from_metadata function
+    """
+    # Test getting string with no formatting
+    assert mm_meta_reader.get_string_from_metadata({"name":"thing"}, "Blah") == "Blah"
+    # Test getting string with some metadata keys
+    metadata = {"title":"This is a title", "artist":"Person", "thing":"Other"}
+    assert mm_meta_reader.get_string_from_metadata(metadata, "{title}") == "This is a title"
+    assert mm_meta_reader.get_string_from_metadata(metadata, "{thing}_{title}") == "Other_This is a title"
+    assert mm_meta_reader.get_string_from_metadata(metadata, "[{thing}] ({artist})") == "[Other] (Person)"
+    # Test getting string with non-existant keys
+    assert mm_meta_reader.get_string_from_metadata(metadata, "{blah}") is None
+    assert mm_meta_reader.get_string_from_metadata(metadata, "{other} {title}  ") is None
+    assert mm_meta_reader.get_string_from_metadata(metadata, "{a}{b}{c}{thing}{e}{f}") is None
+    # Test getting string with existing JSON data
+    metadata = {"title":"Name", "original":{"number":5, "other":"Final"}}
+    assert mm_meta_reader.get_string_from_metadata(metadata, "[{number}] {title}") == "[5] Name"
+    assert mm_meta_reader.get_string_from_metadata(metadata, "{title} - {other}") == "Name - Final"
+    # Test padding number
+    metadata = {"title":"Name", "other":25, "original":{"number":5, "other":"Final"}}
+    assert mm_meta_reader.get_string_from_metadata(metadata, "[{number!p3}] {title}") == "[005] Name"
+    assert mm_meta_reader.get_string_from_metadata(metadata, "{other!p5} {number!p02}") == "00025 05"
+    assert mm_meta_reader.get_string_from_metadata(metadata, "{title!p5}") == "0Name"
+    # Test that improper modifiers do nothing
+    assert mm_meta_reader.get_string_from_metadata(metadata, "{title!pblah}") == "Name"
+    assert mm_meta_reader.get_string_from_metadata(metadata, "{title!nothing}") == "Name"
+    # Test getting string with empty keys
+    metadata["id"] = None
+    assert mm_meta_reader.get_string_from_metadata(metadata, "{id}") is None
+    assert mm_meta_reader.get_string_from_metadata(metadata, "{id} Thing") is None
+
 def test_load_metadata():
     """
     Tests the load_metadata function.
@@ -311,19 +343,25 @@ def test_get_url():
     metadata = {"post_url":"page/url/", "title":"AAA"}
     assert mm_meta_reader.get_url(metadata, config) == "page/url/" 
     # Test getting Fur Affinity URL based on publisher and ID from config
-    url = mm_meta_reader.get_url({}, config, "Fur Affinity", "ID123")
+    url = mm_meta_reader.get_url({"id":"ID123"}, config, "Fur Affinity")
     assert url == "https://www.furaffinity.net/view/ID123"
-    url = mm_meta_reader.get_url({}, config, "Fur Affinity", "Other")
+    url = mm_meta_reader.get_url({"id":"Other"}, config, "Fur Affinity")
     assert url == "https://www.furaffinity.net/view/Other"
     # Test getting pixiv URL
-    url = mm_meta_reader.get_url({}, config, "pixiv", "ID123")
+    url = mm_meta_reader.get_url({"id":"ID123"}, config, "Pixiv")
     assert url == "https://www.pixiv.net/en/artworks/ID123"
-    url = mm_meta_reader.get_url({}, config, "pixiv", "Other")
+    url = mm_meta_reader.get_url({"id":"Other"}, config, "Pixiv")
     assert url == "https://www.pixiv.net/en/artworks/Other"
+    # Test getting Bluesky URL
+    url = mm_meta_reader.get_url({"artists":["person.net"], "id":"abcd"}, config, "Bluesky")
+    assert url == "https://bsky.app/profile/person.net/post/abcd"
+    # Test getting Twitter URL
+    url = mm_meta_reader.get_url({"artists":["person.net"], "id":"abcd"}, config, "Twitter")
+    assert url == "https://twitter.com/person.net/status/abcd"
     # Test if the publisher or ID are invalid
-    assert mm_meta_reader.get_url({}, config, "NonExistant", "ID123") is None
-    assert mm_meta_reader.get_url({}, config, None, "ID123") is None
-    assert mm_meta_reader.get_url({}, config, "Fur Affinity", None) is None
+    assert mm_meta_reader.get_url({}, config, "NonExistant") is None
+    assert mm_meta_reader.get_url({}, config, None) is None
+    assert mm_meta_reader.get_url({}, config, "Fur Affinity") is None
     # Test if there is no url or publisher info
     assert mm_meta_reader.get_url({}, config) is None
     # Test getting URL when loading metadata
