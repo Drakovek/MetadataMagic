@@ -16,10 +16,12 @@ import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.archive as mm_archive
 import metadata_magic.archive.epub as mm_epub
+import metadata_magic.archive.mkv as mm_mkv
 import metadata_magic.archive.comic_archive as mm_comic_archive
 from os.path import abspath, basename, exists, isdir, join
 
-def archive_all_media(directory:str, config:dict, format_title:bool=False, description_length:int=1000) -> bool:
+def archive_all_media(directory:str, config:dict,
+            format_title:bool=False, description_length:int=1000) -> bool:
     """
     Takes all supported JSON-media pairs and archives them into their appropriate media archives.
     Text files are archived into EPUB files.
@@ -100,7 +102,8 @@ def archive_all_media(directory:str, config:dict, format_title:bool=False, descr
             return False
     return True
 
-def extract_cbz(cbz_file:str, output_directory:str, create_folder:bool=True, remove_structure:bool=False) -> bool:
+def extract_cbz(cbz_file:str, output_directory:str,
+            create_folder:bool=True, remove_structure:bool=False) -> bool:
     """
     Extracts the contents of a CBZ file into a given directory.
     
@@ -122,7 +125,8 @@ def extract_cbz(cbz_file:str, output_directory:str, create_folder:bool=True, rem
     return mm_file_tools.extract_zip(cbz_file, full_directory, create_folder=create_folder,
             remove_internal=remove_structure, delete_files=remove_list)
 
-def extract_epub(epub_file:str, output_directory:str, create_folder:bool=True, remove_structure:bool=False) -> bool:    
+def extract_epub(epub_file:str, output_directory:str,
+            create_folder:bool=True, remove_structure:bool=False) -> bool:
     """
     Extracts the contents of a EPUB file into a given directory.
     
@@ -170,6 +174,29 @@ def extract_epub(epub_file:str, output_directory:str, create_folder:bool=True, r
             assert exists(new_file)
     return True
 
+def extract_mkv(mkv_file:str, output_directory:str) -> bool:
+    """
+    Extracts the contents of an mkv file to a given directory.
+    Really just extracts the original JSON metadata, if embedded in the file.
+
+    :param mkv_file: Path to MKV file to extract
+    :type mkv_file: str, required
+    :param output_directory: Directory to extract MKV file to
+    :type output_directory: str, required
+    :return: Whether extracting files was successful
+    :rtype: bool
+    """
+    metadata = mm_mkv.get_info_from_mkv(mkv_file)
+    # Create JSON metadata file, if appropriate
+    if not metadata["original"] == {}:
+        filename = basename(mkv_file)[:-4]
+        filename = mm_rename.get_available_filename(["AAA.json"], filename, abspath(output_directory))
+        json_file = abspath(join(output_directory, f"{filename}.json"))
+        mm_file_tools.write_json_file(json_file, metadata["original"])
+        # Remove existing metadata from the mkv file
+        mm_mkv.remove_all_mkv_metadata(mkv_file)
+    return True
+
 def extract_all_archives(directory:str, create_folders:bool=True, remove_structure:bool=False) -> bool:
     """
     Extracts the contents of all media archive files in the given directory.
@@ -190,6 +217,7 @@ def extract_all_archives(directory:str, create_folders:bool=True, remove_structu
     for archive in tqdm.tqdm(archives):
         try:
             # Extract archives
+            remove_archive = True
             parent_dir = abspath(join(archive, os.pardir))
             extension = html_string_tools.get_extension(archive).lower()
             if extension == ".cbz":
@@ -198,6 +226,9 @@ def extract_all_archives(directory:str, create_folders:bool=True, remove_structu
             elif extension == ".epub":
                 assert extract_epub(archive, parent_dir, create_folder=create_folders,
                         remove_structure=remove_structure)
+            elif extension == ".mkv":
+                remove_archive = False
+                assert extract_mkv(archive, parent_dir)
             else:
                 assert False
         except AssertionError:
@@ -205,7 +236,8 @@ def extract_all_archives(directory:str, create_folders:bool=True, remove_structu
             python_print_tools.color_print(f"Failed Extracting \"{archive}\"", "red")
             return False
         # Remove the existing archive
-        os.remove(archive)
+        if remove_archive:
+            os.remove(archive)
     return True
 
 def main():

@@ -12,13 +12,15 @@ import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.meta_reader as mm_meta_reader
 import metadata_magic.archive.epub as mm_epub
+import metadata_magic.archive.mkv as mm_mkv
 import metadata_magic.archive.comic_archive as mm_comic_archive
 from os.path import abspath, isdir, exists
 from typing import List
 
-ARCHIVE_EXTENSIONS = [".cbz", ".epub"]
-SUPPORTED_IMAGES = [".png", ".jpeg", ".jpg"]
+ARCHIVE_EXTENSIONS = [".cbz", ".epub", ".mkv"]
+SUPPORTED_IMAGES = [".gif", ".png", ".jpeg", ".jpg"]
 SUPPORTED_TEXT = [".txt", ".html", ".htm"]
+SUPPORTED_VIDEO = [".mkv", ".webm", ".mp4", ".m4v", ".avi"]
 
 def get_directory_archive_type(directory:str) -> str:
     """
@@ -38,6 +40,9 @@ def get_directory_archive_type(directory:str) -> str:
     # Return "cbz" if the directory contains image files
     if mm_file_tools.directory_contains(directory, SUPPORTED_IMAGES, True):
         return "cbz"
+    # Return "mkv" if the directory contains video files
+    if mm_file_tools.directory_contains(directory, SUPPORTED_VIDEO, False):
+        return "mkv"
     # Return None if no appropriate archive format could be found
     return None
 
@@ -145,6 +150,10 @@ def get_info_from_archive(file:str) -> dict:
     metadata = mm_epub.get_info_from_epub(file)
     if not metadata == get_empty_metadata():
         return metadata
+    # Try getting info from an MKV file
+    metadata = mm_mkv.get_info_from_mkv(file)["metadata"]
+    if not metadata == get_empty_metadata():
+        return metadata
     # Return empty metadata
     return get_empty_metadata()
 
@@ -202,6 +211,8 @@ def update_archive_info(archive_file:str, metadata:dict,
                 update_cover=update_cover, always_overwrite=always_overwrite)
     if extension == ".cbz":
         mm_comic_archive.update_cbz_info(archive_file, metadata, always_overwrite=always_overwrite)
+    if extension == ".mkv":
+        mm_mkv.update_mkv_info(archive_file, metadata)
 
 def generate_cover_image(title:str, authors:List[str], path:str) -> bool:
     """
@@ -462,3 +473,8 @@ def main():
             if archive_type == "epub":
                 chapters = mm_epub.get_chapters_from_user(path, metadata)
                 mm_epub.create_epub(chapters, metadata, path)
+            if archive_type == "mkv":
+                success = mm_mkv.create_mkv(path, metadata["title"], metadata, remove_files=args.xxxxx)
+                if not success:
+                    python_print_tools.color_print("Failed to create MKV video.", "red")
+                    python_print_tools.color_print("More than one video file in directory?", "red")

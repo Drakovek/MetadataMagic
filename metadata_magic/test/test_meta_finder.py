@@ -11,7 +11,7 @@ def test_separate_files():
     """
     # Check that all JSON files were found
     jsons, media = mm_meta_finder.separate_files(mm_test.PAIR_DIRECTORY)
-    assert len(jsons) == 13
+    assert len(jsons) == 14
     assert basename(jsons[0]) == "a.large.json"
     assert abspath(join(jsons[0], os.pardir)) == mm_test.PAIR_GIF_DIRECTORY
     assert basename(jsons[1]) == "small.gif.json"
@@ -38,8 +38,10 @@ def test_separate_files():
     assert abspath(join(jsons[11], os.pardir)) == mm_test.PAIR_TEXT_DIRECTORY
     assert basename(jsons[12]) == "A.A.json"
     assert abspath(join(jsons[12], os.pardir)) == mm_test.PAIR_VIDEO_DIRECTORY
+    assert basename(jsons[13]) == "basicvideo.json"
+    assert abspath(join(jsons[13], os.pardir)) == mm_test.PAIR_VIDEO_DIRECTORY
     # Check that all non-JSON files were found
-    assert len(media) == 14
+    assert len(media) == 15
     assert basename(media[0]) == "a.large.gif"
     assert abspath(join(media[0], os.pardir)) == mm_test.PAIR_GIF_DIRECTORY
     assert basename(media[1]) == "small.GIF"
@@ -68,9 +70,11 @@ def test_separate_files():
     assert abspath(join(media[12], os.pardir)) == mm_test.PAIR_TEXT_DIRECTORY
     assert basename(media[13]) == "A.A.mkv"
     assert abspath(join(media[13], os.pardir)) == mm_test.PAIR_VIDEO_DIRECTORY
+    assert basename(media[14]) == "basicvideo.mp4"
+    assert abspath(join(media[14], os.pardir)) == mm_test.PAIR_VIDEO_DIRECTORY
     # Check that archive files are included
     jsons, media = mm_meta_finder.separate_files(mm_test.ARCHIVE_DIRECTORY)
-    assert len(media) == 13
+    assert len(media) == 16
     assert jsons == []
 
 def test_get_pairs_from_list():
@@ -99,7 +103,7 @@ def test_get_pairs():
     Tests the get_pairs function.
     """
     pairs = mm_meta_finder.get_pairs(mm_test.PAIR_DIRECTORY)
-    assert len(pairs) == 11
+    assert len(pairs) == 12
     assert basename(pairs[0]["json"]) == "a.large.json"
     assert basename(pairs[0]["media"]) == "a.large.gif"
     assert abspath(join(pairs[0]["json"], os.pardir)) == mm_test.PAIR_GIF_DIRECTORY
@@ -144,3 +148,7 @@ def test_get_pairs():
     assert basename(pairs[10]["media"]) == "A.A.mkv"
     assert abspath(join(pairs[10]["json"], os.pardir)) == mm_test.PAIR_VIDEO_DIRECTORY
     assert abspath(join(pairs[10]["media"], os.pardir)) == mm_test.PAIR_VIDEO_DIRECTORY
+    assert basename(pairs[11]["json"]) == "basicvideo.json"
+    assert basename(pairs[11]["media"]) == "basicvideo.mp4"
+    assert abspath(join(pairs[11]["json"], os.pardir)) == mm_test.PAIR_VIDEO_DIRECTORY
+    assert abspath(join(pairs[11]["media"], os.pardir)) == mm_test.PAIR_VIDEO_DIRECTORY

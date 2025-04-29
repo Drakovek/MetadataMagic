@@ -22,7 +22,7 @@ def test_get_default_labels():
         assert labels[0]["label"] == "1.0"
         assert basename(labels[1]["file"]) == "10.epub"
         assert labels[1]["label"] == "1.5"
-        assert basename(labels[2]["file"]) == "2.cbz"
+        assert basename(labels[2]["file"]) == "2.mkv"
         assert labels[2]["label"] == "2.0"
         assert basename(labels[3]["file"]) == "00A.cbz"
         assert labels[3]["label"] == "100000.0"
@@ -44,7 +44,7 @@ def test_get_default_labels():
         assert labels[1]["label"] == "2.0"
         assert basename(labels[2]["file"]) == "1.cbz"
         assert labels[2]["label"] == "3.0"
-        assert basename(labels[3]["file"]) == "2.cbz"
+        assert basename(labels[3]["file"]) == "2.mkv"
         assert labels[3]["label"] == "4.0"
         assert basename(labels[4]["file"]) == "10.epub"
         assert labels[4]["label"] == "5.0"
@@ -149,8 +149,8 @@ def test_write_series():
         assert metadata["series"] == "Series Test"
         assert metadata["series_number"] == "0.5"
         assert metadata["series_total"] is None
-        metadata = mm_archive.get_info_from_archive(abspath(join(series_directory, "2.cbz")))
-        assert metadata["title"] == "CBZ B"
+        metadata = mm_archive.get_info_from_archive(abspath(join(series_directory, "2.mkv")))
+        assert metadata["title"] == "MKV B"
         assert metadata["series"] == "Series Test"
         assert metadata["series_number"] == "1.0"
         assert metadata["series_total"] == "2"
@@ -191,6 +191,17 @@ def test_write_series_single():
         assert metadata["series"] == "EPUB B"
         assert metadata["series_number"] == "1.0"
         assert metadata["series_total"] is None
+    # Test setting a MKV file as a single archive
+    base_file = abspath(join(mm_test.ARCHIVE_SERIES_DIRECTORY, "2.mkv"))
+    with tempfile.TemporaryDirectory() as temp_dir:
+        mkv_file = abspath(join(temp_dir, "2.mkv"))
+        shutil.copy(base_file, mkv_file)
+        mm_series.write_series_single(mkv_file)
+        metadata = mm_archive.get_info_from_archive(mkv_file)
+        assert metadata["title"] == "MKV B"
+        assert metadata["series"] == "MKV B"
+        assert metadata["series_number"] == "1.0"
+        assert metadata["series_total"] == "1"
 
 def test_get_series_string():
     """

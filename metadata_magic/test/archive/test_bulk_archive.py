@@ -8,6 +8,7 @@ import metadata_magic.config as mm_config
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive as mm_archive
 import metadata_magic.archive.epub as mm_epub
+import metadata_magic.archive.mkv as mm_mkv
 import metadata_magic.archive.bulk_archive as mm_bulk_archive
 import metadata_magic.archive.comic_archive as mm_comic_archive
 from os.path import abspath, join
@@ -89,6 +90,13 @@ def test_archive_all_media():
         epub_extracted = abspath(join(epub_extracted, "EPUB"))
         epub_extracted = abspath(join(epub_extracted, "content"))
         assert sorted(os.listdir(epub_extracted)) == ["TXT.xhtml", "cover_image.xhtml"]
+    # Test that video files are not auto archived
+    config = mm_config.get_config([])
+    with tempfile.TemporaryDirectory() as temp_dir:
+        video_directory = abspath(join(temp_dir, "videos"))
+        shutil.copytree(mm_test.PAIR_VIDEO_DIRECTORY, video_directory)
+        mm_bulk_archive.archive_all_media(video_directory, config)
+        assert sorted(os.listdir(video_directory)) == ["A.A.json", "A.A.mkv", "basicvideo.json", "basicvideo.mp4"]
     # Test bulk archiving while formatting the titles, and ignoring unpaired
     base_directory = abspath(join(mm_test.EPUB_INTERNAL_DIRECTORY, "multiple"))
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -218,6 +226,67 @@ def test_extract_epub():
         assert not mm_bulk_archive.extract_epub(cbz_file, temp_dir, remove_structure=True)
         assert os.listdir(temp_dir) == ["basic.CBZ"]
 
+def test_extract_mkv():
+    """
+    Tests the extract_mkv function.
+    """
+    # Test extracting an MKV file's JSON metadata into a directory
+    original_file = abspath(join(mm_test.ARCHIVE_MKV_DIRECTORY, "full.MKV"))
+    with tempfile.TemporaryDirectory() as temp_dir:
+        base_file = abspath(join(temp_dir, "full.MKV"))
+        shutil.copy(original_file, base_file)
+        assert mm_bulk_archive.extract_mkv(base_file, temp_dir)
+        assert sorted(os.listdir(temp_dir)) == ["full.MKV", "full.json"]
+        json_file = abspath(join(temp_dir, "full.json"))
+        contents = mm_file_tools.read_json_file(json_file)
+        assert contents["title"] == "Video Title"
+        assert contents["artist"] == "Person"
+        assert contents["date"] == "2020-01-01"
+        # Test that the file no longer contains metadata
+        metadata = mm_mkv.get_info_from_mkv(base_file)
+        assert metadata["metadata"] == mm_archive.get_empty_metadata()
+        assert metadata["original"] == {}
+    # Test extracting into a directory where the extracted JSON name already exists
+    original_file = abspath(join(mm_test.ARCHIVE_MKV_DIRECTORY, "full.MKV"))
+    with tempfile.TemporaryDirectory() as temp_dir:
+        base_file = abspath(join(temp_dir, "full.MKV"))
+        shutil.copy(original_file, base_file)
+        existing_json = abspath(join(temp_dir, "full.json"))
+        mm_file_tools.write_json_file(existing_json, {"key":"value"})
+        assert mm_bulk_archive.extract_mkv(base_file, temp_dir)
+        assert sorted(os.listdir(temp_dir)) == ["full-2.json", "full.MKV", "full.json", ]
+        json_file = abspath(join(temp_dir, "full.json"))
+        contents = mm_file_tools.read_json_file(json_file)
+        assert contents["key"] == "value"
+        json_file = abspath(join(temp_dir, "full-2.json"))
+        contents = mm_file_tools.read_json_file(json_file)
+        assert contents["title"] == "Video Title"
+        assert contents["artist"] == "Person"
+        assert contents["date"] == "2020-01-01"
+        # Test that the file no longer contains metadata
+        metadata = mm_mkv.get_info_from_mkv(base_file)
+        assert metadata["metadata"] == mm_archive.get_empty_metadata()
+        assert metadata["original"] == {}
+    # Test extracting if the MKV does not contain original JSON metadata
+    original_file = abspath(join(mm_test.ARCHIVE_MKV_DIRECTORY, "nojson.mkv"))
+    with tempfile.TemporaryDirectory() as temp_dir:
+        base_file = abspath(join(temp_dir, "nojson.mkv"))
+        shutil.copy(original_file, base_file)
+        assert mm_bulk_archive.extract_mkv(base_file, temp_dir)
+        assert sorted(os.listdir(temp_dir)) == ["nojson.mkv"]
+        metadata = mm_mkv.get_info_from_mkv(base_file)
+        assert metadata["original"] == {}
+        assert metadata["metadata"]["title"] == "No JSON Included"
+        assert metadata["metadata"]["artists"] == ["Person"]
+        assert metadata["metadata"]["tags"] == ["video", "tags"]
+    # Test if the file is not a valid MKV
+    with tempfile.TemporaryDirectory() as temp_dir:
+        text_file = abspath(join(temp_dir, "file.mkv"))
+        mm_file_tools.write_text_file(text_file, "Fake Video")
+        assert mm_bulk_archive.extract_mkv(text_file, temp_dir)
+        assert sorted(os.listdir(temp_dir)) == ["file.mkv"]
+        assert mm_file_tools.read_text_file(text_file) == "Fake Video"
+
 def test_extract_all_archives():
     """
     Tests the extract_all_archives function.
@@ -226,13 +295,16 @@ def test_extract_all_archives():
     with tempfile.TemporaryDirectory() as temp_dir:
         cbz_directory = abspath(join(temp_dir, "cbzs"))
         epub_directory = abspath(join(temp_dir, "epubs"))
+        mkv_directory = abspath(join(temp_dir, "mkvs"))
         shutil.copytree(mm_test.ARCHIVE_CBZ_DIRECTORY, cbz_directory)
         shutil.copytree(mm_test.ARCHIVE_EPUB_DIRECTORY, epub_directory)
+        shutil.copytree(mm_test.ARCHIVE_MKV_DIRECTORY, mkv_directory)
         assert mm_bulk_archive.extract_all_archives(temp_dir, create_folders=True, remove_structure=False)
         assert sorted(os.listdir(cbz_directory)) == ["NoPage", "SubInfo", "basic", "empty"]
         assert sorted(os.listdir(abspath(join(cbz_directory, "basic")))) == ["Comic", "ComicInfo.xml"]
         assert sorted(os.listdir(epub_directory)) == ["basic", "long", "small"]
         assert sorted(os.listdir(abspath(join(epub_directory, "basic")))) == ["EPUB", "META-INF", "mimetype"]
+        assert sorted(os.listdir(mkv_directory)) == ["empty.mkv", "full.MKV", "full.json", "nojson.mkv"]
     # Test extracting archives while removing the internal structure
     with tempfile.TemporaryDirectory() as temp_dir:
         cbz_directory = abspath(join(temp_dir, "cbzs"))
@@ -250,7 +322,9 @@ def test_extract_all_archives():
     with tempfile.TemporaryDirectory() as temp_dir:
         fake_cbz = abspath(join(temp_dir, "fake.cbz"))
         fake_epub = abspath(join(temp_dir, "fake.epub"))
+        fake_mkv = abspath(join(temp_dir, "fake.mkv"))
         shutil.copy(abspath(join(mm_test.BASIC_TEXT_DIRECTORY, "unicode.txt")), fake_cbz)
         shutil.copy(abspath(join(mm_test.BASIC_TEXT_DIRECTORY, "unicode.txt")), fake_epub)
+        shutil.copy(abspath(join(mm_test.BASIC_TEXT_DIRECTORY, "unicode.txt")), fake_mkv)
         assert not mm_bulk_archive.extract_all_archives(temp_dir, create_folders=True, remove_structure=False)
-        assert sorted(os.listdir(temp_dir)) == ["fake.cbz", "fake.epub"]
+        assert sorted(os.listdir(temp_dir)) == ["fake.cbz", "fake.epub", "fake.mkv"]

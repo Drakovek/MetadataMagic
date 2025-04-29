@@ -8,6 +8,7 @@ import metadata_magic.config as mm_config
 import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive as mm_archive
 import metadata_magic.archive.epub as mm_epub
+import metadata_magic.archive.mkv as mm_mkv
 import metadata_magic.archive.comic_archive as mm_comic_archive
 from os.path import abspath, join
 from PIL import Image
@@ -21,13 +22,16 @@ def test_get_directory_archive_type():
     assert mm_archive.get_directory_archive_type(mm_test.PAIR_DIRECTORY) == "epub"
     # Test getting cbz from folder with images
     assert mm_archive.get_directory_archive_type(mm_test.PAIR_IMAGE_DIRECTORY) == "cbz"
+    assert mm_archive.get_directory_archive_type(mm_test.PAIR_GIF_DIRECTORY) == "cbz"
     # Test getting "cbz" from subdirectory with images
     with tempfile.TemporaryDirectory() as temp_dir:
         image_subdir = abspath(join(temp_dir, "images"))
         shutil.copytree(mm_test.PAIR_IMAGE_DIRECTORY, image_subdir)
         assert mm_archive.get_directory_archive_type(temp_dir) == "cbz"
+    # Test getting "mkv" from subdirectory with video
+    assert mm_archive.get_directory_archive_type(mm_test.PAIR_VIDEO_DIRECTORY) == "mkv"
     # Test that None is returned from a directory with no relevant files
-    assert mm_archive.get_directory_archive_type(mm_test.PAIR_VIDEO_DIRECTORY) is None
+    assert mm_archive.get_directory_archive_type(mm_test.BASIC_DIRECTORY) is None
 
 def test_get_empty_metadata():
     """
@@ -134,6 +138,22 @@ def test_get_info_from_archive():
     assert metadata["age_rating"] == "Everyone"
     assert metadata["score"] == "3"
     assert metadata["page_count"] == "36"
+    # Test getting metadata from an MKV file
+    mkv_file = abspath(join(mm_test.ARCHIVE_MKV_DIRECTORY, "full.MKV"))
+    metadata = mm_archive.get_info_from_archive(mkv_file)
+    assert metadata["title"] == "Videó"
+    assert metadata["series"] == "Movies"
+    assert metadata["series_number"] == "3.5"
+    assert metadata["series_total"] == "8"
+    assert metadata["description"] == "Video Description"
+    assert metadata["date"] == "2014-01-30"
+    assert metadata["writers"] == ["Writer"]
+    assert metadata["artists"] == ["Director", "Other"]
+    assert metadata["publisher"] == "DVK"
+    assert metadata["tags"] == ["Video", "Tag"]
+    assert metadata["url"] == "/non/existant/vpage"
+    assert metadata["age_rating"] == "Mature"
+    assert metadata["score"] == "2"
     # Test getting metadata from a non-archive file
     text_file = abspath(join(mm_test.BASIC_TEXT_DIRECTORY, "latin1.txt"))
     assert mm_archive.get_info_from_archive(text_file) == mm_archive.get_empty_metadata()
@@ -198,6 +218,22 @@ def test_update_archive_info():
         assert read_metadata["writers"] == ["AAAAA"]
         assert read_metadata["artists"] is None
         assert read_metadata["publisher"] is None
+    # Test updating an MKV file
+    base_file = abspath(join(mm_test.ARCHIVE_MKV_DIRECTORY, "full.MKV"))
+    with tempfile.TemporaryDirectory() as temp_dir:
+        mkv_file = abspath(join(temp_dir, "full.MKV"))
+        shutil.copy(base_file, mkv_file)
+        read_metadata = mm_mkv.get_info_from_mkv(mkv_file)
+        assert read_metadata["metadata"]["title"] == "Videó"
+        metadata = mm_archive.get_empty_metadata()
+        metadata["title"] = "New Video Title"
+        metadata["artists"] = ["New", "People"]
+        mm_archive.update_archive_info(mkv_file, metadata)
+        read_metadata = mm_mkv.get_info_from_mkv(mkv_file)
+        assert read_metadata["metadata"]["title"] == "New Video Title"
+        assert read_metadata["metadata"]["artists"] == ["New", "People"]
+        assert read_metadata["metadata"]["writers"] is None
+        assert read_metadata["metadata"]["publisher"] is None
     # Test attempting to update non-archive files
     base_file = abspath(join(mm_test.BASIC_TEXT_DIRECTORY, "unicode.txt"))
     with tempfile.TemporaryDirectory() as temp_dir:

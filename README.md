@@ -1,6 +1,6 @@
 # MetadataMagic
 
-MetadataMagic is a command line utility for managing media and their respective metadata. This includes cleaning up naming for `.json` metadata as downloaded by applications such as [gallery-dl](https://github.com/mikf/gallery-dl) and [yt-dlp](https://github.com/yt-dlp/yt-dlp), as well as packaging media and metadata together into archive formats such as `.cbz` and `epub`.
+MetadataMagic is a command line utility for managing media and their respective metadata. This includes cleaning up naming for `.json` metadata as downloaded by applications such as [gallery-dl](https://github.com/mikf/gallery-dl) and [yt-dlp](https://github.com/yt-dlp/yt-dlp), as well as packaging media and metadata together into archive formats such as `.cbz`, `epub`, and `.mkv`.
 
 - [Installation](#installation)
 - [Configuration](#configuration)
@@ -54,7 +54,7 @@ If left empty, [directory] defaults to the current working directory.
 
 ## mm-archive
 
-The `mm-archive` command can be used to archive the media files and `.json` metadata in a directory into a single media archive. Currently, the `mm-archive` command supports `.cbz` and `.epub` formatting. If the given directory contains `.txt` or `.html` files, these text files will be archived and converted into the `.epub` ebook file. If the given directory contains only `.png` or `.jpeg`/`.jpg` image files and no text, the files will be archived into a `.cbz` comic book archive file.
+The `mm-archive` command can be used to archive the media files and `.json` metadata in a directory into a single media archive. Currently, the `mm-archive` command supports `.cbz`, `.epub`, and `mkv` formatting. If the given directory contains `.txt` or `.html` files, these text files will be archived and converted into the `.epub` ebook file. If the given directory contains only `.png`, `.jpeg`/`.jpg`, or `.gif` image files and no text, the files will be archived into a `.cbz` comic book archive file. If the given directory contains only video files (`.mkv`, `.webm`, `.mp4`, `.m4v`, `.avi`), the video will be reformatted into a `.mkv` file with metadata.
 
     mm-archive [directory] [OPTIONS]
 
@@ -70,6 +70,12 @@ Metadata for the archive will be pulled from existing `.json` metadata contained
     -g, --grade      Manually input the grade/user score
 
 Finally, you can add the `-x, --xxxxx` option, which will delete the original media files once the archived version is created.
+
+### A note on generated MKVs
+
+Besides title and sometimes creation date, there isn't really a formal or even community standard for metadata in the `.mkv` video container format. So for metadata, MetadataMagic simply attaches a `.xml` file using the `ComicInfo.xml` format: the same metadata format used for `.cbz` files. The original `.json` metadata file corresponding to the video is also added as an attachment, and will be untouched by other functions of MetadataMagic. All other functions in MetadataMagic will read and edit the included `VideoInfo.xml` file embedded in the `.mkv` when doing manipulations.
+
+I'm aware this isn't ideal, since no other programs are configured to be able to read this metadata, and are unlikely to be able to read it in the future. But there is **no** metadata format for video that is widely supported by video players to my knowledge, so there isn't really a better option. At the very least, video players will recognize the title metadata.
 
 ### Options specific to .epub
 
@@ -137,6 +143,8 @@ Image files whose accompanying metadata have excessively long descriptions will 
 
 If the `--format-titles` option is included, the titles of the archives will be automatically formatted to remove page number references and use proper capitalization.
 
+**NOTE:** Video files will **NOT** be automatically formatted to `.mkv` files. While the conversion process used by the `mm-archive` command copies the video and audio streams exactly so there is no loss of quality, it *does* remux the video into a new container format in a way that is not totally reversible. My goal for this project is to pack media into new formats in ways that are convenient, but that are also non-destructive, allowing the user to still have the exact originals of the media and metadata. That is unfortunately impossible for video, so I've elected to only allow packaging it on an individual basis, ensuring no media is accidentally destroyed.
+
 ### Bulk Extracting
 
     mm-bulk-archive --extract [directory]
@@ -148,6 +156,8 @@ This will read every `.cbz` and `.ebub` archive file in the given directory and 
 If you choose to remove the structure, only the original files used to create the archive will be extracted (images/text and `.json` metadata), and all other files and folders will be discarded. The original files will be extracted directly into the given directory with no containing folder.
 
 If you choose NOT to remove the structure, all the files of the archive will be extracted, including metadata and structural files for the `.cbz` and `epub` formats. The files for each archive will be contained in their own folders, extracted into the given directory.
+
+`.mkv` files will also be "extracted", with Metadata magic restoring the original `.json` metadata stored within to an external file, if present. However as stated before, the exact original file cannot be recreated, so the `.mkv` files will remain and not be replaced by the original `.mp4`, `.webm`, etc.
 
 ## mm-update
 
@@ -161,7 +171,7 @@ If the `--cover` option is added, any auto-generated cover images for the archiv
 
     mm-series [directory]
 
-The `mm-series` command allows you to add metadata to `.cbz` and `.epub` archives indicating their place in a book/comic series. All the files in the given directory should be part of the same series and in alpha-numerical order. You will then be prompted to give a series title and edit the placement in the series for each of the archive files:
+The `mm-series` command allows you to add metadata to `.cbz`, `.epub`, and `.mkv` archives indicating their place in a book/comic series. All the files in the given directory should be part of the same series and in alpha-numerical order. You will then be prompted to give a series title and edit the placement in the series for each of the archive files:
 
     ENTRY    FILE                       
     ----------------------------------------
@@ -197,11 +207,11 @@ Some comic and ebook readers don't play well with one-shot comics that contain n
 
     mm-series --standalone [directory]
 
-With this command the `.cbz` and `.epub` files in the given directory will be marked as being entry one of one in their own series, with their series titles being the same as the archive titles.
+With this command the `.cbz`, `.epub`, and `.mkv` files in the given directory will be marked as being entry one of one in their own series, with their series titles being the same as the archive titles.
 
 ## mm-rename
 
-The `mm-rename` command allows you to easily bulk rename `.cbz` and `.epub` archives, as well media files with associated `.json` metadata. For media files with a separate metadata file, the `mm-rename` commands will rename both the media and `.json` file together so they keep the same filename and continue being associated with each other.
+The `mm-rename` command allows you to easily bulk rename `.cbz`, `.epub`, and `.mkv` archives, as well media files with associated `.json` metadata. For media files with a separate metadata file, the `mm-rename` commands will rename both the media and `.json` file together so they keep the same filename and continue being associated with each other.
 
 ### Sort Rename
 
@@ -235,7 +245,7 @@ This is asking for a regex pattern of the files you want to rename. Any filename
 
     mm-rename --metadata-rename [directory]
     
-The `--metadata-rename` option allows you to bulk rename files in a given directory based on their metadata. This can be either embedded metadata as in `.cbz` and `.epub` archives, or associated metadata in a separate `.json` metadata file. Any files that do not have embedded or associated metadata will be ignored. When running this command, you will be prompted on what template to use:
+The `--metadata-rename` option allows you to bulk rename files in a given directory based on their metadata. This can be either embedded metadata as in `.cbz`, `.epub`, or `.mkv` archives, or associated metadata in a separate `.json` metadata file. Any files that do not have embedded or associated metadata will be ignored. When running this command, you will be prompted on what template to use:
 
     Rename in the format "[options] title"
     A - Artist
@@ -282,7 +292,7 @@ The `--missing-json` option allows you to search for the opposite of the `--miss
 
     mm-error --missing-fields [directory]
 
-The `--missing-fields` allows you to search for `.cbz` and `.epub` archives that do not contain information for a specific metadata field. When you run this command, you will be prompted for which metadata field to search for:
+The `--missing-fields` allows you to search for `.cbz`, `.epub`, and `.mkv` archives that do not contain information for a specific metadata field. When you run this command, you will be prompted for which metadata field to search for:
 
     [T] Missing title
     [A] Missing artist
