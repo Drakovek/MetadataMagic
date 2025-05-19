@@ -8,7 +8,7 @@ MetadataMagic is a command line utility for managing media and their respective 
 
 # Installation
 
-MetadataMagic can be downloaded from it's PyPI package using pip:
+MetadataMagic can be downloaded from its PyPI package using pip:
 
     pip3 install Metadata-Magic
 

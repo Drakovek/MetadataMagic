@@ -296,9 +296,10 @@ def create_content_files(chapters:List[dict], output_directory:str) -> List[dict
             extension = html_string_tools.get_extension(file["file"]).lower()
             # Convert based on the appropriate format
             if extension == ".txt":
-                xml = mm_xhtml.txt_to_xhtml(file["file"])
+                text_contents = mm_file_tools.read_text_file(file["file"])
+                xml = html_string_tools.text_to_paragraphs(text_contents, contains_html=False)
             elif extension == ".html" or extension == ".htm":
-                xml = mm_xhtml.html_to_xhtml(file["file"])
+                xml = mm_xhtml.clean_html(file["file"])
             else:
                 # Copy image to the image folder with new name
                 extension = html_string_tools.get_extension(file["file"])

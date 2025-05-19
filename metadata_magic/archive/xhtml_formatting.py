@@ -124,108 +124,36 @@ def format_xhtml(html:str, title:str) -> str:
     xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
     return xml
 
-def text_to_xhtml(text:str, replace_reserved:bool=True) -> str:
+def clean_html(html_file:str) -> str:
     """
-    Formats text to XHTML, automatically detecting how text should be split into paragraph elements.
-    
-    :param text: Text to convert into XHTML format
-    :type text: str, required
-    :param replace_reserved: Whether to escape reserved XHTML reserved charactes.
-    :type replace_reserved: bool, optional
-    :return: XHTML with text split into paragraphs
-    :rtype: str
-    """
-    # Remove redundant new line characters
-    formatted_text = text.replace("\r", "")
-    formatted_text = text.replace("\t", "    ")
-    # Separate sections into paragraphs
-    regex = r"\n\s{3,}|(?:\n\s*){2,}|\n\s*(?=[\"ʺ“”＂])|(?<=[\"ʺ“”＂])\s*\n"
-    formatted_text = re.sub(regex, "{{{PPP}}}", formatted_text)
-    paragraphs = formatted_text.split("{{{PPP}}}")
-    # Format each paragraph
-    xhtml = ""
-    for paragraph in paragraphs:
-        formatted_paragraph = re.sub(r"\s*\n\s*", " ", paragraph)
-        formatted_paragraph = formatted_paragraph.strip()
-        if replace_reserved:
-            formatted_paragraph = html_string_tools.replace_reserved_characters(formatted_paragraph, True)
-        xhtml = f"{xhtml}<p>{formatted_paragraph}</p>"
-    # Return xhtml
-    return xhtml
+    Returns a cleaned up version of an HTML file, good for inclusion in an epub.
+    Text is reformatted into new paragraphs, as necessary.
+    DeviantArt style text is extracted as well.
 
-def txt_to_xhtml(txt_file:str) -> str:
-    """
-    Formats text from a text file to XHTML, automatically detecting how text should be split into paragraph elements.
-    
-    :param text_file: Text file to convert into XHTML format
-    :type text_file: str, required
-    :return: XHTML with text split into paragraphs
-    :rtype: str
-    """
-    # Read text from the given txt file
-    text = mm_file_tools.read_text_file(txt_file)
-    return text_to_xhtml(text)
-
-def format_paragraph(match) -> str:
-    if match.group() is not None:
-        # Split into paragraphs
-        content = re.sub(r"^<[^>]*>|<[^>]*>$", "", match.group())
-        content = re.sub(r"\s+", " ", content).strip()
-        content = re.sub(r"<br\s*\/?>", "\n", content)
-        content = text_to_xhtml(content, False)
-        # Replace the starting elements
-        start_element = re.findall(r"^<[^>]*>", match.group())[0]
-        content = re.sub(r"<p>", start_element, content)
-        return content
-
-def html_to_xhtml(html_file:str) -> str:
-    """
-    Formats text from an HTML file to XHTML.
-    Restructures paragraph elements if necessary.
-    
-    :param html_file: HTML file to convert into XHTML format
+    :param html_file: Path of the HTML file to clean up
     :type html_file: str, required
-    :return: XHTML with text split into paragraphs
+    :return: Cleaned up HTML text
     :rtype: str
     """
-    # Read text from the HTML file
-    text = mm_file_tools.read_text_file(html_file)
-    # Remove all carriage returns
-    for i in range(len(text)-1, -1, -1):
-        if ord(text[i]) == 13:
-            text = text[:i] + text[i+1:]
-    # Parse the HTML text
+    # Read the HTML file
+    original_html = mm_file_tools.read_text_file(html_file)
+    # Get the root element from the body
     ElementTree.register_namespace("", "http://www.w3.org/1999/xhtml")
-    root = html5lib.parse(text.replace("\n", "\n "))
+    root = html5lib.parse(original_html)
     try:
-        # Get DeviantArt style text element if available
-        root = root.findall("*/{http://www.w3.org/1999/xhtml}div[@class='text']")[0]
+        root = root.findall(".//{http://www.w3.org/1999/xhtml}body")[0]
     except IndexError: pass
-    # Remove encapsulation and body elements, if applicable
+    # Get DeviantArt style text element if available
+    try:
+        root = root.findall(".//{http://www.w3.org/1999/xhtml}div[@class='text']")[0]
+    except IndexError: pass
+    # Get HTML from the root element
     content = ElementTree.tostring(root).decode("UTF-8")
-    content = re.sub(r"^\s*<[^\>]+\>\s*|\s*<[^\>]+\>\s*$", "", content)
-    content = re.sub(r"[\s\S]*\<body[^\>]*\>|<\/body[^\>]*\>[\s\S]*", "", content)
-    # Delete javascript tags
-    content = re.sub(r"<\s*script[^>]*>[^<]*<\s*\/\s*script\s*>|<\s*script\s*\/\s*>", "", content)
-    # Reformat text in <pre> elements
-    for pre in re.findall(r"<pre>[\S\s]*<\/pre>", content):
-        new_pre = text_to_xhtml(re.sub(r"^<pre>|<\/pre>$", "", pre), False)
-        content = re.sub(r"<pre>[\S\s]*<\/pre>", new_pre, content, count=1)
-    # Split paragraph tags, if necessary
-    regex = r"<p(?:\s[^>]*)?>(?:[^<]*<(?!\/p>)[^>]*>)*[^<]*<\/p>"
-    content = re.sub(regex, format_paragraph, content)
-    # Replace escape characters
-    content = re.sub(r"\s+", " ", content)
-    content = content.strip().replace("\n", "")
-    content = html_string_tools.replace_reserved_in_html(content, True)
-    # Reformat if not a fully realized HTML file
-    if not len(re.findall(r"<html[^>]*>", text)) > 0:
-        content = re.sub(r"<p(?:\s[^>]*)?>|<div(?:\s[^>]*)?>", "<br/><br/>", content)
-        content = re.sub(r"<\/p>|<\/div>", "<br/><br/>", content)
-        content = re.sub(r"<br\s*\/?>", "\n", content)
-        content = text_to_xhtml(content.strip(), False)
-    # Return in XML format
-    return content
+    # Clean up HTML
+    text = html_string_tools.html_to_text(content, keep_tags=True)
+    html_text = html_string_tools.text_to_paragraphs(text, contains_html=True)
+    # Return the cleaned HTML
+    return html_text
 
 def image_to_xhtml(image_file:str, alt_string:str=None) -> str:
     """

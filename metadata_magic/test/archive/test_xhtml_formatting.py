@@ -249,106 +249,34 @@ def test_format_xhtml():
     compare = f"{compare}\n</html>"
     assert xhtml == compare
 
-def test_text_to_xhtml():
+def test_clean_html():
     """
-    Tests the text_to_xhtml function.
-    """
-    # Test a single paragraph
-    text = " Just a sentence! "
-    assert mm_xhtml.text_to_xhtml(text) == "<p>Just a sentence!</p>"
-    # Test combining lines into paragraph
-    text = "This is a thing\non multiple \nlines."
-    assert mm_xhtml.text_to_xhtml(text) == "<p>This is a thing on multiple lines.</p>"
-    text = "What\n\rabout\n\rcarriage\n\rreturns?"
-    assert mm_xhtml.text_to_xhtml(text) == "<p>What about carriage returns?</p>"
-    # Test paragraphs separated by spaces or tabs
-    text = " Some\n text.\n     And more\ntext!  "
-    assert mm_xhtml.text_to_xhtml(text) == "<p>Some text.</p><p>And more text!</p>"
-    text = "A string \r\n line. \r\n\t And another."
-    assert mm_xhtml.text_to_xhtml(text) == "<p>A string line.</p><p>And another.</p>"
-    text = "Some\n\tMore\n\tlines\t!"
-    assert mm_xhtml.text_to_xhtml(text) == "<p>Some</p><p>More</p><p>lines    !</p>"
-    # Test paragraphs separated by new lines
-    text = " These. \n\n Are \n\n\n\n Paragraphs!"
-    assert mm_xhtml.text_to_xhtml(text) == "<p>These.</p><p>Are</p><p>Paragraphs!</p>"
-    text = "One\r\nparagraph.\r\n\r\nSecond\r\nparagraph."
-    assert mm_xhtml.text_to_xhtml(text) == "<p>One paragraph.</p><p>Second paragraph.</p>"
-    # Test paragraphs separated by quotes
-    text = "\"Not\" \"Separate\"\n\"Separate\""
-    assert mm_xhtml.text_to_xhtml(text) == "<p>&#34;Not&#34; &#34;Separate&#34;</p><p>&#34;Separate&#34;</p>"
-    # Test with escape characters
-    text = "This & that.\n\n>.>"
-    assert mm_xhtml.text_to_xhtml(text) == "<p>This &#38; that.</p><p>&#62;.&#62;</p>"
-    # Test with existing html
-    text = "This & <i>that.</i>\n\nBlah"
-    assert mm_xhtml.text_to_xhtml(text, False) == "<p>This & <i>that.</i></p><p>Blah</p>"
-
-def test_txt_to_xhtml():
-    """
-    Tests the txt_to_xhtml function.
-    """
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Test a single paragraph
-        text_file = abspath(join(temp_dir, "Text.txt"))
-        text = "This is a simple sentence!"
-        mm_file_tools.write_text_file(text_file, text)
-        assert exists(text_file)
-        xml = mm_xhtml.txt_to_xhtml(text_file)
-        assert xml == "<p>This is a simple sentence!</p>"
-        # Test multiple paragraphs
-        text = "Different paragraphs!\n\nHow cool!"
-        mm_file_tools.write_text_file(text_file, text)
-        xml = mm_xhtml.txt_to_xhtml(text_file)
-        assert xml == "<p>Different paragraphs!</p><p>How cool!</p>"
-        # Test multiple paragraphs based on quotations
-        text = "The next line.\n\"Starts with a quote\""
-        mm_file_tools.write_text_file(text_file, text)
-        xml = mm_xhtml.txt_to_xhtml(text_file)
-        assert xml == "<p>The next line.</p><p>&#34;Starts with a quote&#34;</p>"
-        # Test single new line character with HTML escape entities
-        text = "More text!\nAnd This & That..."
-        mm_file_tools.write_text_file(text_file, text)
-        xml = mm_xhtml.txt_to_xhtml(text_file)
-        assert xml == "<p>More text! And This &#38; That...</p>"
-        # Test new lines and separate paragraphs
-        text = "Paragraph\n\nOther\nText!\n\nFinal\nParagraph..."
-        mm_file_tools.write_text_file(text_file, text)
-        xml = mm_xhtml.txt_to_xhtml(text_file)
-        assert xml == "<p>Paragraph</p><p>Other Text!</p><p>Final Paragraph...</p>"
-        # Test with more than one two new lines
-        text = "Thing\n\n\r\n\r\n\nOther\r"
-        mm_file_tools.write_text_file(text_file, text)
-        xml = mm_xhtml.txt_to_xhtml(text_file)
-        assert xml == "<p>Thing</p><p>Other</p>"
-
-def test_html_to_xhtml():
-    """
-    Tests the html_to_xhtml function.
+    Tests the clean_html function
     """
     # Test formatting HTML with basic HTML structure with head & body
     html_file = abspath(join(mm_test.BASIC_HTML_DIRECTORY, "basic.html"))
-    xml = mm_xhtml.html_to_xhtml(html_file)
-    assert xml == "<p>This text is basic.</p> <div><hr /></div> <p class=\"A\">More Text</p>"
+    xml = mm_xhtml.clean_html(html_file)
+    assert xml == "<p>This text is basic.</p><p><hr /></p><p>More Text</p>"
     # Test formatting individual paragraph elements, as necessary
     html_file = abspath(join(mm_test.BASIC_HTML_DIRECTORY, "badformat.html"))
-    xml = mm_xhtml.html_to_xhtml(html_file)
-    compare = "<ping /> <p>This is all a <i>single</i> paragraph!</p>"
-    compare = f"{compare}<p>This is a separate paragraph.</p> "
-    compare = f"{compare}<p class=\"B\">Badly <i>formatted</i> paragraph.</p>"
-    compare = f"{compare}<p class=\"B\">This should be <b>separate!</b></p> "
-    compare = f"{compare}<div><br /><br /></div> <p>This is fine as one</p>"
+    xml = mm_xhtml.clean_html(html_file)
+    compare = "<p>This is all a <i>single</i> paragraph!</p>"
+    compare = f"{compare}<p>This is a separate paragraph.</p>"
+    compare = f"{compare}<p>Badly <i>formatted</i> paragraph.</p>"
+    compare = f"{compare}<p>This should be <b>separate!</b></p>"
+    compare = f"{compare}<p>This is fine as one</p>"
     assert xml == compare
     # Test getting html in the DeviantArt liturature format
     html_file = abspath(join(mm_test.BASIC_HTML_DIRECTORY, "deviantart.htm"))
-    xml = mm_xhtml.html_to_xhtml(html_file)
-    assert xml == "<p>This is the real stuff.</p> <p>Right Here.</p> <p>More.</p>"
+    xml = mm_xhtml.clean_html(html_file)
+    assert xml == "<p>This is the real stuff.</p><p>Right Here.</p><p>More.</p>"
     # Test formatting text that is not HTML
     html_file = abspath(join(mm_test.BASIC_TEXT_DIRECTORY, "unicode.txt"))
-    xml = mm_xhtml.html_to_xhtml(html_file)
-    assert xml == "<p>This is &#252;nicode.</p>"
+    xml = mm_xhtml.clean_html(html_file)
+    assert xml == "<p>This is ünicode.</p>"
     # Test formatting HTML with extra whitespace and no structure
     html_file = abspath(join(mm_test.BASIC_HTML_DIRECTORY, "unformatted.html"))
-    xml = mm_xhtml.html_to_xhtml(html_file)
+    xml = mm_xhtml.clean_html(html_file)
     assert xml == "<p>This is a sentence.</p><p>&#38; this is a different sentence.</p><p>Final bit.</p>"
 
 def test_image_to_xml():
