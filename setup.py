@@ -17,7 +17,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="Metadata-Magic",
-    version="0.14.1",
+    version="0.14.2",
     author="Drakovek",
     author_email="DrakovekMail@gmail.com",
     description="Utility for managing metadata.",
@@ -26,7 +26,7 @@ setuptools.setup(
     url="https://github.com/Drakovek/MetadataMagic",
     packages=setuptools.find_packages(),
     package_data={"": ["*.json"]},
-    install_requires=["CoverGenerator>=0.2.1", "html5lib>=1.1", "HTML-String-Tools>=0.4.0",
+    install_requires=["CoverGenerator>=0.2.1", "html5lib>=1.1", "HTML-String-Tools>=0.4.2",
             "pillow>=8.0.0", "Python-Print-Tools>=0.2.2", "python-ffmpeg>=2.0.0", "tqdm>=4.64.1"],
     classifiers=["Programming Language :: Python :: 3",
             "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",

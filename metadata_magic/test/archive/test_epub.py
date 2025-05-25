@@ -284,7 +284,7 @@ def test_create_content_files():
     with tempfile.TemporaryDirectory() as temp_dir:
         chapters[1]["title"] = "Vertical"
         chapters[2]["title"] = "Chapter 2"
-        chapters = mm_epub.create_content_files(chapters, temp_dir)
+        chapters = mm_epub.create_content_files(chapters, temp_dir, smart_quotes=True)
         assert len(chapters) == 4
         assert chapters[0]["include"]
         assert chapters[0]["id"] == "item0"
@@ -318,7 +318,7 @@ def test_create_content_files():
         compare = f"{compare}\n    </head>"
         compare = f"{compare}\n    <body>"
         compare = f"{compare}\n        <p>This is line 1.</p>"
-        compare = f"{compare}\n        <p>&amp; This is line 2!</p>"
+        compare = f"{compare}\n        <p>&amp; This is &#8216;line&#8217; 2!</p>"
         compare = f"{compare}\n    </body>"
         compare = f"{compare}\n</html>"
         assert contents == compare
@@ -333,7 +333,7 @@ def test_create_content_files():
         compare = f"{compare}\n    </head>"
         compare = f"{compare}\n    <body>"
         compare = f"{compare}\n        <p>This is paragraph 1</p>"
-        compare = f"{compare}\n        <p>&amp; this is paragraph 2!</p>"
+        compare = f"{compare}\n        <p>&amp; &#8216;this&#8217; is paragraph 2!</p>"
         compare = f"{compare}\n    </body>"
         compare = f"{compare}\n</html>"
         assert contents == compare
@@ -380,7 +380,7 @@ def test_create_content_files():
     chapters = mm_epub.group_chapters(chapters, [0,1,2,3])
     with tempfile.TemporaryDirectory() as temp_dir:
         chapters[0]["title"] = "Grouped"
-        chapters = mm_epub.create_content_files(chapters, temp_dir)
+        chapters = mm_epub.create_content_files(chapters, temp_dir, False)
         assert len(chapters) == 1
         assert chapters[0]["include"]
         assert chapters[0]["id"] == "item0"
@@ -403,12 +403,12 @@ def test_create_content_files():
         compare = f"{compare}\n    </head>"
         compare = f"{compare}\n    <body>"
         compare = f"{compare}\n        <p>This is line 1.</p>"
-        compare = f"{compare}\n        <p>&amp; This is line 2!</p>"
+        compare = f"{compare}\n        <p>&amp; This is 'line' 2!</p>"
         compare = f"{compare}\n        <div>"
         compare = f"{compare}\n            <img src=\"../images/image1.PNG\" alt=\"Image 1\" width=\"20\" height=\"100\" />"
         compare = f"{compare}\n        </div>"
         compare = f"{compare}\n        <p>This is paragraph 1</p>"
-        compare = f"{compare}\n        <p>&amp; this is paragraph 2!</p>"
+        compare = f"{compare}\n        <p>&amp; 'this' is paragraph 2!</p>"
         compare = f"{compare}\n        <div>"
         compare = f"{compare}\n            <img src=\"../images/image2.jpg\" alt=\"Image 2\" width=\"200\" height=\"30\" />"
         compare = f"{compare}\n        </div>"
@@ -997,7 +997,7 @@ def test_create_content_opf():
     multiple_dir = abspath(join(mm_test.EPUB_INTERNAL_DIRECTORY, "multiple"))
     chapters = mm_epub.get_default_chapters(multiple_dir)
     with tempfile.TemporaryDirectory() as temp_dir:
-        chapters = mm_epub.create_content_files(chapters, temp_dir)
+        chapters = mm_epub.create_content_files(chapters, temp_dir, False)
         metadata = mm_archive.get_empty_metadata()
         metadata["title"] = "Thing!"
         mm_epub.create_content_opf(chapters, metadata, temp_dir)
@@ -1047,7 +1047,7 @@ def test_create_epub():
         chapters = mm_epub.group_chapters(chapters, [2,3])
         metadata = mm_archive.get_empty_metadata()
         metadata["title"] = "Generated"
-        epub_file = mm_epub.create_epub(chapters, metadata, copy_dir)
+        epub_file = mm_epub.create_epub(chapters, metadata, copy_dir, smart_quotes=True)
         assert exists(epub_file)
         assert basename(epub_file) == "Generated.epub"
         assert abspath(join(epub_file, os.pardir)) == abspath(copy_dir)

@@ -1,6 +1,6 @@
 CoverGenerator>=0.2.1
 html5lib>=1.1
-HTML-String-Tools>=0.4.0
+HTML-String-Tools>=0.4.2
 pillow>=8.0.0
 python-ffmpeg>=2.0.0
 Python-Print-Tools>=0.2.2

@@ -255,11 +255,11 @@ def test_clean_html():
     """
     # Test formatting HTML with basic HTML structure with head & body
     html_file = abspath(join(mm_test.BASIC_HTML_DIRECTORY, "basic.html"))
-    xml = mm_xhtml.clean_html(html_file)
+    xml = mm_xhtml.clean_html(html_file, add_smart_quotes=False)
     assert xml == "<p>This text is basic.</p><p><hr /></p><p>More Text</p>"
     # Test formatting individual paragraph elements, as necessary
     html_file = abspath(join(mm_test.BASIC_HTML_DIRECTORY, "badformat.html"))
-    xml = mm_xhtml.clean_html(html_file)
+    xml = mm_xhtml.clean_html(html_file, add_smart_quotes=False)
     compare = "<p>This is all a <i>single</i> paragraph!</p>"
     compare = f"{compare}<p>This is a separate paragraph.</p>"
     compare = f"{compare}<p>Badly <i>formatted</i> paragraph.</p>"
@@ -268,16 +268,16 @@ def test_clean_html():
     assert xml == compare
     # Test getting html in the DeviantArt liturature format
     html_file = abspath(join(mm_test.BASIC_HTML_DIRECTORY, "deviantart.htm"))
-    xml = mm_xhtml.clean_html(html_file)
+    xml = mm_xhtml.clean_html(html_file, add_smart_quotes=False)
     assert xml == "<p>This is the real stuff.</p><p>Right Here.</p><p>More.</p>"
     # Test formatting text that is not HTML
     html_file = abspath(join(mm_test.BASIC_TEXT_DIRECTORY, "unicode.txt"))
-    xml = mm_xhtml.clean_html(html_file)
+    xml = mm_xhtml.clean_html(html_file, add_smart_quotes=False)
     assert xml == "<p>This is ünicode.</p>"
-    # Test formatting HTML with extra whitespace and no structure
+    # Test adding smart quotes
     html_file = abspath(join(mm_test.BASIC_HTML_DIRECTORY, "unformatted.html"))
-    xml = mm_xhtml.clean_html(html_file)
-    assert xml == "<p>This is a sentence.</p><p>&#38; this is a different sentence.</p><p>Final bit.</p>"
+    xml = mm_xhtml.clean_html(html_file, add_smart_quotes=True)
+    assert xml == "<p>“This is text”</p><p>‘This is more text’</p>"
 
 def test_image_to_xml():
     """

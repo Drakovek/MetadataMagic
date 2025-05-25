@@ -44,6 +44,8 @@ def format_xhtml(html:str, title:str) -> str:
     meta.attrib = {"charset":"utf-8"}
     # Remove all unnecessary HTML escape entities
     formatted_html = html_string_tools.replace_reserved_in_html(html)
+    # Remove all unprintable unicode characters
+    formatted_html = re.sub(r"[\x00-\x1F\x7F]", "", formatted_html)
     # Remove newlines and nonstandard spaces
     formatted_html = formatted_html.replace("\n", "").strip()
     formatted_html = re.sub(r"\s", " ", formatted_html)
@@ -124,7 +126,7 @@ def format_xhtml(html:str, title:str) -> str:
     xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
     return xml
 
-def clean_html(html_file:str) -> str:
+def clean_html(html_file:str, add_smart_quotes:bool) -> str:
     """
     Returns a cleaned up version of an HTML file, good for inclusion in an epub.
     Text is reformatted into new paragraphs, as necessary.
@@ -132,6 +134,8 @@ def clean_html(html_file:str) -> str:
 
     :param html_file: Path of the HTML file to clean up
     :type html_file: str, required
+    :param add_smart_quotes: Whether to automatically add smart quotes, defaults to True
+    :type add_smart_quotes: bool, optional
     :return: Cleaned up HTML text
     :rtype: str
     """
@@ -145,13 +149,19 @@ def clean_html(html_file:str) -> str:
     except IndexError: pass
     # Get DeviantArt style text element if available
     try:
-        root = root.findall(".//{http://www.w3.org/1999/xhtml}div[@class='text']")[0]
-    except IndexError: pass
+        roots = root.findall(".//{http://www.w3.org/1999/xhtml}div[@class='text']")
+        assert len(roots) < 3 and len(roots) > 0
+        root = roots[0]
+    except (AssertionError, IndexError): pass
     # Get HTML from the root element
     content = ElementTree.tostring(root).decode("UTF-8")
     # Clean up HTML
     text = html_string_tools.html_to_text(content, keep_tags=True)
     html_text = html_string_tools.text_to_paragraphs(text, contains_html=True)
+    # Add smart quotes if specified
+    if add_smart_quotes:
+        html_text = html_string_tools.replace_reserved_in_html(html_text, escape_non_ascii=False)
+        html_text = html_string_tools.add_smart_quotes_to_paragraphs(html_text)
     # Return the cleaned HTML
     return html_text
 

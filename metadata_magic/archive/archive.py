@@ -472,7 +472,7 @@ def main():
                 mm_comic_archive.create_cbz(path, metadata["title"], metadata, remove_files=args.xxxxx)
             if archive_type == "epub":
                 chapters = mm_epub.get_chapters_from_user(path, metadata)
-                mm_epub.create_epub(chapters, metadata, path)
+                mm_epub.create_epub(chapters, metadata, path, smart_quotes=False, copy_back_cover=False)
             if archive_type == "mkv":
                 success = mm_mkv.create_mkv(path, metadata["title"], metadata, remove_files=args.xxxxx)
                 if not success:

@@ -262,7 +262,8 @@ def get_chapters_from_user(directory:str, metadata:dict) -> List[dict]:
     # Return the chapters
     return chapters
 
-def create_content_files(chapters:List[dict], output_directory:str) -> List[dict]:
+def create_content_files(chapters:List[dict], output_directory:str,
+            smart_quotes:bool=True) -> List[dict]:
     """
     Creates all the XHTML content files converted from the files provided by the given chapters list.
     Files will be created in a "content" subdirectory in the given output_directory.
@@ -271,6 +272,8 @@ def create_content_files(chapters:List[dict], output_directory:str) -> List[dict
     :type chapters: List[dict], required
     :param output_directory: Directory in which to create the content files
     :type output_directory: str, required
+    :param smart_quotes: Whether to format the internal HTML to use smart quotes, defaults to True
+    :type smart_quotes: bool, optional
     :return: List with chapter file info, now with "file" fields pointing to the new XHTML files
     :rtype: List[dict]
     """
@@ -298,8 +301,10 @@ def create_content_files(chapters:List[dict], output_directory:str) -> List[dict
             if extension == ".txt":
                 text_contents = mm_file_tools.read_text_file(file["file"])
                 xml = html_string_tools.text_to_paragraphs(text_contents, contains_html=False)
+                if smart_quotes:
+                    xml = html_string_tools.add_smart_quotes_to_paragraphs(xml)
             elif extension == ".html" or extension == ".htm":
-                xml = mm_xhtml.clean_html(file["file"])
+                xml = mm_xhtml.clean_html(file["file"], smart_quotes)
             else:
                 # Copy image to the image folder with new name
                 extension = html_string_tools.get_extension(file["file"])
@@ -314,7 +319,8 @@ def create_content_files(chapters:List[dict], output_directory:str) -> List[dict
             # Append to the chapter xml
             chapter_xml = f"{chapter_xml}{xml}"
         # Write with proper XHTML formatting
-        mm_file_tools.write_text_file(xhtml_file, mm_xhtml.format_xhtml(chapter_xml, title))
+        chapter_xml = mm_xhtml.format_xhtml(chapter_xml, title)
+        mm_file_tools.write_text_file(xhtml_file, chapter_xml)
         # Update info for the chapter
         updated_chapters[i]["id"] = updated_chapters[i]["files"][0]["id"]
         updated_chapters[i]["file"] = f"content/{filename}.xhtml"
@@ -736,7 +742,8 @@ def create_content_opf(chapters:List[dict], metadata:dict, output_directory:str)
     opf_file = abspath(join(output_directory, "content.opf"))
     mm_file_tools.write_text_file(opf_file, xml)
 
-def create_epub(chapters:List[dict], metadata:dict, directory:str, copy_back_cover:bool=False) -> str:
+def create_epub(chapters:List[dict], metadata:dict, directory:str,
+            smart_quotes:bool, copy_back_cover:bool=False) -> str:
     """
     Creates an EPUB file from the files in a directory and a list of given chapters.
     
@@ -746,6 +753,10 @@ def create_epub(chapters:List[dict], metadata:dict, directory:str, copy_back_cov
     :type metadata: dict, required
     :param directory: Directory to get file info from and to save finished EPUB into
     :type directory: str, required
+    :param copy_back_cover: Whether to add a copy of the cover to the back of the epub
+    :type bool: bool, optional
+    :param smart_quotes: Whether to format the internal HTML to use smart quotes, defaults to True
+    :type smart_quotes: bool, optional
     :return: The path of the created EPUB file
     :rtype: str
     """
@@ -771,7 +782,7 @@ def create_epub(chapters:List[dict], metadata:dict, directory:str, copy_back_cov
         # Copy the original to the EPUB directory
         copy_original_files(directory, epub_directory)
         # Create the content files
-        updated_chapters = create_content_files(chapters, epub_directory)
+        updated_chapters = create_content_files(chapters, epub_directory, smart_quotes)
         # Copy the cover to the back cover, if specified
         if copy_back_cover:
             # Create the back cover chapter item
@@ -838,7 +849,8 @@ def create_epub_from_description(json_file:str, image_file:str, metadata:dict, d
         chapters = [{"include":True, "title":"Cover", "files":[{"id":"item_cover", "file":cover_image}]},
                 {"include":True, "title":metadata["title"], "files":[{"id":"item_text", "file":html_file}]}]
         # Create the epub file
-        generated_epub = create_epub(chapters, metadata, temp_dir, True)
+        generated_epub = create_epub(chapters, metadata, temp_dir,
+                copy_back_cover=True,smart_quotes=True)
         # Get the final epub file path
         filename = mm_rename.get_available_filename(["a.epub"], metadata["title"], directory)
         epub_file = abspath(join(directory, f"{filename}.epub"))

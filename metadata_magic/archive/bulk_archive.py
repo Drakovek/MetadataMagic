@@ -81,7 +81,8 @@ def archive_all_media(directory:str, config:dict,
                     with tempfile.TemporaryDirectory() as image_dir:
                         chapters = mm_epub.get_default_chapters(temp_dir, title=title)
                         chapters = mm_epub.add_cover_to_chapters(chapters, metadata, image_dir)
-                        archive_file = mm_epub.create_epub(chapters, metadata, temp_dir)
+                        archive_file = mm_epub.create_epub(chapters, metadata, temp_dir,
+                                smart_quotes=True, copy_back_cover=False)
                 assert exists(archive_file)
                 # Copy archive to the original directory
                 parent = abspath(join(pair["json"], os.pardir))
