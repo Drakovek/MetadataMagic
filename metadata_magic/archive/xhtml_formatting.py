@@ -108,6 +108,7 @@ def format_xhtml(html:str, title:str) -> str:
         body = ElementTree.fromstring(formatted_html)
         base.append(body)
     except ElementTree.ParseError as parse_error:
+        # XHTML is too malformed to read
         position = parse_error.position[1]
         start_position = position - 10
         end_position = position + 10
@@ -116,10 +117,13 @@ def format_xhtml(html:str, title:str) -> str:
         if end_position > (len(formatted_html)):
             end_position = len(formatted_html)
         section = formatted_html[start_position:end_position]
+        section = html_string_tools.replace_reserved_characters(section)
         char_num = ord(formatted_html[position])
-        print(f"XML Parse Error: Character Value Decimal {char_num}, String")
-        print(f"Error Section: {section}")
-        return None
+        formatted_html = "<body><p>HTML could not be parsed!</p>"
+        formatted_html = f"{formatted_html}<p>XML Parse Error: Character Value Decimal {char_num}</p>"
+        formatted_html = f"{formatted_html}<p>String Error Section: {section}</p></body>"
+        body = ElementTree.fromstring(formatted_html)
+        base.append(body)
     # Set indents to make the XML more readable
     xml = ElementTree.tostring(base).decode("UTF-8")
     xml = html_string_tools.make_human_readable(xml, "    ").strip()

@@ -90,9 +90,12 @@
                 {"match":"^.*\\.ngfiles\\..*$", "publisher":"Newgrounds"},
                 {"match":"^pixiv$|^.+\\.pximg\\.net.*$", "publisher":"Pixiv"},
                 {"match":"^weasyl$|^.+\\.weasyl\\.com.*$", "publisher":"Weasyl"},
+                {"match":"^reddit$", "publisher":"Reddit"},
+                {"match":"^.+\\.redd\\.it.*$|^.+\\.reddit\\.com.*$", "publisher":"Reddit"},
                 {"match":"^inkbunny$", "publisher":"Inkbunny"},
                 {"match":"^twitter$", "publisher":"Twitter"},
                 {"match":"^bluesky$", "publisher":"Bluesky"},
+                {"match":"^.+\\.patreon\\.com\\/.*$", "publisher":"Patreon"},
                 {"match":"^.*non-existant-website\\.ca.*$", "publisher":"DVK Test"}
             ]
         },

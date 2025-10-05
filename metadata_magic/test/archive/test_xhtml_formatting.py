@@ -248,6 +248,23 @@ def test_format_xhtml():
     compare = f"{compare}\n    </body>"
     compare = f"{compare}\n</html>"
     assert xhtml == compare
+    # Test completely malformed URL
+    html = "Test <a class=\"a\" href=\"aaa\"\" title=\"aaa\"\">Thing\"</a> rel=\"aaa\">link</a>"
+    xhtml = mm_xhtml.format_xhtml(html, "Title!")
+    compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+    compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
+    compare = f"{compare}\n    <head>"
+    compare = f"{compare}\n        <title>Title!</title>"
+    compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+    compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
+    compare = f"{compare}\n    </head>"
+    compare = f"{compare}\n    <body>"
+    compare = f"{compare}\n        <p>HTML could not be parsed!</p>"
+    compare = f"{compare}\n        <p>XML Parse Error: Character Value Decimal 34</p>"
+    compare = f"{compare}\n        <p>String Error Section: ref=\"aaa\" \"=\"\" title</p>"
+    compare = f"{compare}\n    </body>"
+    compare = f"{compare}\n</html>"
+    assert xhtml == compare
 
 def test_clean_html():
     """

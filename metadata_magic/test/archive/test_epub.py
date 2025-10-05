@@ -415,6 +415,38 @@ def test_create_content_files():
         compare = f"{compare}\n    </body>"
         compare = f"{compare}\n</html>"
         assert contents == compare
+    # Test creating content files with malformed HTML
+    multiple_dir = abspath(join(mm_test.EPUB_INTERNAL_DIRECTORY, "broken"))
+    chapters = mm_epub.get_default_chapters(multiple_dir)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        chapters = mm_epub.create_content_files(chapters, temp_dir, False)
+        assert len(chapters) == 1
+        assert chapters[0]["include"]
+        assert chapters[0]["id"] == "item0"
+        assert chapters[0]["title"] == "broken"
+        assert chapters[0]["file"] == "content/broken.xhtml"
+        # Test that the files were created
+        assert sorted(os.listdir(temp_dir)) == ["content", "images"]
+        image_dir = abspath(join(temp_dir, "images"))
+        assert sorted(os.listdir(image_dir)) == []
+        content_dir = abspath(join(temp_dir, "content"))
+        assert os.listdir(content_dir) == ["broken.xhtml"]
+        # Test the XHTML from combined sources
+        contents = mm_file_tools.read_text_file(abspath(join(content_dir, "broken.xhtml")))
+        compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
+        compare = f"{compare}\n    <head>"
+        compare = f"{compare}\n        <title>broken</title>"
+        compare = f"{compare}\n        <meta charset=\"utf-8\" />"
+        compare = f"{compare}\n        <link rel=\"stylesheet\" href=\"../style/epubstyle.css\" type=\"text/css\" />"
+        compare = f"{compare}\n    </head>"
+        compare = f"{compare}\n    <body>"
+        compare = f"{compare}\n        <p>HTML could not be parsed!</p>"
+        compare = f"{compare}\n        <p>XML Parse Error: Character Value Decimal 61</p>"
+        compare = f"{compare}\n        <p>String Error Section: f=\" https:=\"\" other.</p>"
+        compare = f"{compare}\n    </body>"
+        compare = f"{compare}\n</html>"
+        assert contents == compare
 
 def test_copy_original_files():
     """
@@ -445,7 +477,7 @@ def test_copy_original_files():
         mm_epub.copy_original_files(base_dir, temp_dir)
         assert os.listdir(temp_dir) == ["original"]
         assert os.listdir(abspath(join(temp_dir, "original"))) == ["Original.pdf"]
-    
+
 def test_create_style_file():
     """
     Tests the create_style_file function.
