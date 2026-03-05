@@ -8,12 +8,10 @@ import shutil
 import tempfile
 import html_string_tools
 import python_print_tools
-import metadata_magic.sort as mm_sort
-import metadata_magic.rename as mm_rename
-import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_reader as mm_meta_reader
 import metadata_magic.archive as mm_archive
 import metadata_magic.archive.xhtml_formatting as mm_xhtml
+import python_file_tools as pft
 from xml.etree import ElementTree
 from os.path import abspath, basename, exists, isdir, join
 from typing import List
@@ -33,8 +31,8 @@ def get_default_chapters(directory:str, title:str=None) -> List[dict]:
     """
     # Find all media files in the given directory
     file_types = [".txt", ".html", ".htm", ".png", ".jpeg", ".jpg", ".bmp", ".tiff"]
-    media_files = mm_file_tools.find_files_of_type(directory, file_types, include_subdirectories=False)
-    media_files = mm_sort.sort_alphanum(media_files)
+    media_files = pft.find_files_of_type(directory, file_types, include_subdirectories=False)
+    media_files = pft.sort.sort_alphanum(media_files)
     # Set default chapter values for each text file
     chapters = []
     for i in range(0, len(media_files)):
@@ -113,9 +111,9 @@ def group_chapters(chapters:List[dict], group:List[int]) -> List[dict]:
         files.extend(chapters[sorted_group[i]]["files"])
         del updated_chapters[sorted_group[i]]
     # Add the grouped entry
-    grouped_entry["files"] = mm_sort.sort_dictionaries_alphanum(files, "file")
+    grouped_entry["files"] = pft.sort.sort_dictionaries_alphanum(files, "file")
     updated_chapters.append(grouped_entry)
-    updated_chapters = mm_sort.sort_dictionaries_alphanum(updated_chapters, ["files",0,"file"])
+    updated_chapters = pft.sort.sort_dictionaries_alphanum(updated_chapters, ["files",0,"file"])
     # Return the updated chapters
     return updated_chapters
 
@@ -145,7 +143,7 @@ def separate_chapters(chapters:List[dict], chapter_num:str) -> List[dict]:
     # Delete the old grouped chapter
     del new_chapters[chapter_num]
     # Sort the list of chapters
-    new_chapters = mm_sort.sort_dictionaries_alphanum(new_chapters, ["files",0,"file"])
+    new_chapters = pft.sort.sort_dictionaries_alphanum(new_chapters, ["files",0,"file"])
     # Return the new chapters
     return new_chapters
 
@@ -299,7 +297,7 @@ def create_content_files(chapters:List[dict], output_directory:str,
             extension = html_string_tools.get_extension(file["file"]).lower()
             # Convert based on the appropriate format
             if extension == ".txt":
-                text_contents = mm_file_tools.read_text_file(file["file"])
+                text_contents = pft.read_text_file(file["file"])
                 xml = html_string_tools.text_to_paragraphs(text_contents, contains_html=False)
                 if smart_quotes:
                     xml = html_string_tools.add_smart_quotes_to_paragraphs(xml)
@@ -320,7 +318,7 @@ def create_content_files(chapters:List[dict], output_directory:str,
             chapter_xml = f"{chapter_xml}{xml}"
         # Write with proper XHTML formatting
         chapter_xml = mm_xhtml.format_xhtml(chapter_xml, title)
-        mm_file_tools.write_text_file(xhtml_file, chapter_xml)
+        pft.write_text_file(xhtml_file, chapter_xml)
         # Update info for the chapter
         updated_chapters[i]["id"] = updated_chapters[i]["files"][0]["id"]
         updated_chapters[i]["file"] = f"content/{filename}.xhtml"
@@ -391,7 +389,7 @@ def create_style_file(output_directory:str):
     style = f"{style}\n" + "}"
     # Write style to a CSS file
     style_file = abspath(join(style_dir, "epubstyle.css"))
-    mm_file_tools.write_text_file(style_file, style)
+    pft.write_text_file(style_file, style)
 
 def create_nav_file(chapters:List[dict], title:str, output_directory:str):
     """
@@ -436,7 +434,7 @@ def create_nav_file(chapters:List[dict], title:str, output_directory:str):
     xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
     # Write the nav file
     nav_file = abspath(join(output_directory, "nav.xhtml"))
-    mm_file_tools.write_text_file(nav_file, xml)
+    pft.write_text_file(nav_file, xml)
 
 def create_ncx_file(chapters:List[dict], title:str, uid:str, output_directory:str):
     """
@@ -494,7 +492,7 @@ def create_ncx_file(chapters:List[dict], title:str, uid:str, output_directory:st
     xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
     # Write the ncx file
     nav_file = abspath(join(output_directory, "toc.ncx"))
-    mm_file_tools.write_text_file(nav_file, xml)
+    pft.write_text_file(nav_file, xml)
 
 def get_metadata_xml(metadata:dict, cover_id:str=None) -> str:
     """
@@ -658,7 +656,7 @@ def get_manifest_xml(chapters:List[dict], output_directory:str) -> str:
         chapter_item.attrib = attributes
     # Add the images
     image_directory = abspath(join(output_directory, "images"))
-    images = mm_sort.sort_alphanum(os.listdir(image_directory))
+    images = pft.sort.sort_alphanum(os.listdir(image_directory))
     for i in range(0, len(images)):
         attributes = dict()
         attributes["href"] = f"images/{images[i]}"
@@ -713,7 +711,7 @@ def create_content_opf(chapters:List[dict], metadata:dict, output_directory:str)
     # Check images directory for cover image
     try:
         image_directory = abspath(join(output_directory, "images"))
-        image = mm_sort.sort_alphanum(os.listdir(image_directory))[0]
+        image = pft.sort.sort_alphanum(os.listdir(image_directory))[0]
         cover_id = re.sub(r"\..+$", "", basename(image))
     except IndexError:
         cover_id = None
@@ -740,7 +738,7 @@ def create_content_opf(chapters:List[dict], metadata:dict, output_directory:str)
     xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
     # Write the opf file
     opf_file = abspath(join(output_directory, "content.opf"))
-    mm_file_tools.write_text_file(opf_file, xml)
+    pft.write_text_file(opf_file, xml)
 
 def create_epub(chapters:List[dict], metadata:dict, directory:str,
             smart_quotes:bool, copy_back_cover:bool=False) -> str:
@@ -776,7 +774,7 @@ def create_epub(chapters:List[dict], metadata:dict, directory:str,
         xml = html_string_tools.make_human_readable(xml, "    ").strip()
         xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
         container_file = abspath(join(meta_directory, "container.xml"))
-        mm_file_tools.write_text_file(container_file, xml)
+        pft.write_text_file(container_file, xml)
         # Create the style file
         create_style_file(epub_directory)
         # Copy the original to the EPUB directory
@@ -804,10 +802,10 @@ def create_epub(chapters:List[dict], metadata:dict, directory:str,
         # Create the content.opf file
         create_content_opf(updated_chapters, metadata, epub_directory)
         # Get the epub file path
-        filename = mm_rename.get_available_filename(["a.epub"], metadata["title"], directory)
+        filename = pft.get_available_filename(["a.epub"], metadata["title"], directory)
         epub_file = abspath(join(directory, f"{filename}.epub"))
         # Create the epub file
-        assert mm_file_tools.create_zip(build_directory, epub_file, 8, "application/epub+zip")
+        assert pft.create_zip(build_directory, epub_file, 8, "application/epub+zip")
         return epub_file
 
 def create_epub_from_description(json_file:str, image_file:str, metadata:dict, directory:str, config:dict) -> str:
@@ -844,7 +842,7 @@ def create_epub_from_description(json_file:str, image_file:str, metadata:dict, d
         # Create the html from the json description
         html = mm_meta_reader.load_metadata(json_file, config, image_file)["description"]
         html_file = abspath(join(temp_dir, json_name[:len(json_name) - 5] + ".html"))
-        mm_file_tools.write_text_file(html_file, html)
+        pft.write_text_file(html_file, html)
         # Create the chapters list
         chapters = [{"include":True, "title":"Cover", "files":[{"id":"item_cover", "file":cover_image}]},
                 {"include":True, "title":metadata["title"], "files":[{"id":"item_text", "file":html_file}]}]
@@ -852,7 +850,7 @@ def create_epub_from_description(json_file:str, image_file:str, metadata:dict, d
         generated_epub = create_epub(chapters, metadata, temp_dir,
                 copy_back_cover=True,smart_quotes=True)
         # Get the final epub file path
-        filename = mm_rename.get_available_filename(["a.epub"], metadata["title"], directory)
+        filename = pft.get_available_filename(["a.epub"], metadata["title"], directory)
         epub_file = abspath(join(directory, f"{filename}.epub"))
         # Copy the epub file to the appropriate directory
         shutil.copy(generated_epub, epub_file)
@@ -869,7 +867,7 @@ def get_info_from_epub(epub_file:str) -> dict:
     """
     with tempfile.TemporaryDirectory() as extract_dir:
         # Extract content.opf from given file
-        xml_file = mm_file_tools.extract_file_from_zip(epub_file, extract_dir, "content.opf", True)
+        xml_file = pft.extract_file_from_zip(epub_file, extract_dir, "content.opf", True)
         if xml_file is None or not exists(xml_file):
             return mm_archive.get_empty_metadata()
         # Read XML file
@@ -958,11 +956,11 @@ def get_info_from_epub(epub_file:str) -> dict:
             metadata["tags"] = tags
         # Extract all the content files to get the word count
         word_count = 0
-        xml_text = mm_file_tools.read_text_file(xml_file)
+        xml_text = pft.read_text_file(xml_file)
         content_files = re.findall("(?<=href=['\"]).+\\.xhtml(?=['\"])", xml_text)
         for content_file in content_files:
             filename = re.sub(r".+\/", "", content_file)
-            extracted = mm_file_tools.extract_file_from_zip(epub_file, extract_dir, filename, True)
+            extracted = pft.extract_file_from_zip(epub_file, extract_dir, filename, True)
             if extracted is not None and exists(extracted):
                 word_count += mm_xhtml.get_word_count_from_html(extracted)
         metadata["page_count"] = str(math.ceil(word_count/300))
@@ -992,10 +990,10 @@ def update_epub_info(epub_file:str, metadata:dict,
         assert always_overwrite or not new_metadata == existing_metadata
         with tempfile.TemporaryDirectory() as temp_dir:
             # Extract epub into temp file
-            mm_file_tools.extract_zip(abspath(epub_file), temp_dir)
+            pft.extract_zip(abspath(epub_file), temp_dir)
             # Get the opf content file
-            opf_file = mm_file_tools.find_files_of_type(temp_dir, ".opf")[0]
-            opf_text = mm_file_tools.read_text_file(opf_file)
+            opf_file = pft.find_files_of_type(temp_dir, ".opf")[0]
+            opf_text = pft.read_text_file(opf_file)
             # Get the tab value
             tab = re.findall(".+(?=<metadata)", opf_text)[0]
             # Replace the metadata XML
@@ -1009,7 +1007,7 @@ def update_epub_info(epub_file:str, metadata:dict,
             xml = ElementTree.tostring(base).decode("UTF-8")
             xml = html_string_tools.make_human_readable(xml, "    ").strip()
             xml = f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{xml}"
-            mm_file_tools.write_text_file(opf_file, xml)
+            pft.write_text_file(opf_file, xml)
             # Remove the mimetype
             mimetype = abspath(join(temp_dir, "mimetype"))
             if exists(mimetype):
@@ -1028,10 +1026,10 @@ def update_epub_info(epub_file:str, metadata:dict,
                 # Replace the existing cover image xhtml file
                 xml = mm_xhtml.image_to_xhtml(cover_file, "Cover")
                 xml = mm_xhtml.format_xhtml(xml, "Cover")
-                mm_file_tools.write_text_file(cover_xml, xml)
+                pft.write_text_file(cover_xml, xml)
             # Repack the epub file
             new_epub_file = abspath(join(temp_dir, "AAAA.epub"))
-            assert mm_file_tools.create_zip(temp_dir, new_epub_file, 8, "application/epub+zip")
+            assert pft.create_zip(temp_dir, new_epub_file, 8, "application/epub+zip")
             # Replace the old epub file
             os.remove(abspath(epub_file))
             shutil.copy(new_epub_file, abspath(epub_file))

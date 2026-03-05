@@ -5,12 +5,12 @@ import shutil
 import tempfile
 import metadata_magic.test as mm_test
 import metadata_magic.config as mm_config
-import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive as mm_archive
 import metadata_magic.archive.epub as mm_epub
 import metadata_magic.archive.mkv as mm_mkv
 import metadata_magic.archive.bulk_archive as mm_bulk_archive
 import metadata_magic.archive.comic_archive as mm_comic_archive
+import python_file_tools as pft
 from os.path import abspath, join
 
 def test_archive_all_media():
@@ -33,7 +33,7 @@ def test_archive_all_media():
         assert read_metadata["artists"] is None
         cbz_extracted = abspath(join(temp_dir, "cbz_extracted"))
         os.mkdir(cbz_extracted)
-        assert mm_file_tools.extract_zip(cbz_file, cbz_extracted)
+        assert pft.extract_zip(cbz_file, cbz_extracted)
         assert sorted(os.listdir(cbz_extracted)) == ["ComicInfo.xml", "Empty"]
         cbz_extracted = abspath(join(cbz_extracted, "Empty"))
         assert sorted(os.listdir(cbz_extracted)) == ["Empty.json", "Empty.png"]
@@ -49,7 +49,7 @@ def test_archive_all_media():
         assert read_metadata["date"] is None
         epub_extracted = abspath(join(temp_dir, "epub_extracted"))
         os.mkdir(epub_extracted)
-        assert mm_file_tools.extract_zip(epub_file, epub_extracted)
+        assert pft.extract_zip(epub_file, epub_extracted)
         assert sorted(os.listdir(epub_extracted)) == ["EPUB", "META-INF", "mimetype"]
         epub_extracted = abspath(join(epub_extracted, "EPUB"))
         epub_extracted = abspath(join(epub_extracted, "content"))
@@ -70,7 +70,7 @@ def test_archive_all_media():
         assert read_metadata["date"] is None
         epub_extracted = abspath(join(temp_dir, "text1_extracted"))
         os.mkdir(epub_extracted)
-        assert mm_file_tools.extract_zip(epub_file, epub_extracted)
+        assert pft.extract_zip(epub_file, epub_extracted)
         assert sorted(os.listdir(epub_extracted)) == ["EPUB", "META-INF", "mimetype"]
         epub_extracted = abspath(join(epub_extracted, "EPUB"))
         epub_extracted = abspath(join(epub_extracted, "content"))
@@ -85,7 +85,7 @@ def test_archive_all_media():
         assert read_metadata["date"] is None
         epub_extracted = abspath(join(temp_dir, "text2_extracted"))
         os.mkdir(epub_extracted)
-        assert mm_file_tools.extract_zip(epub_file, epub_extracted)
+        assert pft.extract_zip(epub_file, epub_extracted)
         assert sorted(os.listdir(epub_extracted)) == ["EPUB", "META-INF", "mimetype"]
         epub_extracted = abspath(join(epub_extracted, "EPUB"))
         epub_extracted = abspath(join(epub_extracted, "content"))
@@ -238,7 +238,7 @@ def test_extract_mkv():
         assert mm_bulk_archive.extract_mkv(base_file, temp_dir)
         assert sorted(os.listdir(temp_dir)) == ["full.MKV", "full.json"]
         json_file = abspath(join(temp_dir, "full.json"))
-        contents = mm_file_tools.read_json_file(json_file)
+        contents = pft.read_json_file(json_file)
         assert contents["title"] == "Video Title"
         assert contents["artist"] == "Person"
         assert contents["date"] == "2020-01-01"
@@ -252,14 +252,14 @@ def test_extract_mkv():
         base_file = abspath(join(temp_dir, "full.MKV"))
         shutil.copy(original_file, base_file)
         existing_json = abspath(join(temp_dir, "full.json"))
-        mm_file_tools.write_json_file(existing_json, {"key":"value"})
+        pft.write_json_file(existing_json, {"key":"value"})
         assert mm_bulk_archive.extract_mkv(base_file, temp_dir)
         assert sorted(os.listdir(temp_dir)) == ["full-2.json", "full.MKV", "full.json", ]
         json_file = abspath(join(temp_dir, "full.json"))
-        contents = mm_file_tools.read_json_file(json_file)
+        contents = pft.read_json_file(json_file)
         assert contents["key"] == "value"
         json_file = abspath(join(temp_dir, "full-2.json"))
-        contents = mm_file_tools.read_json_file(json_file)
+        contents = pft.read_json_file(json_file)
         assert contents["title"] == "Video Title"
         assert contents["artist"] == "Person"
         assert contents["date"] == "2020-01-01"
@@ -282,10 +282,10 @@ def test_extract_mkv():
     # Test if the file is not a valid MKV
     with tempfile.TemporaryDirectory() as temp_dir:
         text_file = abspath(join(temp_dir, "file.mkv"))
-        mm_file_tools.write_text_file(text_file, "Fake Video")
+        pft.write_text_file(text_file, "Fake Video")
         assert mm_bulk_archive.extract_mkv(text_file, temp_dir)
         assert sorted(os.listdir(temp_dir)) == ["file.mkv"]
-        assert mm_file_tools.read_text_file(text_file) == "Fake Video"
+        assert pft.read_text_file(text_file) == "Fake Video"
 
 def test_extract_all_archives():
     """

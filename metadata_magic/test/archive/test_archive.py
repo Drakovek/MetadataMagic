@@ -5,11 +5,11 @@ import shutil
 import tempfile
 import metadata_magic.test as mm_test
 import metadata_magic.config as mm_config
-import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive as mm_archive
 import metadata_magic.archive.epub as mm_epub
 import metadata_magic.archive.mkv as mm_mkv
 import metadata_magic.archive.comic_archive as mm_comic_archive
+import python_file_tools as pft
 from os.path import abspath, join
 from PIL import Image
 
@@ -240,7 +240,7 @@ def test_update_archive_info():
         text_file = abspath(join(temp_dir, "unicode.txt"))
         shutil.copy(base_file, text_file)
         mm_archive.update_archive_info(text_file, metadata)
-        assert mm_file_tools.read_text_file(text_file) == "This is ünicode."
+        assert pft.read_text_file(text_file) == "This is ünicode."
     base_file = abspath(join(mm_test.BASIC_DIRECTORY, "archive.zip"))
     with tempfile.TemporaryDirectory() as temp_dir:
         zip_file = abspath(join(temp_dir, "archive.zip"))

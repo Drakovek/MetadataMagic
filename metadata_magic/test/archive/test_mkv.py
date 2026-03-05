@@ -5,8 +5,8 @@ import shutil
 import tempfile
 import metadata_magic.test as mm_test
 import metadata_magic.archive as mm_archive
-import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.mkv as mm_mkv
+import python_file_tools as pft
 from os.path import abspath, exists, join
 from ffmpeg import FFmpeg
 from ffmpeg.errors import FFmpegError
@@ -108,7 +108,7 @@ def test_create_mkv():
     # Test if directory contains no videos or more than one video
     with tempfile.TemporaryDirectory() as temp_dir:
         text_file = abspath(join(temp_dir, "text.txt"))
-        mm_file_tools.write_text_file(text_file, "Text.")
+        pft.write_text_file(text_file, "Text.")
         assert mm_mkv.create_mkv(temp_dir, "None", metadata) is None
         shutil.copy(basic_video_file, abspath(join(temp_dir, "basic.mp4")))
         shutil.copy(basic_video_file, abspath(join(temp_dir, "basic2.mp4")))
@@ -116,7 +116,7 @@ def test_create_mkv():
     # Test if the video file is invalid
     with tempfile.TemporaryDirectory() as temp_dir:
         text_file = abspath(join(temp_dir, "text.mp4"))
-        mm_file_tools.write_text_file(text_file, "Text.")
+        pft.write_text_file(text_file, "Text.")
         assert mm_mkv.create_mkv(temp_dir, "None", metadata) is None
     # Test creating MKV with no metadata or invalid metadata
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -246,10 +246,10 @@ def test_remove_all_mkv_metadata():
     # Test if the file is not an mkv file
     with tempfile.TemporaryDirectory() as temp_dir:
         text_file = abspath(join(temp_dir, "text.txt"))
-        mm_file_tools.write_text_file(text_file, "Text!")
+        pft.write_text_file(text_file, "Text!")
         mm_mkv.remove_all_mkv_metadata(text_file)
-        assert mm_file_tools.read_text_file(text_file) == "Text!"
+        assert pft.read_text_file(text_file) == "Text!"
         text_file = abspath(join(temp_dir, "text.mkv"))
-        mm_file_tools.write_text_file(text_file, "Fake video")
+        pft.write_text_file(text_file, "Fake video")
         mm_mkv.remove_all_mkv_metadata(text_file)
-        assert mm_file_tools.read_text_file(text_file) == "Fake video"
+        assert pft.read_text_file(text_file) == "Fake video"

@@ -6,9 +6,8 @@ import math
 import tqdm
 import argparse
 import python_print_tools
-import metadata_magic.sort as mm_sort
 import metadata_magic.archive as mm_archive
-import metadata_magic.file_tools as mm_file_tools
+import python_file_tools as pft
 from os.path import abspath, basename, exists
 from typing import List
 
@@ -25,9 +24,9 @@ def get_default_labels(directory:str) -> List[dict]:
     :rtype: List[dict]
     """
     # Get all archive files
-    archive_files = mm_file_tools.find_files_of_type(directory,
+    archive_files = pft.find_files_of_type(directory,
             mm_archive.ARCHIVE_EXTENSIONS, include_subdirectories=False)
-    archive_files = mm_sort.sort_alphanum(archive_files)
+    archive_files = pft.sort.sort_alphanum(archive_files)
     # Set labels based on the current sequence information
     base_label = 100000
     label_num = base_label
@@ -42,7 +41,7 @@ def get_default_labels(directory:str) -> List[dict]:
         # Add file and label to the list of files
         labeled_files.append({"file":archive_file, "label":label})
     # Sort the files by label
-    labeled_files = mm_sort.sort_dictionaries_alphanum(labeled_files, "label")
+    labeled_files = pft.sort.sort_dictionaries_alphanum(labeled_files, "label")
     # Relabel the files if there was no sequence info found
     if label_num - base_label == len(labeled_files):
         labeled_files = label_files(labeled_files, 0, "1.0")
@@ -202,7 +201,7 @@ def set_series_from_user(directory:str):
             labeled_files = label_files(labeled_files, index, entry_value)
         elif response == "r":
             # Sort and relabel all files alphabetically
-            labeled_files = mm_sort.sort_dictionaries_alphanum(labeled_files, "file")
+            labeled_files = pft.sort.sort_dictionaries_alphanum(labeled_files, "file")
             labeled_files = label_files(labeled_files, 0, "1")
         elif response == "w": 
             write_series(labeled_files, series_title)
@@ -237,7 +236,7 @@ def main():
         if not args.standalone:
             set_series_from_user(directory)
         elif input("Mark all archives in this directory as standalone entries? (Y/[N]): ").lower() == "y":
-            archive_files = mm_file_tools.find_files_of_type(directory, mm_archive.ARCHIVE_EXTENSIONS)
+            archive_files = pft.find_files_of_type(directory, mm_archive.ARCHIVE_EXTENSIONS)
             for archive_file in tqdm.tqdm(archive_files):
                 write_series_single(archive_file)
         

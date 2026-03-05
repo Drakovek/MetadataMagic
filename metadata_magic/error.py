@@ -5,12 +5,11 @@ import tqdm
 import argparse
 import tempfile
 import python_print_tools
-import metadata_magic.sort as mm_sort
 import metadata_magic.config as mm_config
-import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.meta_reader as mm_meta_reader
 import metadata_magic.archive as mm_archive
+import python_file_tools as pft
 from os.path import abspath, basename, exists, join
 from typing import List
 
@@ -64,7 +63,7 @@ def find_missing_metadata(path:str) -> List[str]:
             continue
         # Check if parent dir contains JSON files
         parent_dir = abspath(join(media[media_num], os.pardir))
-        if not mm_file_tools.directory_contains(parent_dir, ".json", False):
+        if not pft.directory_contains(parent_dir, ".json", False):
             del media[media_num]
     # Return list of media without metadata
     return media
@@ -85,7 +84,7 @@ def find_long_descriptions(path:str, config:dict, length:int=LONG_DESCRIPTION) -
     # Get a list of all archive files
     print("Searching archives with long descriptions...")
     full_path = abspath(path)
-    archive_files = mm_file_tools.find_files_of_type(full_path, mm_archive.ARCHIVE_EXTENSIONS)
+    archive_files = pft.find_files_of_type(full_path, mm_archive.ARCHIVE_EXTENSIONS)
     # Run through all archive files
     long = []
     for archive_file in tqdm.tqdm(archive_files):
@@ -101,7 +100,7 @@ def find_long_descriptions(path:str, config:dict, length:int=LONG_DESCRIPTION) -
         if metadata["description"] is not None and len(metadata["description"]) > length:
             long.append(pair["json"])
     # Return list of files with long descriptions
-    return mm_sort.sort_alphanum(long)
+    return pft.sort.sort_alphanum(long)
 
 def find_missing_fields(path:str, fields:List[str]) -> List[str]:
     """
@@ -117,7 +116,7 @@ def find_missing_fields(path:str, fields:List[str]) -> List[str]:
     """
     # Get a list of all archive files
     full_path = abspath(path)
-    archive_files = mm_file_tools.find_files_of_type(full_path, mm_archive.ARCHIVE_EXTENSIONS)
+    archive_files = pft.find_files_of_type(full_path, mm_archive.ARCHIVE_EXTENSIONS)
     # Run through all files
     missing = []
     for archive_file in tqdm.tqdm(archive_files):
@@ -133,7 +132,7 @@ def find_missing_fields(path:str, fields:List[str]) -> List[str]:
                     break
             except KeyError: pass
     # Return the list of missing files
-    return mm_sort.sort_alphanum(missing)
+    return pft.sort.sort_alphanum(missing)
 
 def find_invalid_jsons(path:str) -> List[str]:
     """
@@ -145,11 +144,11 @@ def find_invalid_jsons(path:str) -> List[str]:
     :rtype: list[str]
     """
     invalid = []
-    json_files = mm_file_tools.find_files_of_type(path, ".json")
+    json_files = pft.find_files_of_type(path, ".json")
     for json_file in tqdm.tqdm(json_files):
-        if mm_file_tools.read_json_file(json_file) == {}:
+        if pft.read_json_file(json_file) == {}:
             invalid.append(json_file)
-    return mm_sort.sort_alphanum(invalid)
+    return pft.sort.sort_alphanum(invalid)
 
 def find_invalid_archives(path:str) -> List[str]:
     """
@@ -161,12 +160,12 @@ def find_invalid_archives(path:str) -> List[str]:
     :rtype: list[str]
     """
     invalid = []
-    archive_files = mm_file_tools.find_files_of_type(path, mm_archive.ARCHIVE_EXTENSIONS)
+    archive_files = pft.find_files_of_type(path, mm_archive.ARCHIVE_EXTENSIONS)
     for archive_file in tqdm.tqdm(archive_files):
         with tempfile.TemporaryDirectory() as tempdir:
-            if not mm_file_tools.extract_zip(archive_file, tempdir):
+            if not pft.extract_zip(archive_file, tempdir):
                 invalid.append(archive_file)
-    return mm_sort.sort_alphanum(invalid)
+    return pft.sort.sort_alphanum(invalid)
 
 def print_errors(error_files:List[str], root_directory:str, print_text:str):
     """
@@ -237,7 +236,7 @@ def main():
         if args.corrupt:
             invalid_files = find_invalid_jsons(directory)
             invalid_files.extend(find_invalid_archives(directory))
-            invalid_files = mm_sort.sort_alphanum(invalid_files)
+            invalid_files = pft.sort.sort_alphanum(invalid_files)
             print_errors(invalid_files, directory, "Corrupted Files")
         # Find missing media
         if args.missing_media:

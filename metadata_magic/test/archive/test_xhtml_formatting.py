@@ -2,8 +2,8 @@
 
 import tempfile
 import metadata_magic.test as mm_test
-import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.xhtml_formatting as mm_xhtml
+import python_file_tools as pft
 from os.path import abspath, exists, join
 
 def test_format_xhtml():
@@ -337,25 +337,25 @@ def test_get_word_count_from_html():
     with tempfile.TemporaryDirectory() as temp_dir:
         # Test with low word count
         html_file = abspath(join(temp_dir, "text.html"))
-        mm_file_tools.write_text_file(html_file, "<p>Some words.</p>")
+        pft.write_text_file(html_file, "<p>Some words.</p>")
         assert mm_xhtml.get_word_count_from_html(html_file) == 2
-        mm_file_tools.write_text_file(html_file, "<p>Some <i>more</i> <a href='b'>words.</a></p>")
+        pft.write_text_file(html_file, "<p>Some <i>more</i> <a href='b'>words.</a></p>")
         assert mm_xhtml.get_word_count_from_html(html_file) == 3
-        mm_file_tools.write_text_file(html_file, "<p class='a'>Something else entirely.</p>")
+        pft.write_text_file(html_file, "<p class='a'>Something else entirely.</p>")
         assert mm_xhtml.get_word_count_from_html(html_file) == 3
-        mm_file_tools.write_text_file(html_file, "<p>A</p><div>blah<div><p>B C D</p>")
+        pft.write_text_file(html_file, "<p>A</p><div>blah<div><p>B C D</p>")
         assert mm_xhtml.get_word_count_from_html(html_file) == 4
         # Test with high word count
         paragraph = "AAA " * 50
         paragraph = f"<p>{paragraph}</p>"
         html = f"<ol>Thing</ol>{paragraph}{paragraph}{paragraph}"
-        mm_file_tools.write_text_file(html_file, html)
+        pft.write_text_file(html_file, html)
         assert mm_xhtml.get_word_count_from_html(html_file) == 150
         # Test with non-ascii characters
-        mm_file_tools.write_text_file(html_file, "<p>Thís shóuldn't bréak.</p>")
+        pft.write_text_file(html_file, "<p>Thís shóuldn't bréak.</p>")
         assert mm_xhtml.get_word_count_from_html(html_file) == 3
         # Test with no words
-        mm_file_tools.write_text_file(html_file, "<html><div>nothing here</div></html>")
+        pft.write_text_file(html_file, "<html><div>nothing here</div></html>")
         assert mm_xhtml.get_word_count_from_html(html_file) == 0
-        mm_file_tools.write_text_file(html_file, "Not HTML text.")
+        pft.write_text_file(html_file, "Not HTML text.")
         assert mm_xhtml.get_word_count_from_html(html_file) == 0

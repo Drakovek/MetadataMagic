@@ -5,8 +5,8 @@ import re
 import copy
 import tqdm
 import html_string_tools
-import metadata_magic.sort as mm_sort
 import metadata_magic.archive as mm_archive
+import python_file_tools as pft
 from os.path import abspath, basename, isdir, join
 from typing import List
 
@@ -42,8 +42,8 @@ def separate_files(path:str) -> tuple:
         jsons.extend(new_jsons)
         media.extend(new_media)
     # Return JSON and media files separated
-    jsons = mm_sort.sort_alphanum(jsons)
-    media = mm_sort.sort_alphanum(media)
+    jsons = pft.sort.sort_alphanum(jsons)
+    media = pft.sort.sort_alphanum(media)
     return (jsons, media)
 
 def get_pairs_from_lists(jsons:List[str], media:List[str], print_info:bool=True) -> List[dict]:

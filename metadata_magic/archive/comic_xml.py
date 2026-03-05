@@ -3,7 +3,6 @@
 import re
 import html_string_tools
 import metadata_magic.archive as mm_archive
-import metadata_magic.file_tools as mm_file_tools
 from os.path import abspath
 from xml.etree import ElementTree
 

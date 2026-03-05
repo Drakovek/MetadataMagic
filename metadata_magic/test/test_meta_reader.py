@@ -2,8 +2,8 @@
 
 import metadata_magic.test as mm_test
 import metadata_magic.config as mm_config
-import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_reader as mm_meta_reader
+import python_file_tools as pft
 from os.path import abspath, join
 
 def test_get_value_from_keylist():
@@ -83,7 +83,7 @@ def test_load_metadata():
     assert metadata["age_rating"] == "Unknown"
     assert metadata["artists"] is None
     assert metadata["writers"] is None
-    assert metadata["original"] == mm_file_tools.read_json_file(json_file)
+    assert metadata["original"] == pft.read_json_file(json_file)
     # Test loading an invalid JSON file
     metadata = mm_meta_reader.load_metadata("/non/existant/file.json", config, "A")
     assert metadata["json_path"] == "/non/existant/file.json"

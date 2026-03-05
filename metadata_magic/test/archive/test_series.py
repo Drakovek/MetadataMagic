@@ -3,9 +3,9 @@
 import shutil
 import tempfile
 import metadata_magic.test as mm_test
-import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive as mm_archive
 import metadata_magic.archive.series as mm_series
+import python_file_tools as pft
 from os.path import abspath, basename, join
 
 def test_get_default_labels():
@@ -29,7 +29,7 @@ def test_get_default_labels():
         assert basename(labels[4]["file"]) == "00B.epub"
         assert labels[4]["label"] == "100001.0"
         # Remove All Sequence information
-        for file in mm_file_tools.find_files_of_type(temp_dir, mm_archive.ARCHIVE_EXTENSIONS):
+        for file in pft.find_files_of_type(temp_dir, mm_archive.ARCHIVE_EXTENSIONS):
             metadata = mm_archive.get_info_from_archive(file)
             metadata["series"] = None
             metadata["series_number"] = None

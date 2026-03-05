@@ -8,12 +8,12 @@ import cover_generator
 import html_string_tools
 import python_print_tools
 import metadata_magic.config as mm_config
-import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.meta_reader as mm_meta_reader
 import metadata_magic.archive.epub as mm_epub
 import metadata_magic.archive.mkv as mm_mkv
 import metadata_magic.archive.comic_archive as mm_comic_archive
+import python_file_tools as pft
 from os.path import abspath, isdir, exists
 from typing import List
 
@@ -35,13 +35,13 @@ def get_directory_archive_type(directory:str) -> str:
     :rtype: str
     """
     # Return "epub" if the directory contains text files
-    if mm_file_tools.directory_contains(directory, SUPPORTED_TEXT, False):
+    if pft.directory_contains(directory, SUPPORTED_TEXT, False):
         return "epub"
     # Return "cbz" if the directory contains image files
-    if mm_file_tools.directory_contains(directory, SUPPORTED_IMAGES, True):
+    if pft.directory_contains(directory, SUPPORTED_IMAGES, True):
         return "cbz"
     # Return "mkv" if the directory contains video files
-    if mm_file_tools.directory_contains(directory, SUPPORTED_VIDEO, False):
+    if pft.directory_contains(directory, SUPPORTED_VIDEO, False):
         return "mkv"
     # Return None if no appropriate archive format could be found
     return None

@@ -2,7 +2,7 @@
 
 import re
 import html_string_tools
-import metadata_magic.file_tools as mm_file_tools
+import python_file_tools as pft
 from os.path import abspath
 from typing import List
 
@@ -344,7 +344,7 @@ def load_metadata(json_file:str, config:dict, media_file:str) -> dict:
     :rtype: dict
     """
     # Load JSON into dictionary
-    json = mm_file_tools.read_json_file(json_file)
+    json = pft.read_json_file(json_file)
     # Set the path of the JSON in the metadata
     meta_dict = {"json_path":abspath(json_file)}
     # Add internal metadata in standardized forms

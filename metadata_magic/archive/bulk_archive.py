@@ -11,13 +11,12 @@ import html_string_tools
 import python_print_tools
 import metadata_magic.config as mm_config
 import metadata_magic.error as mm_error
-import metadata_magic.rename as mm_rename
-import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.meta_finder as mm_meta_finder
 import metadata_magic.archive as mm_archive
 import metadata_magic.archive.epub as mm_epub
 import metadata_magic.archive.mkv as mm_mkv
 import metadata_magic.archive.comic_archive as mm_comic_archive
+import python_file_tools as pft
 from os.path import abspath, basename, exists, isdir, join
 
 def archive_all_media(directory:str, config:dict,
@@ -63,9 +62,9 @@ def archive_all_media(directory:str, config:dict,
                 if format_title:
                     metadata["title"] = mm_archive.format_title(metadata["title"])
                 # Rename files to fit the title
-                title = mm_rename.get_file_friendly_text(metadata["title"], ascii_only=True)
-                mm_rename.rename_file(new_json, title)
-                mm_rename.rename_file(new_media, title)
+                title = pft.get_file_friendly_text(metadata["title"], ascii_only=True)
+                pft.rename_file(new_json, title)
+                pft.rename_file(new_media, title)
                 # Create the archive file
                 archive_file = None
                 if extension in mm_archive.SUPPORTED_IMAGES:
@@ -88,7 +87,7 @@ def archive_all_media(directory:str, config:dict,
                 parent = abspath(join(pair["json"], os.pardir))
                 filename = basename(pair["json"])
                 filename = filename[:len(filename) - 5]
-                filename = mm_rename.get_available_filename([archive_file], filename, parent)
+                filename = pft.get_available_filename([archive_file], filename, parent)
                 extension = html_string_tools.get_extension(archive_file).lower()
                 new_archive = join(parent, f"{filename}{extension}")
                 shutil.copy(archive_file, new_archive)
@@ -123,7 +122,7 @@ def extract_cbz(cbz_file:str, output_directory:str,
     if remove_structure:
         remove_list = ["ComicInfo.xml", "comicinfo.xml"]
     full_directory = abspath(output_directory)
-    return mm_file_tools.extract_zip(cbz_file, full_directory, create_folder=create_folder,
+    return pft.extract_zip(cbz_file, full_directory, create_folder=create_folder,
             remove_internal=remove_structure, delete_files=remove_list)
 
 def extract_epub(epub_file:str, output_directory:str,
@@ -145,10 +144,10 @@ def extract_epub(epub_file:str, output_directory:str,
     # Extract with structure intact if specified
     full_directory = abspath(output_directory)
     if not remove_structure:
-        return mm_file_tools.extract_zip(epub_file, full_directory, create_folder=create_folder)
+        return pft.extract_zip(epub_file, full_directory, create_folder=create_folder)
     with tempfile.TemporaryDirectory() as temp_dir:
         # Extract epub to temp folder
-        mm_file_tools.extract_zip(epub_file, temp_dir)
+        pft.extract_zip(epub_file, temp_dir)
         # Get the folder containing the original files
         original_dir = abspath(join(temp_dir, "EPUB"))
         original_dir = abspath(join(original_dir, "original"))
@@ -158,14 +157,14 @@ def extract_epub(epub_file:str, output_directory:str,
         copy_dir = full_directory
         if create_folder:
             folder_name = re.sub(r"\..{1,6}$", "", basename(epub_file))
-            folder_name = mm_rename.get_available_filename(["AAAAAAAA"], folder_name, full_directory)
+            folder_name = pft.get_available_filename(["AAAAAAAA"], folder_name, full_directory)
             copy_dir = abspath(join(full_directory, folder_name))
             os.mkdir(copy_dir)
         # Copy files from epub
         for original_file in sorted(os.listdir(original_dir)):
             full_file = abspath(join(original_dir, original_file))
             filename = re.sub(r"\..{1,6}$", "", original_file)
-            filename = mm_rename.get_available_filename([original_file], filename, copy_dir)
+            filename = pft.get_available_filename([original_file], filename, copy_dir)
             filename = filename + html_string_tools.get_extension(full_file)
             new_file = abspath(join(copy_dir, filename))
             if isdir(full_file):
@@ -191,9 +190,9 @@ def extract_mkv(mkv_file:str, output_directory:str) -> bool:
     # Create JSON metadata file, if appropriate
     if not metadata["original"] == {}:
         filename = basename(mkv_file)[:-4]
-        filename = mm_rename.get_available_filename(["AAA.json"], filename, abspath(output_directory))
+        filename = pft.get_available_filename(["AAA.json"], filename, abspath(output_directory))
         json_file = abspath(join(output_directory, f"{filename}.json"))
-        mm_file_tools.write_json_file(json_file, metadata["original"])
+        pft.write_json_file(json_file, metadata["original"])
         # Remove existing metadata from the mkv file
         mm_mkv.remove_all_mkv_metadata(mkv_file)
     return True
@@ -213,7 +212,7 @@ def extract_all_archives(directory:str, create_folders:bool=True, remove_structu
     :rtype: bool
     """
     # Get a list of all archive files
-    archives = mm_file_tools.find_files_of_type(directory, mm_archive.ARCHIVE_EXTENSIONS)
+    archives = pft.find_files_of_type(directory, mm_archive.ARCHIVE_EXTENSIONS)
     # Extract each archive
     for archive in tqdm.tqdm(archives):
         try:

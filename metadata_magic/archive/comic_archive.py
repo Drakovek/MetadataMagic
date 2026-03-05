@@ -5,11 +5,9 @@ import copy
 import shutil
 import tempfile
 import html_string_tools
-import metadata_magic.sort as mm_sort
-import metadata_magic.rename as mm_rename
 import metadata_magic.archive as mm_archive
-import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive.comic_xml as mm_comic_xml
+import python_file_tools as pft
 from os.path import abspath, basename, exists, isdir, join
 
 def create_cbz(directory:str, name:str=None, metadata:dict=None, remove_files:bool=False) -> str:
@@ -29,16 +27,16 @@ def create_cbz(directory:str, name:str=None, metadata:dict=None, remove_files:bo
     """
     # Return None if directory is empty
     full_directory = abspath(directory)
-    files = mm_sort.sort_alphanum(os.listdir(full_directory))
+    files = pft.sort.sort_alphanum(os.listdir(full_directory))
     for i in range(len(files)-1, -1, -1):
         if files[i].startswith("."):
             del files[i]
     if len(files) == 0:
         return None
     # Create CBZ filename
-    filename = mm_rename.get_available_filename(["a.cbz"], basename(full_directory), full_directory)
+    filename = pft.get_available_filename(["a.cbz"], basename(full_directory), full_directory)
     if name is not None:
-        filename = mm_rename.get_available_filename(["a.cbz"], name, full_directory)
+        filename = pft.get_available_filename(["a.cbz"], name, full_directory)
     cbz_file = abspath(join(full_directory, f"{filename}.cbz"))
     # Check if there are existing directories
     move_files = True
@@ -56,8 +54,8 @@ def create_cbz(directory:str, name:str=None, metadata:dict=None, remove_files:bo
                 assert folder_name is not None
             except (AssertionError, KeyError, TypeError):
                 folder_name = files[0][:len(files[0]) - len(html_string_tools.get_extension(files[0]))]
-        folder_name = mm_rename.get_file_friendly_text(folder_name)
-        folder_name = mm_rename.get_available_filename(["AAAAAAAAAA"], folder_name, full_directory)
+        folder_name = pft.get_file_friendly_text(folder_name)
+        folder_name = pft.get_available_filename(["AAAAAAAAAA"], folder_name, full_directory)
         new_folder = abspath(join(full_directory, folder_name))
         os.mkdir(new_folder)
         # Move existing files to the new folder
@@ -71,12 +69,12 @@ def create_cbz(directory:str, name:str=None, metadata:dict=None, remove_files:bo
     if metadata is not None:
         # Set the page count
         new_metadata = copy.deepcopy(metadata)
-        images = mm_file_tools.find_files_of_type(full_directory, mm_archive.SUPPORTED_IMAGES)
+        images = pft.find_files_of_type(full_directory, mm_archive.SUPPORTED_IMAGES)
         new_metadata["page_count"] = str(len(images))
         # Write the metadata file
-        mm_file_tools.write_text_file(meta_file, mm_comic_xml.get_comic_xml(new_metadata))
+        pft.write_text_file(meta_file, mm_comic_xml.get_comic_xml(new_metadata))
     # Create cbz file
-    assert mm_file_tools.create_zip(full_directory, cbz_file)
+    assert pft.create_zip(full_directory, cbz_file)
     # Remove all old files besides the CBZ, if specified.
     if remove_files:
         files = os.listdir(full_directory)
@@ -108,7 +106,7 @@ def get_info_from_cbz(cbz_file:str, check_subdirectories:bool=True) -> dict:
         file = abspath(cbz_file)
         assert exists(extract_dir)
         # Extract ComicInfo.xml from given file
-        xml_file = mm_file_tools.extract_file_from_zip(cbz_file, extract_dir, "ComicInfo.xml", check_subdirectories)
+        xml_file = pft.extract_file_from_zip(cbz_file, extract_dir, "ComicInfo.xml", check_subdirectories)
         if xml_file is None or not exists(xml_file):
             return mm_archive.get_empty_metadata()
         # Read XML file
@@ -119,8 +117,8 @@ def get_info_from_cbz(cbz_file:str, check_subdirectories:bool=True) -> dict:
         except (AssertionError, ValueError):
             extract_dir = abspath(join(extract_dir, "images"))
             os.mkdir(extract_dir)
-            mm_file_tools.extract_zip(cbz_file, extract_dir)
-            images = mm_file_tools.find_files_of_type(extract_dir, mm_archive.SUPPORTED_IMAGES)
+            pft.extract_zip(cbz_file, extract_dir)
+            images = pft.find_files_of_type(extract_dir, mm_archive.SUPPORTED_IMAGES)
             metadata["page_count"] = str(len(images))
             # Update the cbz file
             update_cbz_info(cbz_file, metadata)
@@ -141,10 +139,10 @@ def update_cbz_info(cbz_file:str, metadata:dict, always_overwrite:bool=False):
     with tempfile.TemporaryDirectory() as temp_dir:
         # Extract cbz into temp file
         full_cbz_file = abspath(cbz_file)
-        if mm_file_tools.extract_zip(full_cbz_file, temp_dir):
+        if pft.extract_zip(full_cbz_file, temp_dir):
             # Delete existing ComicInfo.xml files, and get existing metadata
             old_metadata = None
-            xml_files = mm_file_tools.find_files_of_type(temp_dir, ".xml")
+            xml_files = pft.find_files_of_type(temp_dir, ".xml")
             for xml_file in xml_files:
                 if basename(xml_file) == "ComicInfo.xml":
                     old_metadata = mm_comic_xml.read_comic_info(xml_file)

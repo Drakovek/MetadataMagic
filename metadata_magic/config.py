@@ -2,7 +2,7 @@
 
 import os
 import json
-import metadata_magic.file_tools as mm_file_tools
+import python_file_tools as pft
 from os.path import abspath, expandvars, join
 from typing import List
 
@@ -48,8 +48,8 @@ def get_config(paths:List[str]) -> dict:
     """
     # Try to read any of the config files
     for file in paths:
-        config = mm_file_tools.read_json_file(abspath(file))
+        config = pft.read_json_file(abspath(file))
         if config is not None and not config == {}:
             return config
     # Return an empty dictionary if the config file couldn't be read
-    return mm_file_tools.read_json_file(DEFAULT_CONFIG_FILE)
+    return pft.read_json_file(DEFAULT_CONFIG_FILE)

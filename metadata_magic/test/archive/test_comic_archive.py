@@ -4,10 +4,10 @@ import os
 import shutil
 import tempfile
 import metadata_magic.test as mm_test
-import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive as mm_archive
 import metadata_magic.archive.comic_xml as mm_comic_xml
 import metadata_magic.archive.comic_archive as mm_comic_archive
+import python_file_tools as pft
 from os.path import abspath, exists, join
 
 def test_create_cbz():
@@ -22,7 +22,7 @@ def test_create_cbz():
         shutil.copytree(mm_test.PAIR_IMAGE_DIRECTORY, image_directory)
         cbz_file = mm_comic_archive.create_cbz(image_directory)
         assert sorted(os.listdir(image_directory)) == [".empty", "aaa", "images.cbz"]
-        mm_file_tools.extract_zip(cbz_file, extract_directory)
+        pft.extract_zip(cbz_file, extract_directory)
         assert sorted(os.listdir(extract_directory)) == ["aaa"]
         files = sorted(os.listdir(abspath(join(extract_directory, "aaa"))))
         assert files == ["aaa.json", "aaa.webp", "bare.PNG.json", "bare.png", "long.JPG", "long.JSON"]
@@ -36,7 +36,7 @@ def test_create_cbz():
         assert sorted(os.listdir(temp_dir)) == ["TITLE!.cbz", "[AA]", "[BB]"]
         extract_directory = abspath(join(temp_dir, "extract"))
         os.mkdir(extract_directory)
-        mm_file_tools.extract_zip(cbz_file, extract_directory)
+        pft.extract_zip(cbz_file, extract_directory)
         assert sorted(os.listdir(extract_directory)) == ["[AA]", "[BB]"]
         files = sorted(os.listdir(abspath(join(extract_directory, "[AA]"))))
         assert files == ["aaa.json", "aaa.webp", "bare.PNG.json", "bare.png", "long.JPG", "long.JSON"]
@@ -53,7 +53,7 @@ def test_create_cbz():
         metadata["artists"] = ["Multiple", "Artists"]
         cbz_file = mm_comic_archive.create_cbz(image_directory, metadata=metadata)
         assert sorted(os.listdir(image_directory)) == [".empty", "Name", "images.cbz"]
-        mm_file_tools.extract_zip(cbz_file, extract_directory)
+        pft.extract_zip(cbz_file, extract_directory)
         assert sorted(os.listdir(extract_directory)) == ["ComicInfo.xml", "Name"]
         files = sorted(os.listdir(abspath(join(extract_directory, "Name"))))
         assert files == ["aaa.json", "aaa.webp", "bare.PNG.json", "bare.png", "long.JPG", "long.JSON"]
@@ -74,7 +74,7 @@ def test_create_cbz():
         metadata["page_count"] = "42"
         cbz_file = mm_comic_archive.create_cbz(image_directory, "AAA", metadata=metadata, remove_files=True)
         assert sorted(os.listdir(image_directory)) == ["AAA.cbz"]
-        mm_file_tools.extract_zip(cbz_file, extract_directory)
+        pft.extract_zip(cbz_file, extract_directory)
         assert sorted(os.listdir(extract_directory)) == ["AAA", "ComicInfo.xml"]
         files = sorted(os.listdir(abspath(join(extract_directory, "AAA"))))
         assert files == ["aaa.json", "aaa.webp", "bare.PNG.json", "bare.png", "long.JPG", "long.JSON"]
@@ -96,7 +96,7 @@ def test_create_cbz():
         assert sorted(os.listdir(temp_dir)) == ["01", "02", "TITLE!.cbz"]
         extract_directory = abspath(join(temp_dir, "extract"))
         os.mkdir(extract_directory)
-        mm_file_tools.extract_zip(cbz_file, extract_directory)
+        pft.extract_zip(cbz_file, extract_directory)
         assert sorted(os.listdir(extract_directory)) == ["01", "02", "ComicInfo.xml"]
         files = sorted(os.listdir(abspath(join(extract_directory, "01"))))
         assert files == ["aaa.json", "aaa.webp", "bare.PNG.json", "bare.png", "long.JPG", "long.JSON"]
@@ -113,13 +113,13 @@ def test_create_cbz():
         os.mkdir(extract_directory)
         image_directory = abspath(join(temp_dir, "images"))
         shutil.copytree(mm_test.PAIR_IMAGE_DIRECTORY, image_directory)
-        mm_file_tools.write_text_file(abspath(join(image_directory, "ComicInfo.xml")), "AAA")
+        pft.write_text_file(abspath(join(image_directory, "ComicInfo.xml")), "AAA")
         metadata = mm_archive.get_empty_metadata()
         metadata["title"] = "Replaced"
         metadata["artists"] = ["New"]
         cbz_file = mm_comic_archive.create_cbz(image_directory, metadata=metadata)
         assert sorted(os.listdir(image_directory)) == [".empty", "Replaced", "images.cbz"]
-        mm_file_tools.extract_zip(cbz_file, extract_directory)
+        pft.extract_zip(cbz_file, extract_directory)
         assert sorted(os.listdir(extract_directory)) == ["ComicInfo.xml", "Replaced"]
         files = sorted(os.listdir(abspath(join(extract_directory, "Replaced"))))
         assert files == ["aaa.json", "aaa.webp", "bare.PNG.json", "bare.png", "long.JPG", "long.JSON"]
@@ -131,9 +131,9 @@ def test_create_cbz():
     # Test creating a CBZ file fails if there are no internal files, or only dotfiles
     with tempfile.TemporaryDirectory() as temp_dir:
         assert mm_comic_archive.create_cbz(temp_dir) is None
-        mm_file_tools.write_text_file(abspath(join(temp_dir, ".01")), "AAA")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, ".aa")), "AAA")
-        mm_file_tools.write_text_file(abspath(join(temp_dir, ".02")), "AAA")
+        pft.write_text_file(abspath(join(temp_dir, ".01")), "AAA")
+        pft.write_text_file(abspath(join(temp_dir, ".aa")), "AAA")
+        pft.write_text_file(abspath(join(temp_dir, ".02")), "AAA")
         assert mm_comic_archive.create_cbz(temp_dir) is None
 
 def test_get_info_from_cbz():
@@ -166,7 +166,7 @@ def test_get_info_from_cbz():
         # Test that page count is not already in cbz file
         extract_dir = abspath(join(temp_dir, "extract"))
         os.mkdir(extract_dir)
-        mm_file_tools.extract_zip(cbz_file, extract_dir)
+        pft.extract_zip(cbz_file, extract_dir)
         assert sorted(os.listdir(extract_dir)) == ["B.jpeg", "ComicInfo.xml", "G.jpg", "R.png"]
         xml_file = abspath(join(extract_dir, "ComicInfo.xml"))
         metadata = read_meta = mm_comic_xml.read_comic_info(xml_file)
@@ -192,7 +192,7 @@ def test_get_info_from_cbz():
         # Test that page count has been added to the metadata after reading
         shutil.rmtree(extract_dir)
         os.mkdir(extract_dir)
-        mm_file_tools.extract_zip(cbz_file, extract_dir)
+        pft.extract_zip(cbz_file, extract_dir)
         assert sorted(os.listdir(extract_dir)) == ["ComicInfo.xml", "No Page"]
         xml_file = abspath(join(extract_dir, "ComicInfo.xml"))
         metadata = read_meta = mm_comic_xml.read_comic_info(xml_file)
@@ -206,7 +206,7 @@ def test_get_info_from_cbz():
         shutil.copy(base_file, cbz_file)
         extract_dir = abspath(join(temp_dir, "extract"))
         os.mkdir(extract_dir)
-        mm_file_tools.extract_zip(cbz_file, extract_dir)
+        pft.extract_zip(cbz_file, extract_dir)
         assert sorted(os.listdir(extract_dir)) == ["Internal"]
         # Test getting metadata not in the home directory
         metadata = mm_comic_archive.get_info_from_cbz(cbz_file)
@@ -265,7 +265,7 @@ def test_update_cbz_info():
         # Test that the existing archived files are still present
         extract_dir = abspath(join(temp_dir, "extracted"))
         os.mkdir(extract_dir)
-        mm_file_tools.extract_zip(cbz_file, extract_dir)
+        pft.extract_zip(cbz_file, extract_dir)
         assert sorted(os.listdir(extract_dir)) == ["Comic", "ComicInfo.xml"]
         sub_dir = abspath(join(extract_dir, "Comic"))
         assert sorted(os.listdir(sub_dir)) == ["Comic.jpg"]
@@ -297,7 +297,7 @@ def test_update_cbz_info():
         # Test that metadata has been added while keeping images intact
         extract_dir = abspath(join(temp_dir, "extracted"))
         os.mkdir(extract_dir)
-        mm_file_tools.extract_zip(cbz_file, extract_dir)
+        pft.extract_zip(cbz_file, extract_dir)
         assert sorted(os.listdir(extract_dir)) == ["ComicInfo.xml", "Not Empty"]
         sub_dir = abspath(join(extract_dir, "Not Empty"))
         assert sorted(os.listdir(sub_dir)) == ["empty.jpg"]
@@ -329,7 +329,7 @@ def test_update_cbz_info():
         # Test that metadata has been added while keeping images intact
         extract_dir = abspath(join(temp_dir, "extracted"))
         os.mkdir(extract_dir)
-        mm_file_tools.extract_zip(cbz_file, extract_dir)
+        pft.extract_zip(cbz_file, extract_dir)
         assert sorted(os.listdir(extract_dir)) == ["ComicInfo.xml", "Internal"]
         sub_dir = abspath(join(extract_dir, "Internal"))
         assert sorted(os.listdir(sub_dir)) == ["Red.jpg"]
@@ -344,7 +344,7 @@ def test_update_cbz_info():
         assert mm_comic_archive.get_info_from_cbz(cbz_file) == metadata
         extract_dir = abspath(join(temp_dir, "extracted"))
         os.mkdir(extract_dir)
-        mm_file_tools.extract_zip(cbz_file, extract_dir)
+        pft.extract_zip(cbz_file, extract_dir)
         assert sorted(os.listdir(extract_dir)) == ["Internal"]
         sub_dir = abspath(join(extract_dir, "Internal"))
         assert sorted(os.listdir(sub_dir)) == ["ComicInfo.xml", "Red.jpg"]
@@ -355,7 +355,7 @@ def test_update_cbz_info():
         assert metadata["page_count"] == "12"
         extract_dir = abspath(join(temp_dir, "new_extracted"))
         os.mkdir(extract_dir)
-        mm_file_tools.extract_zip(cbz_file, extract_dir)
+        pft.extract_zip(cbz_file, extract_dir)
         assert sorted(os.listdir(extract_dir)) == ["ComicInfo.xml", "Internal"]
         sub_dir = abspath(join(extract_dir, "Internal"))
         assert sorted(os.listdir(sub_dir)) == ["Red.jpg"]
@@ -364,4 +364,4 @@ def test_update_cbz_info():
     text_file = abspath(join(mm_test.BASIC_TEXT_DIRECTORY, "latin1.txt"))
     mm_comic_archive.update_cbz_info(text_file, metadata)
     assert exists(text_file)
-    assert mm_file_tools.read_text_file(text_file) == "This is lätin1."
+    assert pft.read_text_file(text_file) == "This is lätin1."

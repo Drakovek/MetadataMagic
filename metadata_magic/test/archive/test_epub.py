@@ -5,9 +5,9 @@ import shutil
 import tempfile
 import metadata_magic.test as mm_test
 import metadata_magic.config as mm_config
-import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive as mm_archive
 import metadata_magic.archive.epub as mm_epub
+import python_file_tools as pft
 from os.path import abspath, basename, exists, join
 from PIL import Image
 
@@ -308,7 +308,7 @@ def test_create_content_files():
         assert  files[2] == "[CC] Part 2.xhtml"
         assert  files[3] == "[DD] Image 2.xhtml"
         # Test the XHTML generated from plain text
-        contents = mm_file_tools.read_text_file(abspath(join(content_dir, "[AA] Part 1.xhtml")))
+        contents = pft.read_text_file(abspath(join(content_dir, "[AA] Part 1.xhtml")))
         compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
         compare = f"{compare}\n    <head>"
@@ -323,7 +323,7 @@ def test_create_content_files():
         compare = f"{compare}\n</html>"
         assert contents == compare
         # Test the XHTML generated from HTML
-        contents = mm_file_tools.read_text_file(abspath(join(content_dir, "[CC] Part 2.xhtml")))
+        contents = pft.read_text_file(abspath(join(content_dir, "[CC] Part 2.xhtml")))
         compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
         compare = f"{compare}\n    <head>"
@@ -338,7 +338,7 @@ def test_create_content_files():
         compare = f"{compare}\n</html>"
         assert contents == compare
         # Test the XHTML generated from images
-        contents = mm_file_tools.read_text_file(abspath(join(content_dir, "[BB] Image 1.xhtml")))
+        contents = pft.read_text_file(abspath(join(content_dir, "[BB] Image 1.xhtml")))
         compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<html xmlns:svgns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns=\"http://www.w3.org/1999/xhtml\">"
         compare = f"{compare}\n    <head>"
@@ -356,7 +356,7 @@ def test_create_content_files():
         compare = f"{compare}\n    </body>"
         compare = f"{compare}\n</html>"
         assert contents == compare
-        contents = mm_file_tools.read_text_file(abspath(join(content_dir, "[DD] Image 2.xhtml")))
+        contents = pft.read_text_file(abspath(join(content_dir, "[DD] Image 2.xhtml")))
         compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<html xmlns:svgns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns=\"http://www.w3.org/1999/xhtml\">"
         compare = f"{compare}\n    <head>"
@@ -393,7 +393,7 @@ def test_create_content_files():
         content_dir = abspath(join(temp_dir, "content"))
         assert os.listdir(content_dir) == ["[AA] Part 1.xhtml"]
         # Test the XHTML from combined sources
-        contents = mm_file_tools.read_text_file(abspath(join(content_dir, "[AA] Part 1.xhtml")))
+        contents = pft.read_text_file(abspath(join(content_dir, "[AA] Part 1.xhtml")))
         compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
         compare = f"{compare}\n    <head>"
@@ -432,7 +432,7 @@ def test_create_content_files():
         content_dir = abspath(join(temp_dir, "content"))
         assert os.listdir(content_dir) == ["broken.xhtml"]
         # Test the XHTML from combined sources
-        contents = mm_file_tools.read_text_file(abspath(join(content_dir, "broken.xhtml")))
+        contents = pft.read_text_file(abspath(join(content_dir, "broken.xhtml")))
         compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
         compare = f"{compare}\n    <head>"
@@ -488,7 +488,7 @@ def test_create_style_file():
         sub_dir = abspath(join(temp_dir, "style"))
         assert os.listdir(sub_dir) == ["epubstyle.css"]
         style_file = abspath(join(sub_dir, "epubstyle.css"))
-        style = mm_file_tools.read_text_file(style_file)
+        style = pft.read_text_file(style_file)
         compare = ""
         compare = f"{compare}img "+ "{"
         compare = f"{compare}\n    display: block;"
@@ -522,7 +522,7 @@ def test_create_nav_file():
         mm_epub.create_nav_file(chapters, "Title!", temp_dir)
         assert sorted(os.listdir(temp_dir)) == ["content", "images", "nav.xhtml"]
         nav_file = abspath(join(temp_dir, "nav.xhtml"))
-        contents = mm_file_tools.read_text_file(nav_file)
+        contents = pft.read_text_file(nav_file)
         compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\" xmlns:epub=\"http://www.idpf.org/2007/ops\" lang=\"en\" xml:lang=\"en\">"
         compare = f"{compare}\n    <head>"
@@ -559,7 +559,7 @@ def test_create_nav_file():
         mm_epub.create_nav_file(chapters, "Grouped", temp_dir)
         assert sorted(os.listdir(temp_dir)) == ["content", "images", "nav.xhtml"]
         nav_file = abspath(join(temp_dir, "nav.xhtml"))
-        contents = mm_file_tools.read_text_file(nav_file)
+        contents = pft.read_text_file(nav_file)
         compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\" xmlns:epub=\"http://www.idpf.org/2007/ops\" lang=\"en\" xml:lang=\"en\">"
         compare = f"{compare}\n    <head>"
@@ -593,7 +593,7 @@ def test_create_ncx_file():
         mm_epub.create_ncx_file(chapters, "Title!", "/page/url/", temp_dir)
         assert sorted(os.listdir(temp_dir)) == ["content", "images", "toc.ncx"]
         ncx_file = abspath(join(temp_dir, "toc.ncx"))
-        contents = mm_file_tools.read_text_file(ncx_file)
+        contents = pft.read_text_file(ncx_file)
         compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<ncx xmlns=\"http://www.daisy.org/z3986/2005/ncx/\" version=\"2005-1\">"
         compare = f"{compare}\n    <head>"
@@ -643,7 +643,7 @@ def test_create_ncx_file():
         mm_epub.create_ncx_file(chapters, "Group", "/other/", temp_dir)
         assert sorted(os.listdir(temp_dir)) == ["content", "images", "toc.ncx"]
         ncx_file = abspath(join(temp_dir, "toc.ncx"))
-        contents = mm_file_tools.read_text_file(ncx_file)
+        contents = pft.read_text_file(ncx_file)
         compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<ncx xmlns=\"http://www.daisy.org/z3986/2005/ncx/\" version=\"2005-1\">"
         compare = f"{compare}\n    <head>"
@@ -1035,7 +1035,7 @@ def test_create_content_opf():
         mm_epub.create_content_opf(chapters, metadata, temp_dir)
         assert sorted(os.listdir(temp_dir)) == ["content", "content.opf", "images"]
         opf_file = abspath(join(temp_dir, "content.opf"))
-        contents = mm_file_tools.read_text_file(opf_file)
+        contents = pft.read_text_file(opf_file)
         compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<package xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns=\"http://www.idpf.org/2007/opf\" unique-identifier=\"id\" version=\"3.0\" prefix=\"http://www.idpf.org/vocab/rendition/#\">"
         compare = f"{compare}\n    <metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">"
@@ -1086,14 +1086,14 @@ def test_create_epub():
         # Extract the epub file to see contents
         extract_dir = abspath(join(temp_dir, "extracted"))
         os.mkdir(extract_dir)
-        assert mm_file_tools.extract_zip(epub_file, extract_dir)
+        assert pft.extract_zip(epub_file, extract_dir)
         assert sorted(os.listdir(extract_dir)) == ["EPUB", "META-INF", "mimetype"]
         # Check the mimetype contents
-        assert mm_file_tools.read_text_file(abspath(join(extract_dir, "mimetype"))) == "application/epub+zip"
+        assert pft.read_text_file(abspath(join(extract_dir, "mimetype"))) == "application/epub+zip"
         # Check the contents of the meta folder
         meta_directory = abspath(join(extract_dir, "META-INF"))
         assert sorted(os.listdir(meta_directory)) == ["container.xml"]
-        container = mm_file_tools.read_text_file(abspath(join(meta_directory, "container.xml")))
+        container = pft.read_text_file(abspath(join(meta_directory, "container.xml")))
         compare = ""
         compare = f"{compare}<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<container xmlns=\"urn:oasis:names:tc:opendocument:xmlns:container\" version=\"1.0\">"
@@ -1128,7 +1128,7 @@ def test_create_epub():
         style_directory = abspath(join(epub_directory, "images"))
         assert sorted(os.listdir(style_directory)) == ["image1.PNG", "image2.jpg"]
         # Check the contents of the content.opf file
-        content = mm_file_tools.read_text_file(abspath(join(epub_directory, "content.opf")))
+        content = pft.read_text_file(abspath(join(epub_directory, "content.opf")))
         compare = ""
         compare = f"{compare}<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<package xmlns:dc=\"http://purl.org/dc/elements/1.1/\" "
@@ -1181,14 +1181,14 @@ def test_create_epub_from_description():
         # Extract the epub file to see contents
         extract_dir = abspath(join(temp_dir, "extracted"))
         os.mkdir(extract_dir)
-        assert mm_file_tools.extract_zip(epub_file, extract_dir)
+        assert pft.extract_zip(epub_file, extract_dir)
         assert sorted(os.listdir(extract_dir)) == ["EPUB", "META-INF", "mimetype"]
         # Check the mimetype contents
-        assert mm_file_tools.read_text_file(abspath(join(extract_dir, "mimetype"))) == "application/epub+zip"
+        assert pft.read_text_file(abspath(join(extract_dir, "mimetype"))) == "application/epub+zip"
         # Check the contents of the META-INF directory
         meta_directory = abspath(join(extract_dir, "META-INF"))
         assert sorted(os.listdir(meta_directory)) == ["container.xml"]
-        container = mm_file_tools.read_text_file(abspath(join(meta_directory, "container.xml")))
+        container = pft.read_text_file(abspath(join(meta_directory, "container.xml")))
         compare = ""
         compare = f"{compare}<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<container xmlns=\"urn:oasis:names:tc:opendocument:xmlns:container\" version=\"1.0\">"
@@ -1213,7 +1213,7 @@ def test_create_epub_from_description():
         style_directory = abspath(join(epub_directory, "images"))
         assert sorted(os.listdir(style_directory)) == ["image1.JPG"]
         # Check the contents of the content.opf file
-        content = mm_file_tools.read_text_file(abspath(join(epub_directory, "content.opf")))
+        content = pft.read_text_file(abspath(join(epub_directory, "content.opf")))
         compare = ""
         compare = f"{compare}<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<package xmlns:dc=\"http://purl.org/dc/elements/1.1/\" "
@@ -1248,7 +1248,7 @@ def test_create_epub_from_description():
         compare = f"{compare}\n</package>"
         assert content == compare
         # Check the contents of the XHTML generated from the description
-        content = mm_file_tools.read_text_file(abspath(join(content_directory, "long.xhtml")))
+        content = pft.read_text_file(abspath(join(content_directory, "long.xhtml")))
         compare = ""
         compare = f"{compare}<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<html xmlns=\"http://www.w3.org/1999/xhtml\">"
@@ -1361,7 +1361,7 @@ def test_update_epub_info():
         metadata["cover_id"] = "image1"
         mm_epub.update_epub_info(epub_file, metadata)
         # Check that EPUB structure is intact
-        assert mm_file_tools.extract_zip(epub_file, temp_dir)
+        assert pft.extract_zip(epub_file, temp_dir)
         assert sorted(os.listdir(temp_dir)) == ["EPUB", "META-INF", "mimetype", "small.epub"]
         epub_dir = abspath(join(temp_dir, "EPUB"))
         assert sorted(os.listdir(epub_dir)) == ["content", "content.opf", "images", "nav.xhtml", "original", "style", "toc.ncx"]
@@ -1371,7 +1371,7 @@ def test_update_epub_info():
         assert sorted(os.listdir(image_dir)) == ["image1.jpg"]
         # Check that the cover image hasn't been changed
         assert os.stat(abspath(join(image_dir, "image1.jpg"))).st_size == 1196
-        contents = mm_file_tools.read_text_file(abspath(join(content_dir, "cover_image.xhtml")))
+        contents = pft.read_text_file(abspath(join(content_dir, "cover_image.xhtml")))
         compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<html xmlns:svgns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns=\"http://www.w3.org/1999/xhtml\">"
         compare = f"{compare}\n    <head>"
@@ -1390,7 +1390,7 @@ def test_update_epub_info():
         compare = f"{compare}\n</html>"
         assert contents == compare
         # Test that the metadata has been updated
-        contents = mm_file_tools.read_text_file(abspath(join(epub_dir, "content.opf")))
+        contents = pft.read_text_file(abspath(join(epub_dir, "content.opf")))
         compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<package xmlns=\"http://www.idpf.org/2007/opf\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" unique-identifier=\"id\" version=\"3.0\" prefix=\"http://www.idpf.org/vocab/rendition/#\">"
         compare = f"{compare}\n    <metadata>"
@@ -1429,7 +1429,7 @@ def test_update_epub_info():
         metadata["cover_id"] = "image1"
         mm_epub.update_epub_info(epub_file, metadata, update_cover=True)
         # Check that EPUB structure is intact
-        assert mm_file_tools.extract_zip(epub_file, temp_dir)
+        assert pft.extract_zip(epub_file, temp_dir)
         assert sorted(os.listdir(temp_dir)) == ["EPUB", "META-INF", "mimetype", "small.epub"]
         epub_dir = abspath(join(temp_dir, "EPUB"))
         assert sorted(os.listdir(epub_dir)) == ["content", "content.opf", "images", "nav.xhtml", "original", "style", "toc.ncx"]
@@ -1439,7 +1439,7 @@ def test_update_epub_info():
         assert sorted(os.listdir(image_dir)) == ["image1.jpg"]
         # Check that the cover image has been updated
         assert os.stat(abspath(join(image_dir, "image1.jpg"))).st_size > 5000
-        contents = mm_file_tools.read_text_file(abspath(join(content_dir, "cover_image.xhtml")))
+        contents = pft.read_text_file(abspath(join(content_dir, "cover_image.xhtml")))
         compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<html xmlns:svgns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns=\"http://www.w3.org/1999/xhtml\">"
         compare = f"{compare}\n    <head>"
@@ -1458,7 +1458,7 @@ def test_update_epub_info():
         compare = f"{compare}\n</html>"
         assert contents == compare
         # Test that the metadata has been updated
-        contents = mm_file_tools.read_text_file(abspath(join(epub_dir, "content.opf")))
+        contents = pft.read_text_file(abspath(join(epub_dir, "content.opf")))
         compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<package xmlns=\"http://www.idpf.org/2007/opf\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" unique-identifier=\"id\" version=\"3.0\" prefix=\"http://www.idpf.org/vocab/rendition/#\">"
         compare = f"{compare}\n    <metadata>"
@@ -1496,7 +1496,7 @@ def test_update_epub_info():
         metadata["cover_id"] = None
         mm_epub.update_epub_info(epub_file, metadata, update_cover=True)
         # Check that EPUB structure is intact
-        assert mm_file_tools.extract_zip(epub_file, temp_dir)
+        assert pft.extract_zip(epub_file, temp_dir)
         assert sorted(os.listdir(temp_dir)) == ["EPUB", "META-INF", "basic.epub", "mimetype"]
         epub_dir = abspath(join(temp_dir, "EPUB"))
         assert sorted(os.listdir(epub_dir)) == ["content", "content.opf", "images", "nav.xhtml", "original", "style", "toc.ncx"]
@@ -1505,7 +1505,7 @@ def test_update_epub_info():
         image_dir = abspath(join(epub_dir, "images"))
         assert os.listdir(image_dir) == []
         # Test that the metadata has been updated
-        contents = mm_file_tools.read_text_file(abspath(join(epub_dir, "content.opf")))
+        contents = pft.read_text_file(abspath(join(epub_dir, "content.opf")))
         compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         compare = f"{compare}\n<package xmlns=\"http://www.idpf.org/2007/opf\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" unique-identifier=\"id\" version=\"3.0\" prefix=\"http://www.idpf.org/vocab/rendition/#\">"
         compare = f"{compare}\n    <metadata>"

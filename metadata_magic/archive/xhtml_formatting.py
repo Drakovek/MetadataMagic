@@ -3,7 +3,7 @@
 import re
 import html5lib
 import html_string_tools
-import metadata_magic.file_tools as mm_file_tools
+import python_file_tools as pft
 from PIL import Image, UnidentifiedImageError
 from os.path import abspath, basename
 from xml.etree import ElementTree
@@ -144,7 +144,7 @@ def clean_html(html_file:str, add_smart_quotes:bool) -> str:
     :rtype: str
     """
     # Read the HTML file
-    original_html = mm_file_tools.read_text_file(html_file)
+    original_html = pft.read_text_file(html_file)
     # Get the root element from the body
     ElementTree.register_namespace("", "http://www.w3.org/1999/xhtml")
     root = html5lib.parse(original_html)
@@ -207,7 +207,7 @@ def get_word_count_from_html(html_file:str) -> int:
     :rtype: int
     """
     # Read the html file
-    html = mm_file_tools.read_text_file(abspath(html_file))
+    html = pft.read_text_file(abspath(html_file))
     # Get all paragraph tags
     paragraphs = re.findall(r"<p[^>]*>(?:[^<]*<(?!\s*\/p))*[^<]*<\/p>", html)
     html = " ".join(paragraphs)

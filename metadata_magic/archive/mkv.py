@@ -6,10 +6,9 @@ import shutil
 import tempfile
 import traceback
 import html_string_tools
-import metadata_magic.file_tools as mm_file_tools
 import metadata_magic.archive as mm_archive
-import metadata_magic.rename as mm_rename
 import metadata_magic.archive.comic_xml as mm_comic_xml
+import python_file_tools as pft
 from ffmpeg import FFmpeg
 from ffmpeg.errors import FFmpegError
 from os.path import abspath, basename, exists, join
@@ -31,7 +30,7 @@ def create_mkv(directory:str, name:str=None, metadata:dict=None, remove_files:bo
     :rtype: str
     """
     # Find the video file in the given directory
-    videos = mm_file_tools.find_files_of_type(abspath(directory), mm_archive.SUPPORTED_VIDEO, False)
+    videos = pft.find_files_of_type(abspath(directory), mm_archive.SUPPORTED_VIDEO, False)
     if not len(videos) == 1: return None
     base_video = videos[0]
     # Get the JSON information for the video, if available
@@ -42,16 +41,16 @@ def create_mkv(directory:str, name:str=None, metadata:dict=None, remove_files:bo
     if not exists(json_file):
         json_file = None
     # Get the filename for the mkv file to create
-    mkv_file = mm_rename.get_available_filename(["a.mkv"], basename(base_filename), abspath(directory))
+    mkv_file = pft.get_available_filename(["a.mkv"], basename(base_filename), abspath(directory))
     if name is not None:
-        mkv_file = mm_rename.get_available_filename(["a.mkv"], name, abspath(directory))
+        mkv_file = pft.get_available_filename(["a.mkv"], name, abspath(directory))
     mkv_file = abspath(join(directory, f"{mkv_file}.mkv"))
     # Create the VideoInfo.xml file
     with tempfile.TemporaryDirectory() as temp_dir:
         xml_file = abspath(join(temp_dir, "VideoInfo.xml"))
         try:
             xml = mm_comic_xml.get_comic_xml(metadata)
-            mm_file_tools.write_text_file(xml_file, xml)
+            pft.write_text_file(xml_file, xml)
         except (KeyError, TypeError):
             return None
         # Create the main metadata for the mkv file
@@ -116,7 +115,7 @@ def get_info_from_mkv(mkv_file:str) -> dict:
         json_metadata = {}
         for filename in os.listdir(attachment_dir):
             full_file = abspath(join(attachment_dir, filename))
-            json_metadata = mm_file_tools.read_json_file(full_file)
+            json_metadata = pft.read_json_file(full_file)
             if not json_metadata == {}:
                 break
         # Find and read the video metadata
@@ -147,7 +146,7 @@ def update_mkv_info(mkv_file, metadata:dict):
         original_metadata = get_info_from_mkv(base_mkv)
         if not original_metadata["original"] == {}:
             json_file = abspath(join(temp_dir, "AAA.json"))
-            mm_file_tools.write_json_file(json_file, original_metadata["original"])
+            pft.write_json_file(json_file, original_metadata["original"])
         # Create a new MKV file with the given metadata
         new_mkv = create_mkv(abspath(temp_dir), "BBB", metadata)
         # Delete the old mkv and replace with the new one, if available
