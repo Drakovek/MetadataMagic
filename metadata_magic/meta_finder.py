@@ -10,19 +10,21 @@ import python_file_tools as pft
 from os.path import abspath, basename, isdir, join
 from typing import List
 
-def separate_files(path:str) -> tuple:
+def separate_files(path:str, include_subdirectories:bool=True) -> tuple:
     """
     Returns a list of all files in a directory and sub_directories.
     Separated by JSON files and non-JSON files.
 
     :param path: Directory in which to search
     :type path: str, required
+    :param include_subdirectories: Whether to include files in subdirectories, defaults to True
+    :type include_subdirectories: bool, optional
     :return: List of JSON files and non-JSONs, organized (jsons, media)
     :rtype: tuple
     """
     # Get all files in the given directory
     absolute_path = abspath(path)
-    all_files = os.listdir(absolute_path)
+    all_files = pft.find_all_files(path, include_subdirectories=include_subdirectories)
     # Seperate JSON and non-JSON files
     media = []
     jsons = []
@@ -32,15 +34,8 @@ def separate_files(path:str) -> tuple:
         extension = html_string_tools.get_extension(full_file).lower()
         if extension == ".json":
             jsons.append(full_file)
-        elif isdir(full_file):
-            directories.append(full_file)
         else:
             media.append(full_file)
-    # Append files in subdirectories
-    for directory in directories:
-        new_jsons, new_media = separate_files(directory)
-        jsons.extend(new_jsons)
-        media.extend(new_media)
     # Return JSON and media files separated
     jsons = pft.sort.sort_alphanum(jsons)
     media = pft.sort.sort_alphanum(media)
@@ -96,7 +91,7 @@ def get_pairs_from_lists(jsons:List[str], media:List[str], print_info:bool=True)
     # Return the JSON-media pairs
     return pairs
 
-def get_pairs(path:str, print_info:bool=True) -> List[dict]:
+def get_pairs(path:str, print_info:bool=True, include_subdirectories:bool=True) -> List[dict]:
     """
     Returns a list of media files paired with their corresponding JSON metadata file.
     Returned in dicts with "json" and "media" fields.
@@ -105,6 +100,8 @@ def get_pairs(path:str, print_info:bool=True) -> List[dict]:
     :type path: str, required
     :param print_info: Whether to print search updates to the user, defaults to true
     :type print_info: bool, optional
+    :param include_subdirectories: Whether to include files in subdirectories, defaults to True
+    :type include_subdirectories: bool, optional
     :return: List of media files paired with JSONs
     :rtype: List[dict]
     """
@@ -112,5 +109,5 @@ def get_pairs(path:str, print_info:bool=True) -> List[dict]:
     if print_info:
         print("Searching directory...")
     # Get the list of json and media files and pair when appropriate
-    jsons, media = separate_files(path)
+    jsons, media = separate_files(path, include_subdirectories=include_subdirectories)
     return get_pairs_from_lists(jsons, media, print_info)

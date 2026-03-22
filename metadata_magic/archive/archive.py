@@ -22,6 +22,34 @@ SUPPORTED_IMAGES = [".gif", ".png", ".jpeg", ".jpg"]
 SUPPORTED_TEXT = [".txt", ".html", ".htm"]
 SUPPORTED_VIDEO = [".mkv", ".webm", ".mp4", ".m4v", ".avi"]
 
+def get_archive_files(directory:str, include_subdirectories:bool=True) -> List[str]:
+    """
+    Returns a list of archive files in a given directory.
+    Excludes files with an archive type extension but are part of a JSON pair.
+
+    :param directory: Directory to search for archives within
+    :type directory: str, required
+    :param include_subdirectories: Whether to include archives in subdirectories, defaults to True
+    :type include_subdirectories: bool, optional
+    :return: List of all archives in the given directory
+    :rtype: List[str]
+    """
+    # Get separated list of all files
+    jsons, archives = mm_meta_finder.separate_files(directory, include_subdirectories)
+    # Remove all non-archive files from archives
+    for i in range(len(archives) - 1, -1, -1):
+        extension = html_string_tools.get_extension(archives[i]).lower()
+        if not extension in ARCHIVE_EXTENSIONS:
+            del archives[i]
+    # Get json pairs
+    pairs = mm_meta_finder.get_pairs_from_lists(jsons, archives, print_info=False)
+    # Remove paired files from list of archives
+    for pair in pairs:
+        index = archives.index(pair["media"])
+        del archives[index]
+    # Return archives
+    return archives
+
 def get_directory_archive_type(directory:str) -> str:
     """
     Returns what kind of media archive the files in a given directory can be converted into.

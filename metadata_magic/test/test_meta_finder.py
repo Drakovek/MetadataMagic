@@ -72,6 +72,22 @@ def test_separate_files():
     assert abspath(join(media[13], os.pardir)) == mm_test.PAIR_VIDEO_DIRECTORY
     assert basename(media[14]) == "basicvideo.mp4"
     assert abspath(join(media[14], os.pardir)) == mm_test.PAIR_VIDEO_DIRECTORY
+    # Test getting separate_files not including subdirectories
+    jsons, media = mm_meta_finder.separate_files(mm_test.PAIR_DIRECTORY, False)
+    assert len(jsons) == 3
+    assert basename(jsons[0]) == "no-media.json"
+    assert abspath(join(jsons[0], os.pardir)) == mm_test.PAIR_DIRECTORY
+    assert basename(jsons[1]) == "pair-2.json"
+    assert abspath(join(jsons[1], os.pardir)) == mm_test.PAIR_DIRECTORY
+    assert basename(jsons[2]) == "pair.json"
+    assert abspath(join(jsons[2], os.pardir)) == mm_test.PAIR_DIRECTORY
+    assert len(media) == 3
+    assert basename(media[0]) == "missing-metadata.txt"
+    assert abspath(join(media[0], os.pardir)) == mm_test.PAIR_DIRECTORY
+    assert basename(media[1]) == "pair-2.jpg"
+    assert abspath(join(media[1], os.pardir)) == mm_test.PAIR_DIRECTORY
+    assert basename(media[2]) == "pair.txt"
+    assert abspath(join(media[2], os.pardir)) == mm_test.PAIR_DIRECTORY
     # Check that archive files are included
     jsons, media = mm_meta_finder.separate_files(mm_test.ARCHIVE_DIRECTORY)
     assert len(media) == 16
@@ -152,3 +168,14 @@ def test_get_pairs():
     assert basename(pairs[11]["media"]) == "basicvideo.mp4"
     assert abspath(join(pairs[11]["json"], os.pardir)) == mm_test.PAIR_VIDEO_DIRECTORY
     assert abspath(join(pairs[11]["media"], os.pardir)) == mm_test.PAIR_VIDEO_DIRECTORY
+    # Test finding pairs not including subdirectories
+    pairs = mm_meta_finder.get_pairs(mm_test.PAIR_DIRECTORY, include_subdirectories=False)
+    assert len(pairs) == 2
+    assert basename(pairs[0]["json"]) == "pair-2.json"
+    assert basename(pairs[0]["media"]) == "pair-2.jpg"
+    assert abspath(join(pairs[0]["json"], os.pardir)) == mm_test.PAIR_DIRECTORY
+    assert abspath(join(pairs[0]["media"], os.pardir)) == mm_test.PAIR_DIRECTORY
+    assert basename(pairs[1]["json"]) == "pair.json"
+    assert basename(pairs[1]["media"]) == "pair.txt"
+    assert abspath(join(pairs[1]["json"], os.pardir)) == mm_test.PAIR_DIRECTORY
+    assert abspath(join(pairs[1]["media"], os.pardir)) == mm_test.PAIR_DIRECTORY

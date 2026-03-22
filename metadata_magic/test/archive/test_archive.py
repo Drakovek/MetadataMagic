@@ -10,8 +10,29 @@ import metadata_magic.archive.epub as mm_epub
 import metadata_magic.archive.mkv as mm_mkv
 import metadata_magic.archive.comic_archive as mm_comic_archive
 import python_file_tools as pft
-from os.path import abspath, join
+from os.path import abspath, basename, join
 from PIL import Image
+
+def test_get_archive_files():
+    """
+    Tests the get_archive_files function.
+    """
+    # Find archive files in directory
+    test_dir = mm_test.ARCHIVE_PAIRS
+    internal_dir = abspath(join(test_dir, "internal"))
+    archive_files = mm_archive.get_archive_files(test_dir)
+    assert len(archive_files) == 3
+    assert basename(archive_files[0]) == "basic.CBZ"
+    assert abspath(join(archive_files[0], os.pardir)) == test_dir
+    assert basename(archive_files[1]) == "basic.epub"
+    assert abspath(join(archive_files[1], os.pardir)) == internal_dir
+    assert basename(archive_files[2]) == "empty.mkv"
+    assert abspath(join(archive_files[2], os.pardir)) == internal_dir
+    # Find archive files in directory including subdirectories
+    archive_files = mm_archive.get_archive_files(test_dir, include_subdirectories=False)
+    assert len(archive_files) == 1
+    assert basename(archive_files[0]) == "basic.CBZ"
+    assert abspath(join(archive_files[0], os.pardir)) == test_dir
 
 def test_get_directory_archive_type():
     """

@@ -84,7 +84,7 @@ def find_long_descriptions(path:str, config:dict, length:int=LONG_DESCRIPTION) -
     # Get a list of all archive files
     print("Searching archives with long descriptions...")
     full_path = abspath(path)
-    archive_files = pft.find_files_of_type(full_path, mm_archive.ARCHIVE_EXTENSIONS)
+    archive_files = mm_archive.get_archive_files(full_path)
     # Run through all archive files
     long = []
     for archive_file in tqdm.tqdm(archive_files):
@@ -116,7 +116,7 @@ def find_missing_fields(path:str, fields:List[str]) -> List[str]:
     """
     # Get a list of all archive files
     full_path = abspath(path)
-    archive_files = pft.find_files_of_type(full_path, mm_archive.ARCHIVE_EXTENSIONS)
+    archive_files = mm_archive.get_archive_files(full_path)
     # Run through all files
     missing = []
     for archive_file in tqdm.tqdm(archive_files):
@@ -160,7 +160,7 @@ def find_invalid_archives(path:str) -> List[str]:
     :rtype: list[str]
     """
     invalid = []
-    archive_files = pft.find_files_of_type(path, mm_archive.ARCHIVE_EXTENSIONS)
+    archive_files = mm_archive.get_archive_files(path)
     for archive_file in tqdm.tqdm(archive_files):
         with tempfile.TemporaryDirectory() as tempdir:
             if not pft.extract_zip(archive_file, tempdir):

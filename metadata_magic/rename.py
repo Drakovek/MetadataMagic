@@ -28,7 +28,7 @@ def rename_archives(path:str, template:str, ascii_only:bool=False):
     :type ascii_only: bool, optional
     """
     # Get all media archives
-    archive_files = pft.find_files_of_type(path, mm_archive.ARCHIVE_EXTENSIONS)
+    archive_files = mm_archive.get_archive_files(path)
     # Run through each archive file
     for archive_file in tqdm.tqdm(archive_files):
         # Get the filename for the archive file

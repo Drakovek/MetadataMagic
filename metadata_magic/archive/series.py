@@ -24,9 +24,7 @@ def get_default_labels(directory:str) -> List[dict]:
     :rtype: List[dict]
     """
     # Get all archive files
-    archive_files = pft.find_files_of_type(directory,
-            mm_archive.ARCHIVE_EXTENSIONS, include_subdirectories=False)
-    archive_files = pft.sort.sort_alphanum(archive_files)
+    archive_files = mm_archive.get_archive_files(directory, include_subdirectories=False)
     # Set labels based on the current sequence information
     base_label = 100000
     label_num = base_label
@@ -236,7 +234,7 @@ def main():
         if not args.standalone:
             set_series_from_user(directory)
         elif input("Mark all archives in this directory as standalone entries? (Y/[N]): ").lower() == "y":
-            archive_files = pft.find_files_of_type(directory, mm_archive.ARCHIVE_EXTENSIONS)
+            archive_files = mm_archive.get_archive_files(directory)
             for archive_file in tqdm.tqdm(archive_files):
                 write_series_single(archive_file)
         

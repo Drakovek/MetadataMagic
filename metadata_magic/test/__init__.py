@@ -35,3 +35,5 @@ ERROR_TEST_DIRECTORY = abspath(join(TEST_DIRECTORY, "error_tests"))
 ZIP_CONFLICT_DIRECTORY = abspath(join(ERROR_TEST_DIRECTORY, "zip_conflicts"))
 JSON_ERROR_DIRECTORY = abspath(join(ERROR_TEST_DIRECTORY, "json_error"))
 ARCHIVE_ERROR_DIRECTORY = abspath(join(ERROR_TEST_DIRECTORY, "archive_error"))
+ARCHIVE_PAIRS = abspath(join(ERROR_TEST_DIRECTORY, "archive_pairs"))
+

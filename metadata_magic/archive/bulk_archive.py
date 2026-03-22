@@ -212,7 +212,7 @@ def extract_all_archives(directory:str, create_folders:bool=True, remove_structu
     :rtype: bool
     """
     # Get a list of all archive files
-    archives = pft.find_files_of_type(directory, mm_archive.ARCHIVE_EXTENSIONS)
+    archives = mm_archive.get_archive_files(directory)
     # Extract each archive
     for archive in tqdm.tqdm(archives):
         try:

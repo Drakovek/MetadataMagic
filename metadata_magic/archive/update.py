@@ -5,7 +5,6 @@ import tqdm
 import argparse
 import python_print_tools
 import metadata_magic.archive as mm_archive
-import python_file_tools as pft
 from os.path import abspath, isdir, exists
 
 def update_fields(existing_metadata:dict, updating_metadata:dict) -> dict:
@@ -48,7 +47,7 @@ def mass_update_archives(directory:str, metadata:dict,
     :type always_overwrite: bool, optional
     """
     # Get list of archive files in the directory
-    archive_files = pft.find_files_of_type(directory, mm_archive.ARCHIVE_EXTENSIONS)
+    archive_files = mm_archive.get_archive_files(directory)
     # Run through archive files
     for archive_file in tqdm.tqdm(archive_files):
         # Update the archive file with the metadata
