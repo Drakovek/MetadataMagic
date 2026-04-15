@@ -40,10 +40,14 @@ def archive_all_media(directory:str, config:dict,
     # Get all JSON-media pairs in the directory
     full_directory = abspath(directory)
     pairs = mm_meta_finder.get_pairs(full_directory, print_info=False)
-    # Run through each pair
+    # Create extension_sets
     media_extensions = []
     media_extensions.extend(mm_archive.SUPPORTED_IMAGES)
     media_extensions.extend(mm_archive.SUPPORTED_TEXT)
+    media_extensions = set(media_extensions)
+    supported_images_set = mm_archive.SUPPORTED_IMAGES
+    supported_text_set = mm_archive.SUPPORTED_TEXT
+    # Run through each pair
     for pair in tqdm.tqdm(pairs):
         try:
             # Ignore if the extension is not supported
@@ -67,7 +71,7 @@ def archive_all_media(directory:str, config:dict,
                 pft.rename_file(new_media, title)
                 # Create the archive file
                 archive_file = None
-                if extension in mm_archive.SUPPORTED_IMAGES:
+                if extension in supported_images_set:
                     # Create an epub if the description is too long
                     if metadata["description"] is None or len(metadata["description"]) < description_length:
                         archive_file = mm_comic_archive.create_cbz(temp_dir, name=title, metadata=metadata)
@@ -76,7 +80,7 @@ def archive_all_media(directory:str, config:dict,
                         new_media = new_pair["media"]
                         new_json = new_pair["json"]
                         archive_file = mm_epub.create_epub_from_description(new_json, new_media, metadata, temp_dir, config)
-                elif extension in mm_archive.SUPPORTED_TEXT:
+                elif extension in supported_text_set:
                     with tempfile.TemporaryDirectory() as image_dir:
                         chapters = mm_epub.get_default_chapters(temp_dir, title=title)
                         chapters = mm_epub.add_cover_to_chapters(chapters, metadata, image_dir)

@@ -61,33 +61,27 @@ def get_pairs_from_lists(jsons:List[str], media:List[str], print_info:bool=True)
     if print_info:
         print("Finding JSON metadata:")
         iterator = tqdm.tqdm(media)
-    # Create a new list of json basenames set to lowercase
-    jsons_modified = []
+    # Create a dictionary mapping JSON files to the file name sans .json extension
+    base_json_map = {}
     for json in jsons:
-        base = basename(abspath(json))[:-5].lower()
-        jsons_modified.append(abspath(join(abspath(join(json, os.pardir)), base)))
+        parent = abspath(join(json, os.pardir))
+        no_json_extension = abspath(join(parent, basename(json).lower()[:-5]))
+        base_json_map[no_json_extension] = json
     # Run through the list of media, finding matching JSON files
-    pairs = []
-    reference_jsons = copy.deepcopy(jsons)
     for media_file in iterator:
-        # Get the file with the altered extension
-        base = basename(abspath(media_file)).lower()
-        base = abspath(join(abspath(join(media_file, os.pardir)), base))
-        # Check if the JSON exists with the same basename
-        try:
-            index = jsons_modified.index(base)
-        except ValueError:
-            try:
-                # Remove the media extension and check again
-                base = re.sub(r"\.[0-9A-Za-z]{1,5}$", "", base)
-                index = jsons_modified.index(base)
-            except ValueError: continue
-        # Create a pair, then add to the list of pairs
-        pair = {"json":reference_jsons[index], "media":media_file}
-        pairs.append(pair)
-        # Delete the items from the json list and the basename list
-        del jsons_modified[index]
-        del reference_jsons[index]
+        # Get media file altered so base name is non-case sensitive
+        parent = abspath(join(media_file, os.pardir))
+        base_media_file = abspath(join(parent, basename(media_file).lower()))
+        # Check if JSON exists with the same basename plus .json (test.png.json)
+        json_path = base_json_map.pop(base_media_file, None)
+        # Check minus the main media extension if json path not found
+        if json_path is None:
+            base_media_file = re.sub(r"\.[0-9A-Za-z]{1,5}$", "", base_media_file)
+            json_path = base_json_map.pop(base_media_file, None)
+        # If a pair was found, add to the list of pairs
+        if json_path is not None:
+            pair = {"json":json_path, "media":media_file}
+            pairs.append(pair)
     # Return the JSON-media pairs
     return pairs
 

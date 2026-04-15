@@ -1499,11 +1499,9 @@ def test_update_epub_info():
         assert pft.extract_zip(epub_file, temp_dir)
         assert sorted(os.listdir(temp_dir)) == ["EPUB", "META-INF", "basic.epub", "mimetype"]
         epub_dir = abspath(join(temp_dir, "EPUB"))
-        assert sorted(os.listdir(epub_dir)) == ["content", "content.opf", "images", "nav.xhtml", "original", "style", "toc.ncx"]
+        assert sorted(os.listdir(epub_dir)) == ["content", "content.opf", "nav.xhtml", "original", "style", "toc.ncx"]
         content_dir = abspath(join(epub_dir, "content"))
         assert os.listdir(content_dir) == ["text.xhtml"]
-        image_dir = abspath(join(epub_dir, "images"))
-        assert os.listdir(image_dir) == []
         # Test that the metadata has been updated
         contents = pft.read_text_file(abspath(join(epub_dir, "content.opf")))
         compare = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -1541,5 +1539,5 @@ def test_update_epub_info():
         # Test that file will be overwritten even with the same metadata, if specified
         metadata = mm_epub.get_info_from_epub(epub_file)
         mm_epub.update_epub_info(epub_file, metadata, always_overwrite=True)
-        assert os.stat(epub_file).st_size == 3336
+        assert os.stat(epub_file).st_size == 2752
         assert metadata == mm_epub.get_info_from_epub(epub_file)

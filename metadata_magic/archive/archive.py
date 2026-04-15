@@ -37,9 +37,10 @@ def get_archive_files(directory:str, include_subdirectories:bool=True) -> List[s
     # Get separated list of all files
     jsons, archives = mm_meta_finder.separate_files(directory, include_subdirectories)
     # Remove all non-archive files from archives
+    archive_extensions_set = set(ARCHIVE_EXTENSIONS)
     for i in range(len(archives) - 1, -1, -1):
         extension = html_string_tools.get_extension(archives[i]).lower()
-        if not extension in ARCHIVE_EXTENSIONS:
+        if not extension in archive_extensions_set:
             del archives[i]
     # Get json pairs
     pairs = mm_meta_finder.get_pairs_from_lists(jsons, archives, print_info=False)
